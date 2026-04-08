@@ -14,16 +14,16 @@ export function SubmitRequest() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Submit Request</h1>
-        <p className="text-gray-600 mt-1">Submit leave requests or grade rechecks</p>
+        <h1 className="text-3xl font-semibold text-gray-900">Gửi yêu cầu</h1>
+        <p className="text-gray-600 mt-1">Gửi đơn xin nghỉ học hoặc phúc khảo điểm</p>
       </div>
 
       {submitted && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-600" />
           <div>
-            <p className="font-medium text-green-900">Request submitted successfully!</p>
-            <p className="text-sm text-green-700">You will receive a notification once it's reviewed.</p>
+            <p className="font-medium text-green-900">Gửi yêu cầu thành công!</p>
+            <p className="text-sm text-green-700">Bạn sẽ nhận thông báo khi yêu cầu được xử lý.</p>
           </div>
         </div>
       )}
@@ -34,7 +34,7 @@ export function SubmitRequest() {
           {/* Request Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Request Type *
+              Loại yêu cầu *
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <button
@@ -47,8 +47,8 @@ export function SubmitRequest() {
                 }`}
               >
                 <Calendar className={`w-6 h-6 mb-2 ${requestType === "leave" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-semibold text-gray-900">Leave Request</p>
-                <p className="text-sm text-gray-600">Request absence from classes</p>
+                <p className="font-semibold text-gray-900">Đơn xin nghỉ học</p>
+                <p className="text-sm text-gray-600">Xin phép nghỉ buổi học</p>
               </button>
               <button
                 type="button"
@@ -60,8 +60,8 @@ export function SubmitRequest() {
                 }`}
               >
                 <FileText className={`w-6 h-6 mb-2 ${requestType === "recheck" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-semibold text-gray-900">Grade Recheck</p>
-                <p className="text-sm text-gray-600">Request grade review</p>
+                <p className="font-semibold text-gray-900">Phúc khảo điểm</p>
+                <p className="text-sm text-gray-600">Đề nghị xem lại điểm</p>
               </button>
             </div>
           </div>
@@ -70,18 +70,18 @@ export function SubmitRequest() {
           {requestType === "recheck" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Course *
+                Môn học *
               </label>
               <select
                 required
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A]"
               >
-                <option value="">Select course</option>
-                <option>CS301 - Data Structures</option>
-                <option>CS302 - Database Systems</option>
-                <option>CS303 - Web Development</option>
-                <option>CS304 - Machine Learning</option>
-                <option>MATH201 - Linear Algebra</option>
+                <option value="">Chọn môn học</option>
+                <option>CS301 - Cấu trúc dữ liệu</option>
+                <option>CS302 - Hệ cơ sở dữ liệu</option>
+                <option>CS303 - Phát triển web</option>
+                <option>CS304 - Học máy</option>
+                <option>MATH201 - Đại số tuyến tính</option>
               </select>
             </div>
           )}
@@ -91,7 +91,7 @@ export function SubmitRequest() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  From Date *
+                  Từ ngày *
                 </label>
                 <input
                   type="date"
@@ -101,7 +101,7 @@ export function SubmitRequest() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  To Date *
+                  Đến ngày *
                 </label>
                 <input
                   type="date"
@@ -115,12 +115,12 @@ export function SubmitRequest() {
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title *
+              Tiêu đề *
             </label>
             <input
               type="text"
               required
-              placeholder={requestType === "leave" ? "e.g., Medical Leave" : "e.g., Midterm Exam Grade Review"}
+              placeholder={requestType === "leave" ? "Ví dụ: Nghỉ học do ốm" : "Ví dụ: Phúc khảo điểm giữa kỳ"}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A]"
             />
           </div>
@@ -128,14 +128,14 @@ export function SubmitRequest() {
           {/* Content/Reason */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {requestType === "leave" ? "Reason" : "Details"} *
+              {requestType === "leave" ? "Lý do" : "Chi tiết"} *
             </label>
             <textarea
               required
               rows={6}
               placeholder={requestType === "leave" 
-                ? "Please explain the reason for your leave request..."
-                : "Please provide details about your grade recheck request..."
+                ? "Vui lòng nêu rõ lý do xin nghỉ học..."
+                : "Vui lòng cung cấp chi tiết yêu cầu phúc khảo..."
               }
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] resize-none"
             ></textarea>
@@ -144,14 +144,14 @@ export function SubmitRequest() {
           {/* Attachment */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Supporting Documents
+              Tài liệu đính kèm
             </label>
             <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-gray-300 transition-colors">
               <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
               <p className="text-sm text-gray-600 mb-1">
-                Click to upload or drag and drop
+                Bấm để tải lên hoặc kéo thả tệp
               </p>
-              <p className="text-xs text-gray-500">PDF, JPG, PNG up to 10MB</p>
+              <p className="text-xs text-gray-500">PDF, JPG, PNG tối đa 10MB</p>
               <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" />
             </div>
           </div>
@@ -163,13 +163,13 @@ export function SubmitRequest() {
               className="flex-1 px-6 py-3 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
-              Submit Request
+              Gửi yêu cầu
             </button>
             <button
               type="button"
               className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
             >
-              Cancel
+              Hủy
             </button>
           </div>
         </form>
@@ -178,7 +178,7 @@ export function SubmitRequest() {
       {/* Recent Requests */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Requests</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Yêu cầu gần đây</h2>
         </div>
         <div className="divide-y divide-gray-200">
           <div className="p-6 hover:bg-gray-50">
@@ -186,15 +186,15 @@ export function SubmitRequest() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                    Leave Request
+                    Đơn xin nghỉ học
                   </span>
                   <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">
-                    Pending
+                    Chờ duyệt
                   </span>
                 </div>
-                <p className="font-medium text-gray-900 mb-1">Medical Leave</p>
-                <p className="text-sm text-gray-600 mb-2">March 18-20, 2026</p>
-                <p className="text-xs text-gray-500">Submitted on March 17, 2026</p>
+                <p className="font-medium text-gray-900 mb-1">Nghỉ học do ốm</p>
+                <p className="text-sm text-gray-600 mb-2">18-20/03/2026</p>
+                <p className="text-xs text-gray-500">Đã gửi ngày 17/03/2026</p>
               </div>
             </div>
           </div>
@@ -203,15 +203,15 @@ export function SubmitRequest() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
-                    Grade Recheck
+                    Phúc khảo điểm
                   </span>
                   <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                    Approved
+                    Đã duyệt
                   </span>
                 </div>
-                <p className="font-medium text-gray-900 mb-1">Midterm Exam Review - CS301</p>
-                <p className="text-sm text-gray-600 mb-2">Data Structures & Algorithms</p>
-                <p className="text-xs text-gray-500">Submitted on March 10, 2026</p>
+                <p className="font-medium text-gray-900 mb-1">Phúc khảo giữa kỳ - CS301</p>
+                <p className="text-sm text-gray-600 mb-2">Cấu trúc dữ liệu và giải thuật</p>
+                <p className="text-xs text-gray-500">Đã gửi ngày 10/03/2026</p>
               </div>
             </div>
           </div>
