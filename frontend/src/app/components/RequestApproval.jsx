@@ -6,35 +6,35 @@ const requests = [
     studentName: "Emily Johnson",
     studentId: "2021001235",
     type: "leave",
-    title: "Medical Leave",
-    course: "CS301 - Data Structures",
-    dateRange: "March 24-26, 2026",
-    submittedDate: "March 23, 2026",
+    title: "Nghỉ học do điều trị y tế",
+    course: "CS301 - Cấu trúc dữ liệu",
+    dateRange: "24-26/03/2026",
+    submittedDate: "23/03/2026",
     status: "pending",
-    reason: "Medical appointment and recovery period required."
+    reason: "Có lịch khám và cần thời gian hồi phục theo chỉ định."
   },
   {
     id: 2,
     studentName: "Michael Chen",
     studentId: "2021001236",
     type: "recheck",
-    title: "Midterm Grade Review",
-    course: "CS302 - Database Systems",
-    submittedDate: "March 22, 2026",
+    title: "Phúc khảo điểm giữa kỳ",
+    course: "CS302 - Hệ cơ sở dữ liệu",
+    submittedDate: "22/03/2026",
     status: "pending",
-    reason: "Request to review midterm exam grading for question 3 and 5."
+    reason: "Đề nghị xem lại cách chấm câu 3 và câu 5 của bài thi giữa kỳ."
   },
   {
     id: 3,
     studentName: "Sarah Williams",
     studentId: "2021001237",
     type: "leave",
-    title: "Family Emergency",
-    course: "CS303 - Web Development",
-    dateRange: "March 20-21, 2026",
-    submittedDate: "March 19, 2026",
+    title: "Việc gia đình khẩn cấp",
+    course: "CS303 - Phát triển web",
+    dateRange: "20-21/03/2026",
+    submittedDate: "19/03/2026",
     status: "pending",
-    reason: "Urgent family matter requiring immediate attention."
+    reason: "Có việc gia đình đột xuất cần xử lý ngay."
   },
 ];
 
@@ -50,26 +50,26 @@ export function RequestApproval() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Request Approval</h1>
-        <p className="text-gray-600 mt-1">Review and manage student requests</p>
+        <h1 className="text-3xl font-semibold text-gray-900">Duyệt yêu cầu</h1>
+        <p className="text-gray-600 mt-1">Xem xét và xử lý yêu cầu của sinh viên</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Pending Requests</p>
+          <p className="text-sm text-gray-500 mb-1">Yêu cầu chờ duyệt</p>
           <p className="text-3xl font-semibold text-gray-900">3</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Approved Today</p>
+          <p className="text-sm text-gray-500 mb-1">Đã duyệt hôm nay</p>
           <p className="text-3xl font-semibold text-green-600">5</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Rejected Today</p>
+          <p className="text-sm text-gray-500 mb-1">Đã từ chối hôm nay</p>
           <p className="text-3xl font-semibold text-red-600">1</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Total This Month</p>
+          <p className="text-sm text-gray-500 mb-1">Tổng trong tháng</p>
           <p className="text-3xl font-semibold text-gray-900">28</p>
         </div>
       </div>
@@ -77,13 +77,13 @@ export function RequestApproval() {
       {/* Requests Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Pending Requests</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Danh sách chờ duyệt</h2>
           <div className="flex gap-2">
             <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-              Filter
+              Lọc
             </button>
             <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-              Sort
+              Sắp xếp
             </button>
           </div>
         </div>
@@ -111,10 +111,10 @@ export function RequestApproval() {
                             ? "bg-blue-50 text-blue-700"
                             : "bg-purple-50 text-purple-700"
                         }`}>
-                          {request.type === "leave" ? "Leave Request" : "Grade Recheck"}
+                          {request.type === "leave" ? "Đơn xin nghỉ học" : "Phúc khảo điểm"}
                         </span>
                         <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">
-                          Pending Review
+                          Chờ xem xét
                         </span>
                       </div>
                       <h3 className="font-semibold text-gray-900">{request.title}</h3>
@@ -124,12 +124,12 @@ export function RequestApproval() {
                   {/* Student Info */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-13">
                     <div>
-                      <p className="text-sm text-gray-500">Student</p>
+                      <p className="text-sm text-gray-500">Sinh viên</p>
                       <p className="font-medium text-gray-900">{request.studentName}</p>
-                      <p className="text-sm text-gray-600">ID: {request.studentId}</p>
+                      <p className="text-sm text-gray-600">MSSV: {request.studentId}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Course</p>
+                      <p className="text-sm text-gray-500">Môn học</p>
                       <p className="font-medium text-gray-900">{request.course}</p>
                     </div>
                   </div>
@@ -138,15 +138,15 @@ export function RequestApproval() {
                   <div className="pl-13">
                     {request.dateRange && (
                       <div className="mb-2">
-                        <p className="text-sm text-gray-500">Period</p>
+                        <p className="text-sm text-gray-500">Thời gian</p>
                         <p className="text-sm font-medium text-gray-900">{request.dateRange}</p>
                       </div>
                     )}
                     <div className="mb-2">
-                      <p className="text-sm text-gray-500">Reason</p>
+                      <p className="text-sm text-gray-500">Lý do</p>
                       <p className="text-sm text-gray-900">{request.reason}</p>
                     </div>
-                    <p className="text-xs text-gray-500">Submitted: {request.submittedDate}</p>
+                    <p className="text-xs text-gray-500">Đã gửi: {request.submittedDate}</p>
                   </div>
                 </div>
 
@@ -157,18 +157,18 @@ export function RequestApproval() {
                     className="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors font-medium text-sm flex items-center gap-2"
                   >
                     <Check className="w-4 h-4" />
-                    Approve
+                    Duyệt
                   </button>
                   <button
                     onClick={() => handleReject(request.id)}
                     className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm flex items-center gap-2"
                   >
                     <X className="w-4 h-4" />
-                    Reject
+                    Từ chối
                   </button>
                   <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm text-gray-700 flex items-center gap-2">
                     <Eye className="w-4 h-4" />
-                    Details
+                    Chi tiết
                   </button>
                 </div>
               </div>
@@ -180,42 +180,42 @@ export function RequestApproval() {
       {/* Recent Actions */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Actions</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Hoạt động gần đây</h2>
         </div>
         <div className="divide-y divide-gray-200">
           <div className="p-4 flex items-center justify-between">
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Leave Request - Alex Thompson</p>
-              <p className="text-sm text-gray-600">CS304 - Machine Learning</p>
+              <p className="font-medium text-gray-900">Đơn xin nghỉ học - Alex Thompson</p>
+              <p className="text-sm text-gray-600">CS304 - Học máy</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">March 23, 10:30 AM</span>
+              <span className="text-sm text-gray-500">23/03, 10:30</span>
               <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                Approved
+                Đã duyệt
               </span>
             </div>
           </div>
           <div className="p-4 flex items-center justify-between">
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Grade Recheck - Jessica Lee</p>
-              <p className="text-sm text-gray-600">MATH201 - Linear Algebra</p>
+              <p className="font-medium text-gray-900">Phúc khảo điểm - Jessica Lee</p>
+              <p className="text-sm text-gray-600">MATH201 - Đại số tuyến tính</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">March 23, 09:15 AM</span>
+              <span className="text-sm text-gray-500">23/03, 09:15</span>
               <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                Approved
+                Đã duyệt
               </span>
             </div>
           </div>
           <div className="p-4 flex items-center justify-between">
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Leave Request - David Park</p>
-              <p className="text-sm text-gray-600">CS301 - Data Structures</p>
+              <p className="font-medium text-gray-900">Đơn xin nghỉ học - David Park</p>
+              <p className="text-sm text-gray-600">CS301 - Cấu trúc dữ liệu</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">March 22, 04:20 PM</span>
+              <span className="text-sm text-gray-500">22/03, 16:20</span>
               <span className="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-full">
-                Rejected
+                Từ chối
               </span>
             </div>
           </div>

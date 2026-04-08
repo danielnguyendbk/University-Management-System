@@ -4,11 +4,11 @@ const exams = [
   {
     id: 1,
     code: "CS301",
-    name: "Data Structures & Algorithms",
-    type: "Final Exam",
-    date: "April 15, 2026",
-    time: "09:00 AM - 11:00 AM",
-    duration: "2 hours",
+    name: "Cấu trúc dữ liệu và giải thuật",
+    type: "Thi cuối kỳ",
+    date: "15/04/2026",
+    time: "09:00 - 11:00",
+    duration: "2 giờ",
     room: "Exam Hall A - Seats 1-50",
     lecturer: "Dr. Emily Smith",
     status: "upcoming"
@@ -16,11 +16,11 @@ const exams = [
   {
     id: 2,
     code: "CS302",
-    name: "Database Management Systems",
-    type: "Final Exam",
-    date: "April 17, 2026",
-    time: "02:00 PM - 04:30 PM",
-    duration: "2.5 hours",
+    name: "Hệ quản trị cơ sở dữ liệu",
+    type: "Thi cuối kỳ",
+    date: "17/04/2026",
+    time: "14:00 - 16:30",
+    duration: "2.5 giờ",
     room: "Exam Hall B - Seats 51-100",
     lecturer: "Prof. Michael Johnson",
     status: "upcoming"
@@ -28,11 +28,11 @@ const exams = [
   {
     id: 3,
     code: "CS303",
-    name: "Web Development",
-    type: "Final Exam",
-    date: "April 19, 2026",
-    time: "10:00 AM - 12:00 PM",
-    duration: "2 hours",
+    name: "Phát triển web",
+    type: "Thi cuối kỳ",
+    date: "19/04/2026",
+    time: "10:00 - 12:00",
+    duration: "2 giờ",
     room: "Exam Hall C - Seats 101-150",
     lecturer: "Dr. Sarah Williams",
     status: "upcoming"
@@ -40,11 +40,11 @@ const exams = [
   {
     id: 4,
     code: "CS304",
-    name: "Machine Learning",
-    type: "Final Exam",
-    date: "April 22, 2026",
-    time: "09:00 AM - 11:30 AM",
-    duration: "2.5 hours",
+    name: "Học máy",
+    type: "Thi cuối kỳ",
+    date: "22/04/2026",
+    time: "09:00 - 11:30",
+    duration: "2.5 giờ",
     room: "Exam Hall A - Seats 1-50",
     lecturer: "Dr. James Brown",
     status: "upcoming"
@@ -52,11 +52,11 @@ const exams = [
   {
     id: 5,
     code: "MATH201",
-    name: "Linear Algebra",
-    type: "Final Exam",
-    date: "April 24, 2026",
-    time: "01:00 PM - 03:00 PM",
-    duration: "2 hours",
+    name: "Đại số tuyến tính",
+    type: "Thi cuối kỳ",
+    date: "24/04/2026",
+    time: "13:00 - 15:00",
+    duration: "2 giờ",
     room: "Exam Hall D - Seats 151-200",
     lecturer: "Dr. Robert Wilson",
     status: "upcoming"
@@ -68,12 +68,12 @@ export function ExamSchedule() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Exam Schedule</h1>
-          <p className="text-gray-600 mt-1">Spring 2026 Final Examinations</p>
+          <h1 className="text-3xl font-semibold text-gray-900">Lịch thi</h1>
+          <p className="text-gray-600 mt-1">Lịch thi cuối kỳ học kỳ Xuân 2026</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
           <Download className="w-4 h-4" />
-          Download Schedule
+          Tải lịch thi
         </button>
       </div>
 
@@ -82,12 +82,12 @@ export function ExamSchedule() {
         <div className="flex gap-3">
           <FileText className="w-6 h-6 text-amber-600 flex-shrink-0" />
           <div>
-            <h3 className="font-semibold text-amber-900 mb-2">Exam Guidelines</h3>
+            <h3 className="font-semibold text-amber-900 mb-2">Quy định thi</h3>
             <ul className="text-sm text-amber-800 space-y-1">
-              <li>• Students must arrive 15 minutes before the exam starts</li>
-              <li>• Valid student ID is required for entry</li>
-              <li>• No electronic devices allowed except approved calculators</li>
-              <li>• Check the seat assignment before the exam date</li>
+              <li>• Sinh viên phải có mặt trước giờ thi 15 phút</li>
+              <li>• Bắt buộc mang theo thẻ sinh viên hợp lệ</li>
+              <li>• Không được mang thiết bị điện tử, trừ máy tính được phép</li>
+              <li>• Kiểm tra sơ đồ chỗ ngồi trước ngày thi</li>
             </ul>
           </div>
         </div>
@@ -117,7 +117,7 @@ export function ExamSchedule() {
                       </span>
                     </div>
                     <h3 className="font-semibold text-gray-900 text-lg">{exam.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">Lecturer: {exam.lecturer}</p>
+                    <p className="text-sm text-gray-600 mt-1">Giảng viên: {exam.lecturer}</p>
                   </div>
                 </div>
 
@@ -126,7 +126,7 @@ export function ExamSchedule() {
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Date</p>
+                      <p className="text-sm text-gray-500">Ngày thi</p>
                       <p className="font-medium text-gray-900">{exam.date}</p>
                     </div>
                   </div>
@@ -134,16 +134,16 @@ export function ExamSchedule() {
                   <div className="flex items-start gap-3">
                     <Clock className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Time</p>
+                      <p className="text-sm text-gray-500">Thời gian</p>
                       <p className="font-medium text-gray-900">{exam.time}</p>
-                      <p className="text-xs text-gray-600">Duration: {exam.duration}</p>
+                      <p className="text-xs text-gray-600">Thời lượng: {exam.duration}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3 md:col-span-2">
                     <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="text-sm text-gray-500">Địa điểm</p>
                       <p className="font-medium text-gray-900">{exam.room}</p>
                     </div>
                   </div>
@@ -152,10 +152,10 @@ export function ExamSchedule() {
 
               {/* Right: Countdown or Status */}
               <div className="md:w-48 flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-600 mb-1">Days Until Exam</p>
+                <p className="text-sm text-gray-600 mb-1">Số ngày còn lại</p>
                 <p className="text-4xl font-bold text-[#1E3A8A] mb-2">23</p>
                 <button className="w-full px-4 py-2 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors text-sm font-medium">
-                  Set Reminder
+                  Đặt nhắc lịch
                 </button>
               </div>
             </div>
@@ -167,12 +167,12 @@ export function ExamSchedule() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="text-center">
           <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="font-semibold text-gray-900 mb-2">View Calendar</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">Xem dạng lịch</h3>
           <p className="text-sm text-gray-600 mb-4">
-            View all your exams in a calendar format
+            Xem toàn bộ lịch thi theo định dạng lịch
           </p>
           <button className="px-6 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700">
-            Open Calendar View
+            Mở lịch chi tiết
           </button>
         </div>
       </div>
@@ -180,16 +180,16 @@ export function ExamSchedule() {
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Exams</p>
+          <p className="text-sm text-gray-500 mb-1">Tổng số môn thi</p>
           <p className="text-3xl font-semibold text-gray-900">{exams.length}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">First Exam</p>
-          <p className="text-2xl font-semibold text-gray-900">April 15</p>
+          <p className="text-sm text-gray-500 mb-1">Môn thi đầu tiên</p>
+          <p className="text-2xl font-semibold text-gray-900">15/04</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Last Exam</p>
-          <p className="text-2xl font-semibold text-gray-900">April 24</p>
+          <p className="text-sm text-gray-500 mb-1">Môn thi cuối cùng</p>
+          <p className="text-2xl font-semibold text-gray-900">24/04</p>
         </div>
       </div>
     </div>

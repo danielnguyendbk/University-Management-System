@@ -4,55 +4,55 @@ import { PageHeader } from "./common/PageHeader";
 const announcements = [
   {
     id: 1,
-    title: "Spring Semester Registration Open",
-    content: "Course registration for Spring 2026 semester is now open. Please register before March 30, 2026 to avoid late fees. Priority registration is available for seniors and honors students.",
-    date: "March 20, 2026",
-    category: "Academic",
+    title: "Mở đăng ký học kỳ Xuân",
+    content: "Đăng ký môn học cho học kỳ Xuân 2026 đã mở. Vui lòng đăng ký trước 30/03/2026 để tránh phí trễ hạn. Sinh viên năm cuối và sinh viên hệ chất lượng cao được ưu tiên đăng ký sớm.",
+    date: "20/03/2026",
+    category: "Học vụ",
     pinned: true,
     important: true
   },
   {
     id: 2,
-    title: "Campus Safety Guidelines Update",
-    content: "New campus safety protocols have been implemented following recent campus security review. All students are required to review the updated guidelines on the portal and attend the mandatory safety orientation session.",
-    date: "March 18, 2026",
-    category: "Safety",
+    title: "Cập nhật hướng dẫn an toàn khuôn viên",
+    content: "Nhà trường đã áp dụng các quy trình an toàn mới sau đợt rà soát gần đây. Tất cả sinh viên cần đọc hướng dẫn cập nhật trên cổng thông tin và tham dự buổi định hướng an toàn bắt buộc.",
+    date: "18/03/2026",
+    category: "An toàn",
     pinned: true,
     important: true
   },
   {
     id: 3,
-    title: "Library Hours Extended During Finals",
-    content: "The university library will extend operating hours during the final examination period. New hours: Monday-Friday 7AM-2AM, Saturday-Sunday 9AM-12AM. Additional study rooms will be available.",
-    date: "March 15, 2026",
-    category: "Facilities",
+    title: "Thư viện mở cửa kéo dài mùa thi",
+    content: "Thư viện trường sẽ kéo dài giờ phục vụ trong giai đoạn thi cuối kỳ. Giờ mới: Thứ Hai-Thứ Sáu 7:00-2:00, Thứ Bảy-Chủ Nhật 9:00-0:00. Sẽ bổ sung thêm phòng tự học.",
+    date: "15/03/2026",
+    category: "Cơ sở vật chất",
     pinned: false,
     important: false
   },
   {
     id: 4,
-    title: "Career Fair - April 2026",
-    content: "Annual career fair will be held on April 15-16, 2026 in the University Hall. Over 100 companies will participate. Register early to secure your spot with top employers. Resume review sessions available March 25-30.",
-    date: "March 10, 2026",
-    category: "Career",
+    title: "Ngày hội việc làm - 04/2026",
+    content: "Ngày hội việc làm thường niên sẽ diễn ra vào 15-16/04/2026 tại hội trường trường. Hơn 100 doanh nghiệp tham gia. Đăng ký sớm để giữ suất phỏng vấn với nhà tuyển dụng hàng đầu. Có phiên góp ý CV từ 25-30/03.",
+    date: "10/03/2026",
+    category: "Nghề nghiệp",
     pinned: false,
     important: true
   },
   {
     id: 5,
-    title: "Student Health Services Update",
-    content: "Student Health Services has expanded hours and added new services including mental health counseling and nutritional consulting. Book appointments through the student portal.",
-    date: "March 8, 2026",
-    category: "Health",
+    title: "Cập nhật dịch vụ y tế sinh viên",
+    content: "Bộ phận y tế sinh viên đã mở rộng giờ làm và bổ sung dịch vụ mới, gồm tư vấn sức khỏe tinh thần và dinh dưỡng. Đặt lịch hẹn qua cổng thông tin sinh viên.",
+    date: "08/03/2026",
+    category: "Sức khỏe",
     pinned: false,
     important: false
   },
   {
     id: 6,
-    title: "Spring Break - Campus Closure",
-    content: "The university campus will be closed during spring break from April 1-7, 2026. Limited services will be available. Emergency contacts remain active 24/7.",
-    date: "March 5, 2026",
-    category: "General",
+    title: "Nghỉ giữa kỳ Xuân - Tạm đóng cửa khuôn viên",
+    content: "Khuôn viên trường tạm đóng trong kỳ nghỉ giữa kỳ từ 01-07/04/2026. Một số dịch vụ thiết yếu vẫn hoạt động hạn chế. Đường dây khẩn cấp trực 24/7.",
+    date: "05/03/2026",
+    category: "Chung",
     pinned: false,
     important: false
   },
@@ -62,30 +62,30 @@ export function Announcements() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <PageHeader
-        title="Announcements"
-        subtitle="Stay updated with university news and important notices"
+        title="Thông báo"
+        subtitle="Cập nhật tin tức nhà trường và các nhắc nhở quan trọng"
       />
 
       {/* Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap gap-2">
           <button className="px-4 py-2 bg-[#1E3A8A] text-white rounded-lg text-sm font-medium">
-            All
+            Tất cả
           </button>
           <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-            Academic
+            Học vụ
           </button>
           <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-            Safety
+            An toàn
           </button>
           <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-            Facilities
+            Cơ sở vật chất
           </button>
           <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-            Career
+            Nghề nghiệp
           </button>
           <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-            Important Only
+            Chỉ quan trọng
           </button>
         </div>
       </div>
@@ -115,11 +115,11 @@ export function Announcements() {
                     <h3 className="font-semibold text-gray-900 text-lg">{announcement.title}</h3>
                   </div>
                   <span className={`px-3 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
-                    announcement.category === "Academic" ? "bg-blue-50 text-blue-700" :
-                    announcement.category === "Safety" ? "bg-red-50 text-red-700" :
-                    announcement.category === "Facilities" ? "bg-green-50 text-green-700" :
-                    announcement.category === "Career" ? "bg-purple-50 text-purple-700" :
-                    announcement.category === "Health" ? "bg-amber-50 text-amber-700" :
+                    announcement.category === "Học vụ" ? "bg-blue-50 text-blue-700" :
+                    announcement.category === "An toàn" ? "bg-red-50 text-red-700" :
+                    announcement.category === "Cơ sở vật chất" ? "bg-green-50 text-green-700" :
+                    announcement.category === "Nghề nghiệp" ? "bg-purple-50 text-purple-700" :
+                    announcement.category === "Sức khỏe" ? "bg-amber-50 text-amber-700" :
                     "bg-gray-50 text-gray-700"
                   }`}>
                     {announcement.category}
@@ -135,7 +135,7 @@ export function Announcements() {
                   </time>
                   {announcement.important && (
                     <span className="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-full">
-                      Important
+                      Quan trọng
                     </span>
                   )}
                 </div>

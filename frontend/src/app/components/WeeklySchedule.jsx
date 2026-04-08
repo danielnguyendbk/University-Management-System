@@ -4,115 +4,115 @@ const timeSlots = [
   "16:00", "16:30", "17:00"
 ];
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
 
 const classes = [
   {
     id: 1,
-    course: "Data Structures",
+    course: "Cấu trúc dữ liệu",
     code: "CS301",
     lecturer: "Dr. Smith",
     room: "A-301",
-    day: "Monday",
+    day: "Thứ 2",
     startTime: "09:00",
     endTime: "10:30",
     color: "bg-blue-100 border-blue-300 text-blue-900"
   },
   {
     id: 2,
-    course: "Database Systems",
+    course: "Hệ cơ sở dữ liệu",
     code: "CS302",
     lecturer: "Prof. Johnson",
     room: "B-205",
-    day: "Tuesday",
+    day: "Thứ 3",
     startTime: "11:00",
     endTime: "12:30",
     color: "bg-green-100 border-green-300 text-green-900"
   },
   {
     id: 3,
-    course: "Data Structures",
+    course: "Cấu trúc dữ liệu",
     code: "CS301",
     lecturer: "Dr. Smith",
     room: "A-301",
-    day: "Wednesday",
+    day: "Thứ 4",
     startTime: "09:00",
     endTime: "10:30",
     color: "bg-blue-100 border-blue-300 text-blue-900"
   },
   {
     id: 4,
-    course: "Database Systems",
+    course: "Hệ cơ sở dữ liệu",
     code: "CS302",
     lecturer: "Prof. Johnson",
     room: "B-205",
-    day: "Thursday",
+    day: "Thứ 5",
     startTime: "11:00",
     endTime: "12:30",
     color: "bg-green-100 border-green-300 text-green-900"
   },
   {
     id: 5,
-    course: "Web Development",
+    course: "Phát triển web",
     code: "CS303",
     lecturer: "Dr. Williams",
     room: "C-104",
-    day: "Monday",
+    day: "Thứ 2",
     startTime: "14:00",
     endTime: "15:30",
     color: "bg-purple-100 border-purple-300 text-purple-900"
   },
   {
     id: 6,
-    course: "Web Development",
+    course: "Phát triển web",
     code: "CS303",
     lecturer: "Dr. Williams",
     room: "C-104",
-    day: "Wednesday",
+    day: "Thứ 4",
     startTime: "14:00",
     endTime: "15:30",
     color: "bg-purple-100 border-purple-300 text-purple-900"
   },
   {
     id: 7,
-    course: "Machine Learning",
+    course: "Học máy",
     code: "CS304",
     lecturer: "Dr. Brown",
     room: "A-205",
-    day: "Tuesday",
+    day: "Thứ 3",
     startTime: "09:00",
     endTime: "10:30",
     color: "bg-amber-100 border-amber-300 text-amber-900"
   },
   {
     id: 8,
-    course: "Machine Learning",
+    course: "Học máy",
     code: "CS304",
     lecturer: "Dr. Brown",
     room: "A-205",
-    day: "Thursday",
+    day: "Thứ 5",
     startTime: "09:00",
     endTime: "10:30",
     color: "bg-amber-100 border-amber-300 text-amber-900"
   },
   {
     id: 9,
-    course: "Linear Algebra",
+    course: "Đại số tuyến tính",
     code: "MATH201",
     lecturer: "Dr. Wilson",
     room: "D-101",
-    day: "Monday",
+    day: "Thứ 2",
     startTime: "10:30",
     endTime: "12:00",
     color: "bg-rose-100 border-rose-300 text-rose-900"
   },
   {
     id: 10,
-    course: "Linear Algebra",
+    course: "Đại số tuyến tính",
     code: "MATH201",
     lecturer: "Dr. Wilson",
     room: "D-101",
-    day: "Wednesday",
+    day: "Thứ 4",
     startTime: "10:30",
     endTime: "12:00",
     color: "bg-rose-100 border-rose-300 text-rose-900"
@@ -144,37 +144,37 @@ export function WeeklySchedule() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Weekly Schedule</h1>
-          <p className="text-gray-600 mt-1">Spring 2026 Semester - Week of March 23</p>
+          <h1 className="text-3xl font-semibold text-gray-900">Thời khóa biểu tuần</h1>
+          <p className="text-gray-600 mt-1">Học kỳ Xuân 2026 - Tuần bắt đầu từ 23/03</p>
         </div>
         <button className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700">
-          Print Schedule
+          In thời khóa biểu
         </button>
       </div>
 
       {/* Legend */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <p className="text-sm font-medium text-gray-700 mb-3">Course Legend:</p>
+        <p className="text-sm font-medium text-gray-700 mb-3">Chú thích môn học:</p>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-            <span className="text-sm text-gray-700">CS301 - Data Structures</span>
+            <span className="text-sm text-gray-700">CS301 - Cấu trúc dữ liệu</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-100 border border-green-300 rounded"></div>
-            <span className="text-sm text-gray-700">CS302 - Database Systems</span>
+            <span className="text-sm text-gray-700">CS302 - Hệ cơ sở dữ liệu</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-purple-100 border border-purple-300 rounded"></div>
-            <span className="text-sm text-gray-700">CS303 - Web Development</span>
+            <span className="text-sm text-gray-700">CS303 - Phát triển web</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-amber-100 border border-amber-300 rounded"></div>
-            <span className="text-sm text-gray-700">CS304 - Machine Learning</span>
+            <span className="text-sm text-gray-700">CS304 - Học máy</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-rose-100 border border-rose-300 rounded"></div>
-            <span className="text-sm text-gray-700">MATH201 - Linear Algebra</span>
+            <span className="text-sm text-gray-700">MATH201 - Đại số tuyến tính</span>
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export function WeeklySchedule() {
             <thead>
               <tr className="bg-gray-50">
                 <th className="border border-gray-200 px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
-                  Time
+                  Giờ
                 </th>
                 {days.map((day) => (
                   <th
@@ -222,7 +222,7 @@ export function WeeklySchedule() {
                           <div className="space-y-1">
                             <p className="font-semibold text-sm">{cls.code}</p>
                             <p className="text-xs font-medium">{cls.course}</p>
-                            <p className="text-xs opacity-80">Room: {cls.room}</p>
+                            <p className="text-xs opacity-80">Phòng: {cls.room}</p>
                             <p className="text-xs opacity-80">{cls.lecturer}</p>
                             <p className="text-xs opacity-70">
                               {cls.startTime} - {cls.endTime}
@@ -249,15 +249,15 @@ export function WeeklySchedule() {
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Classes This Week</p>
+          <p className="text-sm text-gray-500 mb-1">Tổng số buổi học tuần này</p>
           <p className="text-2xl font-semibold text-gray-900">15</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Total Hours</p>
+          <p className="text-sm text-gray-500 mb-1">Tổng số giờ</p>
           <p className="text-2xl font-semibold text-gray-900">22.5</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500 mb-1">Enrolled Courses</p>
+          <p className="text-sm text-gray-500 mb-1">Môn đang học</p>
           <p className="text-2xl font-semibold text-gray-900">5</p>
         </div>
       </div>

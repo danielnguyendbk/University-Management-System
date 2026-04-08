@@ -1,53 +1,53 @@
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { Calendar, AlertCircle } from "lucide-react";
 
 const announcements = [
   {
     id: 1,
-    title: "Spring Semester Registration Open",
-    description: "Course registration for Spring 2026 semester is now open. Please register before March 30, 2026.",
-    date: "March 20, 2026"
+    title: "Mở đăng ký học kỳ Xuân",
+    description: "Đăng ký môn học cho học kỳ Xuân 2026 đã mở. Vui lòng đăng ký trước ngày 30/03/2026.",
+    date: "20/03/2026"
   },
   {
     id: 2,
-    title: "Campus Safety Guidelines Update",
-    description: "New campus safety protocols have been implemented. All students are required to review the updated guidelines.",
-    date: "March 18, 2026"
+    title: "Cập nhật hướng dẫn an toàn trong khuôn viên",
+    description: "Các quy trình an toàn mới đã được áp dụng. Tất cả sinh viên cần xem lại hướng dẫn đã cập nhật.",
+    date: "18/03/2026"
   },
   {
     id: 3,
-    title: "Library Hours Extended During Finals",
-    description: "The university library will extend operating hours during the final examination period.",
-    date: "March 15, 2026"
+    title: "Thư viện mở cửa kéo dài trong mùa thi",
+    description: "Thư viện trường sẽ kéo dài thời gian hoạt động trong thời gian thi cuối kỳ.",
+    date: "15/03/2026"
   },
   {
     id: 4,
-    title: "Career Fair - April 2026",
-    description: "Annual career fair will be held on April 15-16. Register early to secure your spot with top employers.",
-    date: "March 10, 2026"
+    title: "Ngày hội việc làm - Tháng 4/2026",
+    description: "Ngày hội việc làm thường niên sẽ diễn ra vào 15-16/04. Đăng ký sớm để gặp các nhà tuyển dụng hàng đầu.",
+    date: "10/03/2026"
   }
 ];
 
 const tuitionNotices = [
   {
     id: 1,
-    title: "Tuition Fee - Spring 2026",
+    title: "Học phí - Học kỳ Xuân 2026",
     amount: "$4,500",
-    dueDate: "March 25, 2026",
+    dueDate: "25/03/2026",
     status: "overdue"
   },
   {
     id: 2,
-    title: "Lab Fee - Computer Science",
+    title: "Phí thực hành - Công nghệ thông tin",
     amount: "$200",
-    dueDate: "March 30, 2026",
+    dueDate: "30/03/2026",
     status: "pending"
   },
   {
     id: 3,
-    title: "Student Activity Fee",
+    title: "Phí hoạt động sinh viên",
     amount: "$150",
-    dueDate: "April 5, 2026",
+    dueDate: "05/04/2026",
     status: "pending"
   }
 ];
@@ -70,15 +70,15 @@ export function LoginPage() {
               <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-semibold text-gray-900">University Portal</h1>
-              <p className="text-xs text-gray-500">Student Information System</p>
+              <h1 className="font-semibold text-gray-900">Cổng thông tin sinh viên</h1>
+              <p className="text-xs text-gray-500">Hệ thống thông tin sinh viên</p>
             </div>
           </div>
           <button
             onClick={handleLogin}
             className="px-6 py-2.5 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors font-medium"
           >
-            Student Login
+            Đăng nhập sinh viên
           </button>
         </div>
       </header>
@@ -88,7 +88,7 @@ export function LoginPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* University Announcements - Takes 2 columns */}
           <div className="lg:col-span-2">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">University Announcements</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Thông báo từ nhà trường</h2>
             <div className="space-y-4">
               {announcements.map((announcement) => (
                 <div
@@ -102,7 +102,7 @@ export function LoginPage() {
                       <div className="flex items-center gap-4">
                         <span className="text-xs text-gray-500">{announcement.date}</span>
                         <button className="text-sm text-[#1E3A8A] hover:underline font-medium">
-                          View details →
+                          Xem chi tiết →
                         </button>
                       </div>
                     </div>
@@ -114,7 +114,7 @@ export function LoginPage() {
 
           {/* Tuition Fee Notices - Takes 1 column */}
           <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Tuition Fee Notices</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">Thông báo học phí</h2>
             <div className="space-y-4">
               {tuitionNotices.map((notice) => (
                 <div
@@ -131,14 +131,14 @@ export function LoginPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className="text-xs text-gray-600">Due: {notice.dueDate}</span>
+                    <span className="text-xs text-gray-600">Hạn: {notice.dueDate}</span>
                     {notice.status === "overdue" ? (
                       <span className="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-full">
-                        Overdue
+                        Quá hạn
                       </span>
                     ) : (
                       <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-medium rounded-full">
-                        Pending
+                        Chờ thanh toán
                       </span>
                     )}
                   </div>
@@ -146,8 +146,8 @@ export function LoginPage() {
               ))}
               
               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-sm text-blue-900 font-medium mb-1">Need to pay fees?</p>
-                <p className="text-xs text-blue-700">Login to access payment options and view detailed invoices.</p>
+                <p className="text-sm text-blue-900 font-medium mb-1">Cần thanh toán học phí?</p>
+                <p className="text-xs text-blue-700">Đăng nhập để sử dụng các phương thức thanh toán và xem hóa đơn chi tiết.</p>
               </div>
             </div>
           </div>

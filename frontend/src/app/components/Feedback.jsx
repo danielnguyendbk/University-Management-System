@@ -19,16 +19,16 @@ export function Feedback() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Feedback</h1>
-        <p className="text-gray-600 mt-1">Share your thoughts and suggestions with us</p>
+        <h1 className="text-3xl font-semibold text-gray-900">Phản hồi</h1>
+        <p className="text-gray-600 mt-1">Chia sẻ ý kiến và đề xuất của bạn với chúng tôi</p>
       </div>
 
       {submitted && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-green-600" />
           <div>
-            <p className="font-medium text-green-900">Thank you for your feedback!</p>
-            <p className="text-sm text-green-700">We appreciate you taking the time to help us improve.</p>
+            <p className="font-medium text-green-900">Cảm ơn bạn đã gửi phản hồi!</p>
+            <p className="text-sm text-green-700">Chúng tôi trân trọng thời gian bạn đóng góp để cải thiện hệ thống.</p>
           </div>
         </div>
       )}
@@ -39,7 +39,7 @@ export function Feedback() {
           {/* Category Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Feedback Category *
+              Danh mục phản hồi *
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <button
@@ -52,7 +52,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "general" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">General</p>
+                <p className="font-medium text-gray-900 text-sm">Chung</p>
               </button>
               <button
                 type="button"
@@ -64,7 +64,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "courses" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">Courses</p>
+                <p className="font-medium text-gray-900 text-sm">Môn học</p>
               </button>
               <button
                 type="button"
@@ -76,7 +76,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "facilities" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">Facilities</p>
+                <p className="font-medium text-gray-900 text-sm">Cơ sở vật chất</p>
               </button>
               <button
                 type="button"
@@ -88,7 +88,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "portal" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">Student Portal</p>
+                <p className="font-medium text-gray-900 text-sm">Cổng sinh viên</p>
               </button>
               <button
                 type="button"
@@ -100,7 +100,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "services" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">Services</p>
+                <p className="font-medium text-gray-900 text-sm">Dịch vụ</p>
               </button>
               <button
                 type="button"
@@ -112,7 +112,7 @@ export function Feedback() {
                 }`}
               >
                 <MessageSquare className={`w-5 h-5 mb-1 ${category === "other" ? "text-[#1E3A8A]" : "text-gray-400"}`} />
-                <p className="font-medium text-gray-900 text-sm">Other</p>
+                <p className="font-medium text-gray-900 text-sm">Khác</p>
               </button>
             </div>
           </div>
@@ -120,7 +120,7 @@ export function Feedback() {
           {/* Rating */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Overall Rating *
+              Đánh giá tổng quan *
             </label>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -143,11 +143,11 @@ export function Feedback() {
               ))}
               {rating > 0 && (
                 <span className="ml-3 text-gray-600 self-center">
-                  {rating === 1 && "Poor"}
-                  {rating === 2 && "Fair"}
-                  {rating === 3 && "Good"}
-                  {rating === 4 && "Very Good"}
-                  {rating === 5 && "Excellent"}
+                  {rating === 1 && "Kém"}
+                  {rating === 2 && "Trung bình"}
+                  {rating === 3 && "Khá"}
+                  {rating === 4 && "Tốt"}
+                  {rating === 5 && "Xuất sắc"}
                 </span>
               )}
             </div>
@@ -156,12 +156,12 @@ export function Feedback() {
           {/* Subject */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Subject *
+              Tiêu đề *
             </label>
             <input
               type="text"
               required
-              placeholder="Brief summary of your feedback"
+              placeholder="Tóm tắt ngắn gọn phản hồi của bạn"
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A]"
             />
           </div>
@@ -169,12 +169,12 @@ export function Feedback() {
           {/* Message */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your Feedback *
+              Nội dung phản hồi *
             </label>
             <textarea
               required
               rows={8}
-              placeholder="Please share your detailed feedback, suggestions, or concerns..."
+              placeholder="Vui lòng chia sẻ chi tiết góp ý, đề xuất hoặc vướng mắc của bạn..."
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A] resize-none"
             ></textarea>
           </div>
@@ -187,7 +187,7 @@ export function Feedback() {
               className="w-4 h-4 text-[#1E3A8A] border-gray-300 rounded focus:ring-[#1E3A8A]"
             />
             <label htmlFor="anonymous" className="text-sm text-gray-700">
-              Submit anonymously
+              Gửi ẩn danh
             </label>
           </div>
 
@@ -198,13 +198,13 @@ export function Feedback() {
               className="flex-1 px-6 py-3 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Send className="w-4 h-4" />
-              Submit Feedback
+              Gửi phản hồi
             </button>
             <button
               type="button"
               className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
             >
-              Cancel
+              Hủy
             </button>
           </div>
         </form>
@@ -213,7 +213,7 @@ export function Feedback() {
       {/* Recent Feedback */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Your Recent Feedback</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Phản hồi gần đây của bạn</h2>
         </div>
         <div className="divide-y divide-gray-200">
           <div className="p-6">
@@ -221,7 +221,7 @@ export function Feedback() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                    Student Portal
+                    Cổng sinh viên
                   </span>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -229,14 +229,14 @@ export function Feedback() {
                     ))}
                   </div>
                 </div>
-                <p className="font-medium text-gray-900 mb-1">Great new interface!</p>
+                <p className="font-medium text-gray-900 mb-1">Giao diện mới rất tốt!</p>
                 <p className="text-sm text-gray-600 mb-2">
-                  The new portal design is much more user-friendly. Love the clean layout and easy navigation.
+                  Thiết kế cổng thông tin mới thân thiện hơn nhiều. Bố cục rõ ràng và điều hướng rất dễ dùng.
                 </p>
-                <p className="text-xs text-gray-500">Submitted on March 20, 2026</p>
+                <p className="text-xs text-gray-500">Đã gửi ngày 20/03/2026</p>
               </div>
               <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                Reviewed
+                Đã xem xét
               </span>
             </div>
           </div>
@@ -246,7 +246,7 @@ export function Feedback() {
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full">
-                    Facilities
+                    Cơ sở vật chất
                   </span>
                   <div className="flex gap-0.5">
                     {[1, 2, 3, 4].map((star) => (
@@ -255,14 +255,14 @@ export function Feedback() {
                     <Star className="w-4 h-4 text-gray-300" />
                   </div>
                 </div>
-                <p className="font-medium text-gray-900 mb-1">Library could use more study rooms</p>
+                <p className="font-medium text-gray-900 mb-1">Thư viện cần thêm phòng tự học</p>
                 <p className="text-sm text-gray-600 mb-2">
-                  The library is great but during finals week it's hard to find available study rooms.
+                  Thư viện rất tốt nhưng vào tuần thi rất khó tìm phòng tự học còn trống.
                 </p>
-                <p className="text-xs text-gray-500">Submitted on March 10, 2026</p>
+                <p className="text-xs text-gray-500">Đã gửi ngày 10/03/2026</p>
               </div>
               <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full">
-                Reviewed
+                Đã xem xét
               </span>
             </div>
           </div>
@@ -271,10 +271,10 @@ export function Feedback() {
 
       {/* Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">Your Voice Matters</h3>
+        <h3 className="font-semibold text-blue-900 mb-2">Ý kiến của bạn rất quan trọng</h3>
         <p className="text-sm text-blue-800">
-          We review all feedback carefully. Your suggestions help us improve the university experience for everyone. 
-          You can expect a response within 5-7 business days for non-anonymous submissions.
+          Chúng tôi xem xét cẩn thận mọi phản hồi. Góp ý của bạn giúp cải thiện trải nghiệm học tập cho toàn bộ sinh viên. 
+          Với phản hồi không ẩn danh, bạn sẽ nhận được phản hồi trong khoảng 5-7 ngày làm việc.
         </p>
       </div>
     </div>

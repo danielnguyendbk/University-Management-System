@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Bell,
@@ -20,18 +20,18 @@ import {
 import { useState } from "react";
 
 const navigation = [
-  { name: "Dashboard", name_vi: "Trang chủ", href: "/portal", icon: LayoutDashboard },
-  { name: "Announcements", name_vi: "Thông báo từ ban quản trị", href: "/portal/announcements", icon: Bell },
-  { name: "Curriculum", name_vi: "Chương trình đào tạo", href: "/portal/curriculum", icon: BookOpen },
-  { name: "Course Registration", name_vi: "Đăng ký môn học", href: "/portal/course-registration", icon: ClipboardList },
-  { name: "Weekly Schedule", name_vi: "Thời khóa biểu dạng tuần", href: "/portal/schedule", icon: Calendar },
-  { name: "Exam Schedule", name_vi: "Lịch thi", href: "/portal/exam-schedule", icon: CalendarCheck },
-  { name: "Grades", name_vi: "Xem điểm", href: "/portal/grades", icon: GraduationCap },
-  { name: "Tuition & Payment", name_vi: "Học phí & Thanh toán", href: "/portal/tuition", icon: DollarSign },
-  { name: "E-Invoice", name_vi: "Hóa đơn điện tử", href: "/portal/e-invoice", icon: FileText },
-  { name: "Submit Request", name_vi: "Gửi đơn xin nghỉ / phúc khảo", href: "/portal/submit-request", icon: Send },
-  { name: "Request Approval", name_vi: "Dành cho giảng viên", href: "/portal/request-approval", icon: CheckSquare },
-  { name: "Feedback", name_vi: "Gửi ý kiến", href: "/portal/feedback", icon: MessageSquare },
+  { name: "Trang chủ", name_vi: "Tổng quan hệ thống", href: "/portal", icon: LayoutDashboard },
+  { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", href: "/portal/announcements", icon: Bell },
+  { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", href: "/portal/curriculum", icon: BookOpen },
+  { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", href: "/portal/course-registration", icon: ClipboardList },
+  { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", href: "/portal/schedule", icon: Calendar },
+  { name: "Lịch thi", name_vi: "Kế hoạch thi cử", href: "/portal/exam-schedule", icon: CalendarCheck },
+  { name: "Điểm số", name_vi: "Kết quả học tập", href: "/portal/grades", icon: GraduationCap },
+  { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", href: "/portal/tuition", icon: DollarSign },
+  { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", href: "/portal/e-invoice", icon: FileText },
+  { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", href: "/portal/submit-request", icon: Send },
+  { name: "Duyệt yêu cầu", name_vi: "Dành cho giảng viên", href: "/portal/request-approval", icon: CheckSquare },
+  { name: "Phản hồi", name_vi: "Đóng góp ý kiến", href: "/portal/feedback", icon: MessageSquare },
 ];
 
 export function Root() {
@@ -55,8 +55,8 @@ export function Root() {
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-semibold text-gray-900">University Portal</h1>
-                <p className="text-xs text-gray-500">Student Dashboard</p>
+                <h1 className="font-semibold text-gray-900">Cổng thông tin sinh viên</h1>
+                <p className="text-xs text-gray-500">Bảng điều khiển sinh viên</p>
               </div>
             </div>
           </div>
@@ -67,7 +67,7 @@ export function Root() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search courses, announcements..."
+                placeholder="Tìm môn học, thông báo..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20 focus:border-[#1E3A8A]"
               />
             </div>

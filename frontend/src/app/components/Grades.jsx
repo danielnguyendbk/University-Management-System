@@ -2,31 +2,31 @@ import { TrendingUp, Award, BookOpen } from "lucide-react";
 
 const semesters = [
   {
-    name: "Fall 2025",
+    name: "Học kỳ Thu 2025",
     gpa: 3.85,
     courses: [
-      { code: "CS201", name: "Algorithms", credits: 4, grade: "A", points: 4.0 },
-      { code: "CS202", name: "Operating Systems", credits: 3, grade: "A-", points: 3.7 },
-      { code: "MATH301", name: "Discrete Mathematics", credits: 3, grade: "A", points: 4.0 },
-      { code: "ENG201", name: "Technical Writing", credits: 2, grade: "B+", points: 3.3 },
+      { code: "CS201", name: "Giải thuật", credits: 4, grade: "A", points: 4.0 },
+      { code: "CS202", name: "Hệ điều hành", credits: 3, grade: "A-", points: 3.7 },
+      { code: "MATH301", name: "Toán rời rạc", credits: 3, grade: "A", points: 4.0 },
+      { code: "ENG201", name: "Viết kỹ thuật", credits: 2, grade: "B+", points: 3.3 },
     ]
   },
   {
-    name: "Summer 2025",
+    name: "Học kỳ Hè 2025",
     gpa: 3.65,
     courses: [
-      { code: "CS250", name: "Software Testing", credits: 3, grade: "A-", points: 3.7 },
-      { code: "BUS101", name: "Business Fundamentals", credits: 2, grade: "B+", points: 3.3 },
+      { code: "CS250", name: "Kiểm thử phần mềm", credits: 3, grade: "A-", points: 3.7 },
+      { code: "BUS101", name: "Nền tảng kinh doanh", credits: 2, grade: "B+", points: 3.3 },
     ]
   },
   {
-    name: "Spring 2025",
+    name: "Học kỳ Xuân 2025",
     gpa: 3.75,
     courses: [
-      { code: "CS301", name: "Data Structures", credits: 3, grade: "A", points: 4.0 },
-      { code: "CS302", name: "Database Systems", credits: 4, grade: "A-", points: 3.7 },
-      { code: "CS303", name: "Web Development", credits: 3, grade: "B+", points: 3.3 },
-      { code: "MATH201", name: "Linear Algebra", credits: 3, grade: "A", points: 4.0 },
+      { code: "CS301", name: "Cấu trúc dữ liệu", credits: 3, grade: "A", points: 4.0 },
+      { code: "CS302", name: "Hệ cơ sở dữ liệu", credits: 4, grade: "A-", points: 3.7 },
+      { code: "CS303", name: "Phát triển web", credits: 3, grade: "B+", points: 3.3 },
+      { code: "MATH201", name: "Đại số tuyến tính", credits: 3, grade: "A", points: 4.0 },
     ]
   },
 ];
@@ -49,37 +49,37 @@ export function Grades() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Academic Performance</h1>
-        <p className="text-gray-600 mt-1">View your grades and GPA</p>
+        <h1 className="text-3xl font-semibold text-gray-900">Kết quả học tập</h1>
+        <p className="text-gray-600 mt-1">Xem điểm và GPA của bạn</p>
       </div>
 
       {/* GPA Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-[#1E3A8A] to-[#2563eb] rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-blue-100">Cumulative GPA</p>
+            <p className="text-blue-100">GPA tích lũy</p>
             <Award className="w-6 h-6 text-blue-200" />
           </div>
           <p className="text-5xl font-bold mb-1">{cumulativeGPA.toFixed(2)}</p>
-          <p className="text-sm text-blue-100">Out of 4.0</p>
+          <p className="text-sm text-blue-100">Thang điểm 4.0</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Total Credits Earned</p>
+            <p className="text-sm text-gray-500">Tổng tín chỉ tích lũy</p>
             <BookOpen className="w-5 h-5 text-gray-400" />
           </div>
           <p className="text-3xl font-semibold text-gray-900">{totalCredits}</p>
-          <p className="text-sm text-gray-600 mt-1">Credits completed</p>
+          <p className="text-sm text-gray-600 mt-1">Tín chỉ đã hoàn thành</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Academic Standing</p>
+            <p className="text-sm text-gray-500">Xếp loại học tập</p>
             <TrendingUp className="w-5 h-5 text-gray-400" />
           </div>
-          <p className="text-2xl font-semibold text-green-600">Dean's List</p>
-          <p className="text-sm text-gray-600 mt-1">Excellent performance</p>
+          <p className="text-2xl font-semibold text-green-600">Danh sách xuất sắc</p>
+          <p className="text-sm text-gray-600 mt-1">Kết quả học tập rất tốt</p>
         </div>
       </div>
 
@@ -91,7 +91,7 @@ export function Grades() {
               <h2 className="text-lg font-semibold text-gray-900">{semester.name}</h2>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Semester GPA</p>
+                  <p className="text-sm text-gray-500">GPA học kỳ</p>
                   <p className="text-xl font-bold text-[#1E3A8A]">{semester.gpa.toFixed(2)}</p>
                 </div>
               </div>
@@ -103,19 +103,19 @@ export function Grades() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Course Code
+                    Mã môn
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Course Name
+                    Tên môn
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Credits
+                    Tín chỉ
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Grade
+                    Điểm chữ
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Points
+                    Điểm hệ 4
                   </th>
                 </tr>
               </thead>
@@ -147,7 +147,7 @@ export function Grades() {
 
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Total Credits</span>
+              <span className="text-sm font-medium text-gray-700">Tổng tín chỉ</span>
               <span className="font-semibold text-gray-900">
                 {semester.courses.reduce((sum, c) => sum + c.credits, 0)}
               </span>
@@ -158,7 +158,7 @@ export function Grades() {
 
       {/* Grade Scale */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Grading Scale</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Thang điểm</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
             <p className="font-semibold text-green-900">A (4.0)</p>
