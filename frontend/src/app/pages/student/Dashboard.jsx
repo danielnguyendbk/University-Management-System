@@ -1,6 +1,6 @@
 import { BookOpen, TrendingUp, DollarSign, Clock, AlertCircle } from "lucide-react";
-import { PageHeader } from "./common/PageHeader";
-import { StatCard } from "./common/StatCard";
+import { PageHeader } from "../../components/common/PageHeader";
+import { StatCard } from "../../components/common/StatCard";
 
 const upcomingClasses = [
   { id: 1, course: "Cấu trúc dữ liệu và giải thuật", time: "09:00", room: "A-301", lecturer: "TS. Smith" },
