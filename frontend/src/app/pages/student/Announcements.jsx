@@ -1,5 +1,5 @@
 import { Bell, Pin, Calendar } from "lucide-react";
-import { PageHeader } from "./common/PageHeader";
+import { PageHeader } from "../../components/common/PageHeader";
 
 const announcements = [
   {
