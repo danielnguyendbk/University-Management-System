@@ -1,4 +1,10 @@
 package com.ptit.studentportal.timetable.dto.request;
 
-public class GenerateClassSessionsRequest {
+import jakarta.validation.constraints.NotNull;
+
+public record GenerateClassSessionsRequest(
+        @NotNull Long semesterId,
+        Long scheduleId,
+        Boolean overwriteExisting
+) {
 }

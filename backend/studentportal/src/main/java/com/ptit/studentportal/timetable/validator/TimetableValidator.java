@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.validator;
+package com.ptit.studentportal.timetable.validator;
 
 import org.springframework.stereotype.Component;
 
