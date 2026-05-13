@@ -17,4 +17,3 @@ public interface CalendarBlockRepository extends JpaRepository<AcademicCalendarB
 			LocalDate endDate
 	);
 }
-

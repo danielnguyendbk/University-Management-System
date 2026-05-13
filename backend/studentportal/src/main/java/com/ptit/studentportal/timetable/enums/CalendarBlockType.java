@@ -6,4 +6,3 @@ public enum CalendarBlockType {
 	EXAM_WEEK,
 	EVENT
 }
-

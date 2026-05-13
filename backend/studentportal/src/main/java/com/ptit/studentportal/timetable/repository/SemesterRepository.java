@@ -6,4 +6,3 @@ import com.ptit.studentportal.timetable.entity.Semester;
 
 public interface SemesterRepository extends JpaRepository<Semester, Long> {
 }
-

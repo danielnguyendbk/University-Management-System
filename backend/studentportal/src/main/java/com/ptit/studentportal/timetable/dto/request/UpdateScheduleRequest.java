@@ -21,4 +21,3 @@ public record UpdateScheduleRequest(
 		String status
 ) {
 }
-

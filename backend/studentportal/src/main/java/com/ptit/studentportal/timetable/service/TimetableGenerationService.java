@@ -6,4 +6,3 @@ public interface TimetableGenerationService {
 
 	GenerateTimetableResponse generateForSemester(Long semesterId);
 }
-

@@ -6,4 +6,3 @@ import com.ptit.studentportal.timetable.entity.TimeSlot;
 
 public interface TimeSlotRepository extends JpaRepository<TimeSlot, Integer> {
 }
-

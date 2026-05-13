@@ -34,8 +34,8 @@ public class Room {
 	@Column(name = "room_code", nullable = false, unique = true, length = 20)
 	private String roomCode;
 
-	@Column(name = "building", length = 100)
-	private String building;
+	@Column(name = "building_id")
+	private Long buildingId;
 
 	@Column(name = "room_type", length = 20)
 	private String roomType;

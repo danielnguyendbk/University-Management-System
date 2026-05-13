@@ -15,4 +15,3 @@ public interface CalendarBlockService {
 
 	void delete(Long blockId);
 }
-

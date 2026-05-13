@@ -12,4 +12,3 @@ public record BuildingTimetableResponse(
 		List<RoomTimetableResponse> rooms
 ) {
 }
-

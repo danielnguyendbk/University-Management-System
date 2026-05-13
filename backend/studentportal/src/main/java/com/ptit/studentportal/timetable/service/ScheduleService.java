@@ -17,4 +17,3 @@ public interface ScheduleService {
 
 	void deleteSchedule(Long scheduleId);
 }
-

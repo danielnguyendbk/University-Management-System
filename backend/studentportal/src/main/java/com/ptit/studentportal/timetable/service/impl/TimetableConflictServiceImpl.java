@@ -69,4 +69,3 @@ public class TimetableConflictServiceImpl implements TimetableConflictService {
 		}
 	}
 }
-

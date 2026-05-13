@@ -6,4 +6,3 @@ import com.ptit.studentportal.timetable.entity.Building;
 
 public interface BuildingRepository extends JpaRepository<Building, Long> {
 }
-
