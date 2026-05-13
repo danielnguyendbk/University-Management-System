@@ -52,4 +52,13 @@ public class TimetableValidator {
             throw new ScheduleConflictException("endTime must be after startTime");
         }
     }
+    public void validateSlotRange(Integer slotStart, Integer slotEnd) {
+        if (slotStart == null || slotEnd == null) {
+            throw new IllegalArgumentException("slotStart and slotEnd must not be null");
+        }
+
+        if (slotEnd < slotStart) {
+            throw new ScheduleConflictException("slotEnd must be greater than or equal to slotStart");
+        }
+    }
 }

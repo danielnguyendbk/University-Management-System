@@ -7,7 +7,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.ptit.studentportal.timetable.enums.SessionType;
-import com.ptit.studentportal.timetable.enums.TimetableStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -77,9 +76,8 @@ public class Schedule {
     @Column(name = "note", length = 255)
     private String note;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20)
-    private TimetableStatus status;
+    private String status;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

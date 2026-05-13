@@ -22,6 +22,7 @@ public record CreateScheduleRequest(
 		@NotNull LocalTime endTime,
 		SessionType sessionType,
 		Integer practiceGroupNo,
-		String note
+		String note,
+		String status
 ) {
 }
