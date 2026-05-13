@@ -100,7 +100,7 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 					}
 
 					// Lookup entities
-					Optional<Semester> semester = semesterRepository.findByAcademicCode(importRow.semesterCode);
+					Optional<Semester> semester = semesterRepository.findBySemesterId(importRow.semesterCode);
 					if (semester.isEmpty()) {
 						failedRows++;
 						errors.add(TimetableImportError.builder()

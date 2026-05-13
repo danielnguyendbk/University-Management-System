@@ -7,5 +7,5 @@ import com.ptit.studentportal.timetable.entity.Semester;
 import java.util.Optional;
 
 public interface SemesterRepository extends JpaRepository<Semester, Long> {
-    Optional<Semester> findByAcademicCode(String academicCode);
+    Optional<Semester> findBySemesterId(String semester_id);
 }

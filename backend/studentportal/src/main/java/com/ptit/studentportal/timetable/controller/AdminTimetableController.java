@@ -16,12 +16,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ptit.studentportal.commom.response.ApiResponse;
-import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.GenerateClassSessionsRequest;
 import com.ptit.studentportal.timetable.dto.request.UpdateClassSessionRequest;
 import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
 import com.ptit.studentportal.timetable.entity.ClassSession;
-import com.ptit.studentportal.timetable.entity.Schedule;
 import com.ptit.studentportal.timetable.service.TimetableCommandService;
 import com.ptit.studentportal.timetable.service.TimetableQueryService;
 
@@ -49,13 +47,6 @@ public class AdminTimetableController {
 	) {
 		List<TimetableItemResponse> response = timetableQueryService.getAdminTimetable(fromDate, toDate);
 		return ResponseEntity.ok(ApiResponse.success("Admin timetable loaded", response));
-	}
-
-	@PostMapping("/schedules")
-	public ResponseEntity<ApiResponse<Schedule>> createSchedule(@Valid @RequestBody CreateScheduleRequest request) {
-		Schedule response = timetableCommandService.createSchedule(request);
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(ApiResponse.success("Schedule created", response));
 	}
 
 	@PostMapping("/class-sessions/generate")

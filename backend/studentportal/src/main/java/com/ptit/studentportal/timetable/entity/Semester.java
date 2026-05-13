@@ -40,7 +40,7 @@ public class Semester {
 	private String semesterName;
 
 	@Column(name = "academic_year", nullable = false, length = 20)
-	private String academicYear;
+	private String aYear;
 
 	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
