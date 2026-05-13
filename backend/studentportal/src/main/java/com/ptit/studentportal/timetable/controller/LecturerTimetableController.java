@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.controller;
+package com.ptit.studentportal.timetable.controller;
 
 import java.time.LocalDate;
 import java.util.List;

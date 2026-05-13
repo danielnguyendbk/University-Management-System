@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.dto.request;
+package com.ptit.studentportal.timetable.dto.request;
 
 import java.time.LocalDate;
 

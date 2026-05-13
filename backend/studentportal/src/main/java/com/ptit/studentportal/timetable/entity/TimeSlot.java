@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.entity;
+package com.ptit.studentportal.timetable.entity;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;

@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.service;
+package com.ptit.studentportal.timetable.service;
 
 import org.springframework.web.multipart.MultipartFile;
 

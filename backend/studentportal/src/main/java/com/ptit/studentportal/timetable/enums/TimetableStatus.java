@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.enums;
+package com.ptit.studentportal.timetable.enums;
 
 public enum TimetableStatus {
 	DRAFT,

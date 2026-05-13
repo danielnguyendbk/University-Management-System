@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.service;
+package com.ptit.studentportal.timetable.service;
 
 import com.ptit.studentportal.timetable.dto.response.GenerateTimetableResponse;
 

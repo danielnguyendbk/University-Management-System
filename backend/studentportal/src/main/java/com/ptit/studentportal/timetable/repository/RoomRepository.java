@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.repository;
+package com.ptit.studentportal.timetable.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.service.impl;
+package com.ptit.studentportal.timetable.service.impl;
 
 import java.time.LocalTime;
 import java.util.List;

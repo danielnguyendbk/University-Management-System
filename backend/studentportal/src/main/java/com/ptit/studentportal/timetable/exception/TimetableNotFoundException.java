@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.exception;
+package com.ptit.studentportal.timetable.exception;
 
 public class TimetableNotFoundException extends RuntimeException {
 

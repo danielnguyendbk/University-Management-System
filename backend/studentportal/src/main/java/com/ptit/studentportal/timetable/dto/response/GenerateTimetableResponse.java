@@ -1,4 +1,4 @@
-﻿package com.ptit.studentportal.timetable.dto.response;
+package com.ptit.studentportal.timetable.dto.response;
 
 import java.util.List;
 
