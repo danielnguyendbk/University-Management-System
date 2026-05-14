@@ -36,8 +36,7 @@ public class Schedule {
     @Column(name = "schedule_id")
     private Long scheduleId;
 
-    @Column(name = "semester_id", nullable = false)
-    private Long semesterId;
+
 
     @Column(name = "section_id", nullable = false)
     private Long sectionId;

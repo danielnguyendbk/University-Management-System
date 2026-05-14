@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { AdminScheduleTemplatesTab } from "./AdminScheduleTemplatesTab";
@@ -7,6 +8,12 @@ import { AdminCalendarBlocksTab } from "./AdminCalendarBlocksTab";
 import { AdminScheduleImportTab } from "./AdminScheduleImportTab";
 
 export function AdminTimetablePage() {
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
+  const handleImportSuccess = () => {
+    setRefreshSignal((prev) => prev + 1);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <PageHeader
@@ -24,10 +31,10 @@ export function AdminTimetablePage() {
         </TabsList>
 
         <TabsContent value="import">
-          <AdminScheduleImportTab />
+          <AdminScheduleImportTab onImportSuccess={handleImportSuccess} />
         </TabsContent>
         <TabsContent value="templates">
-          <AdminScheduleTemplatesTab />
+          <AdminScheduleTemplatesTab refreshSignal={refreshSignal} />
         </TabsContent>
         <TabsContent value="generate">
           <AdminGenerateTimetableTab />

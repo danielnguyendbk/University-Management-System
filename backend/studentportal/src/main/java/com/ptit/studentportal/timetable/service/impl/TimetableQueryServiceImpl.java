@@ -7,11 +7,19 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
+import com.ptit.studentportal.timetable.dto.response.ClassSessionViewProjection;
 import com.ptit.studentportal.timetable.entity.Schedule;
+import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.service.TimetableQueryService;
 
 @Service
 public class TimetableQueryServiceImpl implements TimetableQueryService {
+
+    private final ClassSessionRepository classSessionRepository;
+
+    public TimetableQueryServiceImpl(ClassSessionRepository classSessionRepository) {
+        this.classSessionRepository = classSessionRepository;
+    }
 
     @Override
     public List<TimetableItemResponse> getStudentTimetable(Long studentId, LocalDate fromDate, LocalDate toDate) {
@@ -26,6 +34,11 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
     @Override
     public List<TimetableItemResponse> getAdminTimetable(LocalDate fromDate, LocalDate toDate) {
         return Collections.emptyList();
+    }
+
+    @Override
+    public List<ClassSessionViewProjection> getAdminTimetableView(Long semesterId, Integer weekNo, Long buildingId, Long roomId, String sessionType, Long lecturerId, Long sectionId) {
+        return classSessionRepository.findClassSessionsView(semesterId, weekNo, buildingId, roomId, sessionType, lecturerId, sectionId);
     }
 
     @Override

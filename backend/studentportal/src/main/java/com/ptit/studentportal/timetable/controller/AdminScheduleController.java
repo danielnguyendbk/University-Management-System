@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ptit.studentportal.commom.response.ApiResponse;
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.UpdateScheduleRequest;
+import com.ptit.studentportal.timetable.dto.response.ScheduleResponse;
 import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
 import com.ptit.studentportal.timetable.entity.Schedule;
 import com.ptit.studentportal.timetable.service.ScheduleService;
@@ -23,7 +24,7 @@ import com.ptit.studentportal.timetable.service.ScheduleService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/admin/schedules")
+@RequestMapping("/api/admin/timetable/schedules")
 public class AdminScheduleController {
 
 	private final ScheduleService scheduleService;
@@ -33,23 +34,23 @@ public class AdminScheduleController {
 	}
 
 	@PostMapping
-	public ResponseEntity<ApiResponse<Schedule>> createSchedule(@Valid @RequestBody CreateScheduleRequest request) {
-		Schedule response = scheduleService.createSchedule(request);
-		return ResponseEntity.ok(ApiResponse.success("Schedule created", response));
+	public ResponseEntity<ApiResponse<ScheduleResponse>> createSchedule(@Valid @RequestBody CreateScheduleRequest request) {
+		ScheduleResponse response = scheduleService.createSchedule(request);
+		return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(ApiResponse.success("Schedule created", response));
 	}
 
 	@GetMapping
-	public ResponseEntity<ApiResponse<List<TimetableItemResponse>>> getSchedules(@RequestParam Long semesterId) {
-		List<TimetableItemResponse> response = scheduleService.getSchedulesBySemester(semesterId);
+	public ResponseEntity<ApiResponse<List<ScheduleResponse>>> getSchedules(@RequestParam Long semesterId) {
+		List<ScheduleResponse> response = scheduleService.getSchedulesBySemester(semesterId);
 		return ResponseEntity.ok(ApiResponse.success("Schedules loaded", response));
 	}
 
 	@PutMapping("/{scheduleId}")
-	public ResponseEntity<ApiResponse<Schedule>> updateSchedule(
+	public ResponseEntity<ApiResponse<ScheduleResponse>> updateSchedule(
 			@PathVariable Long scheduleId,
 			@RequestBody UpdateScheduleRequest request
 	) {
-		Schedule response = scheduleService.updateSchedule(scheduleId, request);
+		ScheduleResponse response = scheduleService.updateSchedule(scheduleId, request);
 		return ResponseEntity.ok(ApiResponse.success("Schedule updated", response));
 	}
 

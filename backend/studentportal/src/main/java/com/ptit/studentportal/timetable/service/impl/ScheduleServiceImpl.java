@@ -2,27 +2,32 @@ package com.ptit.studentportal.timetable.service.impl;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ptit.studentportal.lecturer.Lecturer;
 import com.ptit.studentportal.lecturer.LecturerRepository;
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.UpdateScheduleRequest;
-import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
+import com.ptit.studentportal.timetable.dto.response.ScheduleResponse;
+import com.ptit.studentportal.timetable.entity.Course;
 import com.ptit.studentportal.timetable.entity.CourseSection;
 import com.ptit.studentportal.timetable.entity.Room;
 import com.ptit.studentportal.timetable.entity.Schedule;
+import com.ptit.studentportal.timetable.entity.Semester;
 import com.ptit.studentportal.timetable.enums.SessionType;
 import com.ptit.studentportal.timetable.enums.TimetableStatus;
 import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
+import com.ptit.studentportal.timetable.repository.CourseRepository;
 import com.ptit.studentportal.timetable.repository.CourseSectionRepository;
 import com.ptit.studentportal.timetable.repository.RoomRepository;
 import com.ptit.studentportal.timetable.repository.ScheduleRepository;
 import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import com.ptit.studentportal.timetable.service.ScheduleService;
 import com.ptit.studentportal.timetable.service.TimetableConflictService;
-import com.ptit.studentportal.timetable.service.TimetableQueryService;
+import com.ptit.studentportal.timetable.utils.DayOfWeekMapper;
 
 @Service
 @Transactional
@@ -41,8 +46,8 @@ public class ScheduleServiceImpl implements ScheduleService {
 	private final SemesterRepository semesterRepository;
 	private final ClassSessionRepository classSessionRepository;
 	private final TimetableConflictService conflictService;
-	private final TimetableQueryService timetableQueryService;
 	private final LecturerRepository lecturerRepository;
+	private final CourseRepository courseRepository;
 
 	public ScheduleServiceImpl(
 			ScheduleRepository scheduleRepository,
@@ -51,8 +56,8 @@ public class ScheduleServiceImpl implements ScheduleService {
 			SemesterRepository semesterRepository,
 			ClassSessionRepository classSessionRepository,
 			TimetableConflictService conflictService,
-			TimetableQueryService timetableQueryService,
-			LecturerRepository lecturerRepository
+			LecturerRepository lecturerRepository,
+			CourseRepository courseRepository
 	) {
 		this.scheduleRepository = scheduleRepository;
 		this.courseSectionRepository = courseSectionRepository;
@@ -60,13 +65,13 @@ public class ScheduleServiceImpl implements ScheduleService {
 		this.semesterRepository = semesterRepository;
 		this.classSessionRepository = classSessionRepository;
 		this.conflictService = conflictService;
-		this.timetableQueryService = timetableQueryService;
 		this.lecturerRepository = lecturerRepository;
+		this.courseRepository = courseRepository;
 	}
 
 	@Override
-	public Schedule createSchedule(CreateScheduleRequest request) {
-		var semester = semesterRepository.findById(request.semesterId())
+	public ScheduleResponse createSchedule(CreateScheduleRequest request) {
+		Semester semester = semesterRepository.findById(request.semesterId())
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
 		CourseSection section = courseSectionRepository.findById(request.sectionId())
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc phan."));
@@ -76,7 +81,11 @@ public class ScheduleServiceImpl implements ScheduleService {
 		Room room = roomRepository.findById(request.roomId())
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay phong hoc."));
 
-		validateDayOfWeek(request.dayOfWeek());
+		if (!DayOfWeekMapper.isValidDayOfWeek(request.dayOfWeek())) {
+			throw new IllegalArgumentException("Ngay trong tuan khong hop le.");
+		}
+		String dayOfWeekDb = DayOfWeekMapper.mapDayOfWeekToDb(request.dayOfWeek());
+
 		validateWeekRange(request.fromWeekNo(), request.toWeekNo());
 		validateSlotRange(request.slotStart(), request.slotEnd());
 		validateTimeRange(request.startTime(), request.endTime());
@@ -89,7 +98,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 				section.getSectionId(),
 				room.getRoomId(),
 				section.getLecturerId(),
-				request.dayOfWeek(),
+				dayOfWeekDb,
 				request.fromWeekNo(),
 				request.toWeekNo(),
 				request.startTime(),
@@ -98,10 +107,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 		);
 
 		Schedule schedule = Schedule.builder()
-				.semesterId(request.semesterId())
 				.sectionId(request.sectionId())
 				.roomId(request.roomId())
-				.dayOfWeek(request.dayOfWeek())
+				.dayOfWeek(dayOfWeekDb)
 				.fromWeekNo(request.fromWeekNo())
 				.toWeekNo(request.toWeekNo())
 				.slotStart(request.slotStart())
@@ -114,31 +122,36 @@ public class ScheduleServiceImpl implements ScheduleService {
 				.status("ACTIVE")
 				.build();
 
-		return scheduleRepository.save(schedule);
+		schedule = scheduleRepository.save(schedule);
+		return mapToScheduleResponse(schedule);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<TimetableItemResponse> getSchedulesBySemester(Long semesterId) {
+	public List<ScheduleResponse> getSchedulesBySemester(Long semesterId) {
 		semesterRepository.findById(semesterId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
-		return scheduleRepository.findBySemesterId(semesterId).stream()
-				.map(timetableQueryService::mapScheduleToResponse)
-				.toList();
+		return scheduleRepository.findActiveSchedulesBySemesterId(semesterId).stream()
+				.map(this::mapToScheduleResponse)
+				.collect(Collectors.toList());
 	}
 
 	@Override
-	public Schedule updateSchedule(Long scheduleId, UpdateScheduleRequest request) {
+	public ScheduleResponse updateSchedule(Long scheduleId, UpdateScheduleRequest request) {
 		Schedule schedule = scheduleRepository.findById(scheduleId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay lich mau."));
 
-		var semester = semesterRepository.findById(schedule.getSemesterId())
+		CourseSection currentSection = courseSectionRepository.findById(schedule.getSectionId())
+				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc phan hien tai."));
+		Long currentSemesterId = currentSection.getSemesterId();
+
+		Semester semester = semesterRepository.findById(currentSemesterId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
 		if (semester.getTimetableStatus() == TimetableStatus.LOCKED) {
 			throw new IllegalArgumentException("Hoc ky da bi khoa, khong the cap nhat lich mau.");
 		}
 
-		Long semesterId = request.semesterId() != null ? request.semesterId() : schedule.getSemesterId();
+		Long semesterId = request.semesterId() != null ? request.semesterId() : currentSemesterId;
 		Long sectionId = request.sectionId() != null ? request.sectionId() : schedule.getSectionId();
 		Long roomId = request.roomId() != null ? request.roomId() : schedule.getRoomId();
 		String dayOfWeek = request.dayOfWeek() != null ? request.dayOfWeek() : schedule.getDayOfWeek();
@@ -159,7 +172,11 @@ public class ScheduleServiceImpl implements ScheduleService {
 		roomRepository.findById(roomId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay phong hoc."));
 
-		validateDayOfWeek(dayOfWeek);
+		if (!DayOfWeekMapper.isValidDayOfWeek(dayOfWeek)) {
+			throw new IllegalArgumentException("Ngay trong tuan khong hop le.");
+		}
+		String dayOfWeekDb = DayOfWeekMapper.mapDayOfWeekToDb(dayOfWeek);
+
 		validateWeekRange(fromWeekNo, toWeekNo);
 		validateSlotRange(slotStart, slotEnd);
 		validateTimeRange(startTime, endTime);
@@ -171,7 +188,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 				sectionId,
 				roomId,
 				section.getLecturerId(),
-				dayOfWeek,
+				dayOfWeekDb,
 				fromWeekNo,
 				toWeekNo,
 				startTime,
@@ -179,10 +196,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 				scheduleId
 		);
 
-		schedule.setSemesterId(semesterId);
 		schedule.setSectionId(sectionId);
 		schedule.setRoomId(roomId);
-		schedule.setDayOfWeek(dayOfWeek);
+		schedule.setDayOfWeek(dayOfWeekDb);
 		schedule.setFromWeekNo(fromWeekNo);
 		schedule.setToWeekNo(toWeekNo);
 		schedule.setSlotStart(slotStart);
@@ -198,7 +214,8 @@ public class ScheduleServiceImpl implements ScheduleService {
 			schedule.setStatus(request.status());
 		}
 
-		return scheduleRepository.save(schedule);
+		schedule = scheduleRepository.save(schedule);
+		return mapToScheduleResponse(schedule);
 	}
 
 	@Override
@@ -213,10 +230,49 @@ public class ScheduleServiceImpl implements ScheduleService {
 		scheduleRepository.delete(schedule);
 	}
 
-	private void validateDayOfWeek(String dayOfWeek) {
-		if (dayOfWeek == null || !dayOfWeek.matches("Mon|Tue|Wed|Thu|Fri|Sat|Sun")) {
-			throw new IllegalArgumentException("Ngay trong tuan khong hop le.");
-		}
+	private ScheduleResponse mapToScheduleResponse(Schedule schedule) {
+		CourseSection section = courseSectionRepository.findById(schedule.getSectionId()).orElse(null);
+		Semester semester = section != null ? semesterRepository.findById(section.getSemesterId()).orElse(null) : null;
+		Course course = section != null ? courseRepository.findById(section.getCourseId()).orElse(null) : null;
+		Room room = roomRepository.findById(schedule.getRoomId()).orElse(null);
+		Lecturer lecturer = section != null ? lecturerRepository.findById(section.getLecturerId()).orElse(null) : null;
+
+		String dayLabel = switch (schedule.getDayOfWeek()) {
+			case "Mon" -> "Thứ 2";
+			case "Tue" -> "Thứ 3";
+			case "Wed" -> "Thứ 4";
+			case "Thu" -> "Thứ 5";
+			case "Fri" -> "Thứ 6";
+			case "Sat" -> "Thứ 7";
+			case "Sun" -> "Chủ nhật";
+			default -> schedule.getDayOfWeek();
+		};
+
+		return ScheduleResponse.builder()
+				.scheduleId(schedule.getScheduleId())
+				.semesterId(semester != null ? semester.getSemesterId() : null)
+				.semesterCode(semester != null ? semester.getSemesterCode() : null)
+				.sectionId(section != null ? section.getSectionId() : null)
+				.sectionCode(section != null ? section.getSectionCode() : null)
+				.courseName(course != null ? course.getCourseName() : null)
+				.roomId(room != null ? room.getRoomId() : null)
+				.roomCode(room != null ? room.getRoomCode() : null)
+				.lecturerId(lecturer != null ? lecturer.getLecturerId() : null)
+				.lecturerCode(lecturer != null ? lecturer.getLecturerCode() : null)
+				.lecturerName(lecturer != null ? lecturer.getFullName() : null)
+				.dayOfWeek(schedule.getDayOfWeek() != null ? schedule.getDayOfWeek().toUpperCase() : null)
+				.dayOfWeekLabel(dayLabel)
+				.fromWeekNo(schedule.getFromWeekNo())
+				.toWeekNo(schedule.getToWeekNo())
+				.slotStart(schedule.getSlotStart())
+				.slotEnd(schedule.getSlotEnd())
+				.startTime(schedule.getStartTime())
+				.endTime(schedule.getEndTime())
+				.sessionType(schedule.getSessionType() != null ? schedule.getSessionType().name() : null)
+				.practiceGroupNo(schedule.getPracticeGroupNo())
+				.status(schedule.getStatus())
+				.note(schedule.getNote())
+				.build();
 	}
 
 	private void validateWeekRange(Integer fromWeek, Integer toWeek) {
@@ -262,4 +318,3 @@ public class ScheduleServiceImpl implements ScheduleService {
 		return 0;
 	}
 }
-

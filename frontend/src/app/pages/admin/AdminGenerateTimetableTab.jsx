@@ -64,12 +64,16 @@ export function AdminGenerateTimetableTab() {
     if (!selectedSemesterId) return;
     try {
       setActionLoading(true);
-      const result = await generateTimetable(selectedSemesterId);
+      const result = await generateTimetable(Number(selectedSemesterId));
       setSummary(result || null);
-      toast.success("Đã sinh thời khóa biểu.");
+      toast.success("Đã sinh thời khóa biểu thành công.");
       await refreshSemesters();
     } catch (error) {
-      toast.error("Sinh thời khóa biểu thất bại.");
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Sinh thời khóa biểu thất bại.";
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -79,11 +83,15 @@ export function AdminGenerateTimetableTab() {
     if (!selectedSemesterId) return;
     try {
       setActionLoading(true);
-      await publishTimetable(selectedSemesterId);
+      await publishTimetable(Number(selectedSemesterId));
       toast.success("Đã công bố thời khóa biểu.");
       await refreshSemesters();
     } catch (error) {
-      toast.error("Không thể công bố thời khóa biểu.");
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Không thể công bố thời khóa biểu.";
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -93,11 +101,15 @@ export function AdminGenerateTimetableTab() {
     if (!selectedSemesterId) return;
     try {
       setActionLoading(true);
-      await lockTimetable(selectedSemesterId);
+      await lockTimetable(Number(selectedSemesterId));
       toast.success("Đã khóa thời khóa biểu.");
       await refreshSemesters();
     } catch (error) {
-      toast.error("Không thể khóa thời khóa biểu.");
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Không thể khóa thời khóa biểu.";
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }

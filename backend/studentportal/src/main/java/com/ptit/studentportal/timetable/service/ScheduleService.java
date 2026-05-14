@@ -4,16 +4,15 @@ import java.util.List;
 
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.UpdateScheduleRequest;
-import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
-import com.ptit.studentportal.timetable.entity.Schedule;
+import com.ptit.studentportal.timetable.dto.response.ScheduleResponse;
 
 public interface ScheduleService {
 
-	Schedule createSchedule(CreateScheduleRequest request);
+	ScheduleResponse createSchedule(CreateScheduleRequest request);
 
-	List<TimetableItemResponse> getSchedulesBySemester(Long semesterId);
+	List<ScheduleResponse> getSchedulesBySemester(Long semesterId);
 
-	Schedule updateSchedule(Long scheduleId, UpdateScheduleRequest request);
+	ScheduleResponse updateSchedule(Long scheduleId, UpdateScheduleRequest request);
 
 	void deleteSchedule(Long scheduleId);
 }

@@ -6,7 +6,7 @@ import { Card } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { CheckCircle2, Download, Upload, XCircle } from "lucide-react";
 
-export function AdminScheduleImportTab() {
+export function AdminScheduleImportTab({ onImportSuccess }) {
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -55,24 +55,50 @@ export function AdminScheduleImportTab() {
       const resultData = response?.data ?? response ?? {};
       const totalRows = Number(resultData.totalRows ?? resultData.total ?? 0);
       const successRows = Number(resultData.successRows ?? resultData.successCount ?? 0);
-      const failedRows = Number(resultData.failedRows ?? resultData.failureCount ?? 0);
+      const errorRows = Number(resultData.errorRows ?? resultData.failedRows ?? resultData.failureCount ?? 0);
       const errors = Array.isArray(resultData.errors) ? resultData.errors : [];
 
       setImportResult({
         totalRows,
         successRows,
-        failedRows,
+        errorRows,
         errors,
         message: message || resultData.message || "Import thành công",
       });
 
       setSelectedFile(null);
-      toast.success("Đã gửi yêu cầu import");
+      toast.success("Đã import thành công");
+
+      if (onImportSuccess && errorRows === 0) {
+        onImportSuccess();
+      }
     } catch (err) {
       console.error("Import error:", err);
-      const message = err?.response?.data?.message || err?.message || "Lỗi import file";
-      setErrorMessage(message);
-      toast.error(message);
+      
+      const responseData = err?.response?.data;
+      if (err?.response?.status === 400 && responseData?.data) {
+        // Handle validation errors from backend
+        const resultData = responseData.data;
+        const totalRows = Number(resultData.totalRows ?? 0);
+        const successRows = Number(resultData.successRows ?? 0);
+        const errorRows = Number(resultData.errorRows ?? 0);
+        const errors = Array.isArray(resultData.errors) ? resultData.errors : [];
+        
+        setImportResult({
+          totalRows,
+          successRows,
+          errorRows,
+          errors,
+          message: responseData.message || "Import thất bại. Vui lòng kiểm tra lỗi bên dưới.",
+        });
+        toast.error("File chứa dữ liệu không hợp lệ. Vui lòng kiểm tra bảng lỗi.");
+        setErrorMessage(""); // Clear generic error message
+      } else {
+        const message = err?.response?.data?.message || err?.message || "Lỗi import file";
+        setErrorMessage(message);
+        toast.error(message);
+        setImportResult(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -182,12 +208,18 @@ export function AdminScheduleImportTab() {
 
       {/* Import Result Section */}
       {importResult && (
-        <Card className="p-6 border-green-200 bg-green-50">
+        <Card className={`p-6 border ${importResult.errorRows > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
           <div className="flex gap-3 items-start">
-            <CheckCircle2 className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
+            {importResult.errorRows > 0 ? (
+              <XCircle className="h-6 w-6 text-red-600 mt-0.5 shrink-0" />
+            ) : (
+              <CheckCircle2 className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
+            )}
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-green-900 mb-2">Import thành công</h3>
-              <div className="space-y-1 text-sm text-green-800 mb-4">
+              <h3 className={`text-lg font-semibold mb-2 ${importResult.errorRows > 0 ? 'text-red-900' : 'text-green-900'}`}>
+                {importResult.message}
+              </h3>
+              <div className={`space-y-1 text-sm mb-4 ${importResult.errorRows > 0 ? 'text-red-800' : 'text-green-800'}`}>
                 <p>
                   <strong>Tổng bản ghi:</strong> {importResult.totalRows}
                 </p>
@@ -195,11 +227,11 @@ export function AdminScheduleImportTab() {
                   <strong>Thành công:</strong> {importResult.successRows}
                 </p>
                 <p>
-                  <strong>Lỗi:</strong> {importResult.failedRows}
+                  <strong>Lỗi:</strong> {importResult.errorRows}
                 </p>
               </div>
 
-              {importResult.failedRows > 0 && (
+              {importResult.errorRows > 0 && (
                 <div className="mt-4">
                   <p className="font-semibold text-red-700 mb-2">Chi tiết lỗi:</p>
                   <div className="bg-white rounded border border-red-200 overflow-x-auto max-h-48 overflow-y-auto">
@@ -220,14 +252,30 @@ export function AdminScheduleImportTab() {
                             </td>
                           </tr>
                         ) : (
-                          errors.map((item, idx) => (
-                          <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                            <td className="px-3 py-2">{item.rowNumber ?? item.row ?? idx + 1}</td>
-                            <td className="px-3 py-2">{item.semesterCode ?? ""}</td>
-                            <td className="px-3 py-2">{item.sectionCode ?? ""}</td>
-                            <td className="px-3 py-2 text-red-700">{item.error ?? item.message ?? ""}</td>
-                          </tr>
-                          ))
+                          errors.map((item, idx) => {
+                            const isConflict = item.errors?.some(e => e.toLowerCase().includes('conflict')) || false;
+                            return (
+                              <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 bg-white">
+                                <td className="px-3 py-2">{item.rowNumber ?? item.row ?? idx + 1}</td>
+                                <td className="px-3 py-2">{item.semesterCode ?? ""}</td>
+                                <td className="px-3 py-2">{item.sectionCode ?? ""}</td>
+                                <td className="px-3 py-2 text-red-700">
+                                  <ul className="list-disc pl-4 space-y-1">
+                                    {item.errors?.length > 0 ? (
+                                      item.errors.map((e, i) => <li key={i}>{e}</li>)
+                                    ) : (
+                                      <li>{item.error ?? item.message ?? ""}</li>
+                                    )}
+                                  </ul>
+                                  {isConflict && (
+                                    <div className="mt-2 text-xs text-orange-600 font-semibold p-2 bg-orange-50 rounded border border-orange-200">
+                                      💡 Gợi ý: Dữ liệu bị trùng với lịch đã có. Hãy xóa lịch cũ hoặc sửa file Excel.
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>

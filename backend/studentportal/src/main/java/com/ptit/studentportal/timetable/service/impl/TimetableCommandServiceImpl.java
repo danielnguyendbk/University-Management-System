@@ -16,7 +16,10 @@ import com.ptit.studentportal.timetable.enums.SessionStatus;
 import com.ptit.studentportal.timetable.exception.TimetableNotFoundException;
 import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.repository.ScheduleRepository;
+import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import com.ptit.studentportal.timetable.service.TimetableCommandService;
+import com.ptit.studentportal.timetable.enums.TimetableStatus;
+import com.ptit.studentportal.timetable.entity.Semester;
 import com.ptit.studentportal.timetable.validator.TimetableValidator;
 
 @Service
@@ -26,15 +29,18 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 	private final ScheduleRepository scheduleRepository;
 	private final ClassSessionRepository classSessionRepository;
 	private final TimetableValidator timetableValidator;
+	private final SemesterRepository semesterRepository;
 
 	public TimetableCommandServiceImpl(
 			ScheduleRepository scheduleRepository,
 			ClassSessionRepository classSessionRepository,
-			TimetableValidator timetableValidator
+			TimetableValidator timetableValidator,
+			SemesterRepository semesterRepository
 	) {
 		this.scheduleRepository = scheduleRepository;
 		this.classSessionRepository = classSessionRepository;
 		this.timetableValidator = timetableValidator;
+		this.semesterRepository = semesterRepository;
 	}
 
 	@Override
@@ -104,6 +110,30 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 		}
 
 		return classSessionRepository.save(classSession);
+	}
+
+	@Override
+	public void publishSemester(Long semesterId) {
+		Semester semester = semesterRepository.findById(semesterId)
+				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
+		semester.setTimetableStatus(TimetableStatus.PUBLISHED);
+		semesterRepository.save(semester);
+	}
+
+	@Override
+	public void lockSemester(Long semesterId) {
+		Semester semester = semesterRepository.findById(semesterId)
+				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
+		semester.setTimetableStatus(TimetableStatus.LOCKED);
+		semesterRepository.save(semester);
+	}
+
+	@Override
+	public void unlockSemester(Long semesterId) {
+		Semester semester = semesterRepository.findById(semesterId)
+				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
+		semester.setTimetableStatus(TimetableStatus.DRAFT);
+		semesterRepository.save(semester);
 	}
 }
 

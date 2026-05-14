@@ -8,6 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import com.ptit.studentportal.timetable.enums.CalendarBlockType;
 
+import jakarta.persistence.Access;
+import jakarta.persistence.AccessType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,6 +26,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "academic_calendar_blocks")
+@Access(AccessType.FIELD)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,7 +36,7 @@ public class AcademicCalendarBlock {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "block_id")
+	@Column(name = "calendar_block_id")
 	private Long blockId;
 
 	@Column(name = "semester_id", nullable = false)

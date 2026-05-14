@@ -54,7 +54,7 @@ public class TimetableGenerationServiceImpl implements TimetableGenerationServic
 		semesterRepository.findById(semesterId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
 
-		List<Schedule> schedules = scheduleRepository.findBySemesterId(semesterId).stream()
+		List<Schedule> schedules = scheduleRepository.findActiveSchedulesBySemesterId(semesterId).stream()
 				.filter(this::isActiveSchedule)
 				.toList();
 

@@ -15,5 +15,11 @@ public interface TimetableCommandService {
 	List<ClassSession> generateClassSessions(GenerateClassSessionsRequest request);
 
 	ClassSession updateClassSession(Long sessionId, UpdateClassSessionRequest request);
+
+	void publishSemester(Long semesterId);
+
+	void lockSemester(Long semesterId);
+
+	void unlockSemester(Long semesterId);
 }
 

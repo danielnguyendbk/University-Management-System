@@ -4,24 +4,26 @@ import java.io.IOException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ptit.studentportal.lecturer.Lecturer;
+import com.ptit.studentportal.lecturer.LecturerRepository;
 import com.ptit.studentportal.timetable.dto.response.TimetableImportError;
 import com.ptit.studentportal.timetable.dto.response.TimetableImportResult;
+import com.ptit.studentportal.timetable.dto.response.TimetableImportRowResult;
 import com.ptit.studentportal.timetable.entity.CourseSection;
 import com.ptit.studentportal.timetable.entity.Room;
 import com.ptit.studentportal.timetable.entity.Schedule;
@@ -32,6 +34,7 @@ import com.ptit.studentportal.timetable.repository.RoomRepository;
 import com.ptit.studentportal.timetable.repository.ScheduleRepository;
 import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import com.ptit.studentportal.timetable.service.TimetableImportService;
+import com.ptit.studentportal.timetable.utils.DayOfWeekMapper;
 
 @Service
 public class TimetableImportServiceImpl implements TimetableImportService {
@@ -39,6 +42,7 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 	private final SemesterRepository semesterRepository;
 	private final CourseSectionRepository courseSectionRepository;
 	private final RoomRepository roomRepository;
+	private final LecturerRepository lecturerRepository;
 	private final ScheduleRepository scheduleRepository;
 	private final JdbcTemplate jdbcTemplate;
 
@@ -46,462 +50,355 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 			SemesterRepository semesterRepository,
 			CourseSectionRepository courseSectionRepository,
 			RoomRepository roomRepository,
+			LecturerRepository lecturerRepository,
 			ScheduleRepository scheduleRepository,
 			JdbcTemplate jdbcTemplate
 	) {
 		this.semesterRepository = semesterRepository;
 		this.courseSectionRepository = courseSectionRepository;
 		this.roomRepository = roomRepository;
+		this.lecturerRepository = lecturerRepository;
 		this.scheduleRepository = scheduleRepository;
 		this.jdbcTemplate = jdbcTemplate;
 	}
 
 	@Override
+	@Transactional
 	public TimetableImportResult importSchedulesFromExcel(MultipartFile file) {
 		List<TimetableImportError> errors = new ArrayList<>();
-		int totalRows = 0;
-		int successRows = 0;
-		int failedRows = 0;
-		Set<Long> successfullySemesterIds = new HashSet<>();
+		List<TimetableImportRowResult> importedRows = new ArrayList<>();
+		List<ScheduleImportRow> parsedRows = new ArrayList<>();
 
-		try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+		int totalRows = 0;
+
+		try (Workbook workbook = file.getOriginalFilename().endsWith(".xls") 
+				? new HSSFWorkbook(file.getInputStream()) 
+				: new XSSFWorkbook(file.getInputStream())) {
+			
 			Sheet sheet = workbook.getSheetAt(0);
+
+			Row headerRow = sheet.getRow(0);
+			if (headerRow == null) {
+				return createErrorResult("File is empty or missing header");
+			}
+
+			// Find header indices
+			int semesterCodeIdx = -1, sectionCodeIdx = -1, roomCodeIdx = -1, lecturerCodeIdx = -1, dayOfWeekIdx = -1;
+			int fromWeekNoIdx = -1, toWeekNoIdx = -1, slotStartIdx = -1, slotEndIdx = -1, startTimeIdx = -1, endTimeIdx = -1;
+			int sessionTypeIdx = -1, practiceGroupNoIdx = -1, noteIdx = -1;
+
+			for (Cell cell : headerRow) {
+				String headerName = getCellValueAsString(cell).trim();
+				switch (headerName) {
+					case "semesterCode" -> semesterCodeIdx = cell.getColumnIndex();
+					case "sectionCode" -> sectionCodeIdx = cell.getColumnIndex();
+					case "roomCode" -> roomCodeIdx = cell.getColumnIndex();
+					case "lecturerCode" -> lecturerCodeIdx = cell.getColumnIndex();
+					case "dayOfWeek" -> dayOfWeekIdx = cell.getColumnIndex();
+					case "fromWeekNo" -> fromWeekNoIdx = cell.getColumnIndex();
+					case "toWeekNo" -> toWeekNoIdx = cell.getColumnIndex();
+					case "slotStart" -> slotStartIdx = cell.getColumnIndex();
+					case "slotEnd" -> slotEndIdx = cell.getColumnIndex();
+					case "startTime" -> startTimeIdx = cell.getColumnIndex();
+					case "endTime" -> endTimeIdx = cell.getColumnIndex();
+					case "sessionType" -> sessionTypeIdx = cell.getColumnIndex();
+					case "practiceGroupNo" -> practiceGroupNoIdx = cell.getColumnIndex();
+					case "note" -> noteIdx = cell.getColumnIndex();
+				}
+			}
+
+			if (semesterCodeIdx == -1 || sectionCodeIdx == -1 || roomCodeIdx == -1 || dayOfWeekIdx == -1) {
+				return createErrorResult("Missing required headers: semesterCode, sectionCode, roomCode, dayOfWeek");
+			}
 
 			int rowIndex = 0;
 			for (Row row : sheet) {
 				rowIndex++;
+				if (rowIndex == 1) continue; // Skip header
 
-				// Skip header row
-				if (rowIndex == 1) {
-					continue;
-				}
-
-				// Counter
 				totalRows++;
 				int currentRowNum = rowIndex;
 
 				try {
-					// Parse row
-					ScheduleImportRow importRow = parseRow(row, currentRowNum);
+					ScheduleImportRow importRow = new ScheduleImportRow();
+					importRow.rowNum = currentRowNum;
+					importRow.semesterCode = getCellValueAsString(row.getCell(semesterCodeIdx));
+					importRow.sectionCode = getCellValueAsString(row.getCell(sectionCodeIdx));
+					importRow.roomCode = getCellValueAsString(row.getCell(roomCodeIdx));
+					importRow.lecturerCode = lecturerCodeIdx != -1 ? getCellValueAsString(row.getCell(lecturerCodeIdx)) : "";
+					importRow.dayOfWeek = getCellValueAsString(row.getCell(dayOfWeekIdx));
+					importRow.fromWeekNo = getCellValueAsInteger(row.getCell(fromWeekNoIdx));
+					importRow.toWeekNo = getCellValueAsInteger(row.getCell(toWeekNoIdx));
+					importRow.slotStart = getCellValueAsInteger(row.getCell(slotStartIdx));
+					importRow.slotEnd = getCellValueAsInteger(row.getCell(slotEndIdx));
+					importRow.startTime = parseTime(row.getCell(startTimeIdx));
+					importRow.endTime = parseTime(row.getCell(endTimeIdx));
+					importRow.sessionType = getCellValueAsString(row.getCell(sessionTypeIdx));
+					importRow.practiceGroupNo = practiceGroupNoIdx != -1 ? getCellValueAsInteger(row.getCell(practiceGroupNoIdx)) : 0;
+					importRow.note = noteIdx != -1 ? getCellValueAsString(row.getCell(noteIdx)) : "";
 
-					// Validate row
-					List<String> validationErrors = validateRow(importRow, currentRowNum);
-					if (!validationErrors.isEmpty()) {
-						failedRows++;
-						for (String error : validationErrors) {
-							errors.add(TimetableImportError.builder()
-									.rowNumber(currentRowNum)
-									.semesterCode(importRow.semesterCode)
-									.sectionCode(importRow.sectionCode)
-									.error(error)
-									.build());
-						}
-						continue;
-					}
-
-					// Lookup entities
-					Optional<Semester> semester = semesterRepository.findBySemesterId(importRow.semesterCode);
-					if (semester.isEmpty()) {
-						failedRows++;
-						errors.add(TimetableImportError.builder()
-								.rowNumber(currentRowNum)
-								.semesterCode(importRow.semesterCode)
-								.sectionCode(importRow.sectionCode)
-								.error("Semester with code '" + importRow.semesterCode + "' not found")
-								.build());
-						continue;
-					}
-
-					Optional<CourseSection> section = courseSectionRepository
-							.findBySectionCodeAndSemesterId(importRow.sectionCode, semester.get().getSemesterId());
-					if (section.isEmpty()) {
-						failedRows++;
-						errors.add(TimetableImportError.builder()
-								.rowNumber(currentRowNum)
-								.semesterCode(importRow.semesterCode)
-								.sectionCode(importRow.sectionCode)
-								.error("Section with code '" + importRow.sectionCode
-										+ "' not found in semester '" + importRow.semesterCode + "'")
-								.build());
-						continue;
-					}
-
-					Optional<Room> room = roomRepository.findByRoomCode(importRow.roomCode);
-					if (room.isEmpty()) {
-						failedRows++;
-						errors.add(TimetableImportError.builder()
-								.rowNumber(currentRowNum)
-								.semesterCode(importRow.semesterCode)
-								.sectionCode(importRow.sectionCode)
-								.error("Room with code '" + importRow.roomCode + "' not found")
-								.build());
-						continue;
-					}
-
-					// Check for conflicts
-					List<String> conflictErrors = checkConflicts(
-							semester.get(),
-							section.get(),
-							room.get(),
-							importRow,
-							currentRowNum
-					);
-					if (!conflictErrors.isEmpty()) {
-						failedRows++;
-						for (String error : conflictErrors) {
-							errors.add(TimetableImportError.builder()
-									.rowNumber(currentRowNum)
-									.semesterCode(importRow.semesterCode)
-									.sectionCode(importRow.sectionCode)
-									.error(error)
-									.build());
-						}
-						continue;
-					}
-
-					// Upsert schedule
-					try {
-						upsertSchedule(semester.get(), section.get(), room.get(), importRow);
-						successRows++;
-						successfullySemesterIds.add(semester.get().getSemesterId());
-					} catch (Exception e) {
-						failedRows++;
-						errors.add(TimetableImportError.builder()
-								.rowNumber(currentRowNum)
-								.semesterCode(importRow.semesterCode)
-								.sectionCode(importRow.sectionCode)
-								.error("Database error: " + e.getMessage())
-								.build());
-					}
-
+					parsedRows.add(importRow);
 				} catch (Exception e) {
-					failedRows++;
-					errors.add(TimetableImportError.builder()
-							.rowNumber(currentRowNum)
-							.semesterCode("")
-							.sectionCode("")
-							.error("Row parsing error: " + e.getMessage())
-							.build());
+					addError(errors, currentRowNum, "", "", "Row parsing error: " + e.getMessage());
 				}
 			}
-
 		} catch (IOException e) {
-			errors.add(TimetableImportError.builder()
-					.rowNumber(0)
-					.semesterCode("")
-					.sectionCode("")
-					.error("File reading error: " + e.getMessage())
-					.build());
-			failedRows++;
+			return createErrorResult("File reading error: " + e.getMessage());
 		}
 
-		// Call stored procedure for each successfully imported semester
-		for (Long semesterId : successfullySemesterIds) {
-			try {
-				callStoredProcedure(semesterId);
-			} catch (Exception e) {
-				// Log but don't fail the entire import
-				System.err.println("Warning: Failed to call sp_generate_class_sessions_for_semester for semester "
-						+ semesterId + ": " + e.getMessage());
+		if (totalRows == 0) {
+			return createErrorResult("File is empty (no data rows)");
+		}
+
+		// Validation phase
+		List<Schedule> schedulesToSave = new ArrayList<>();
+		List<Long> successfullySemesterIds = new ArrayList<>();
+
+		for (ScheduleImportRow row : parsedRows) {
+			List<String> rowErrors = new ArrayList<>();
+
+			// Required fields
+			if (row.semesterCode.isEmpty()) rowErrors.add("semesterCode is required");
+			if (row.sectionCode.isEmpty()) rowErrors.add("sectionCode is required");
+			if (row.roomCode.isEmpty()) rowErrors.add("roomCode is required");
+
+			if (row.dayOfWeek.isEmpty()) {
+				rowErrors.add("dayOfWeek is required");
+			} else if (!DayOfWeekMapper.isValidDayOfWeek(row.dayOfWeek)) {
+				rowErrors.add("dayOfWeek must be MON, TUE, WED, THU, FRI, SAT, or SUN");
 			}
-		}
 
-		return TimetableImportResult.builder()
-				.totalRows(totalRows)
-				.successRows(successRows)
-				.failedRows(failedRows)
-				.errors(errors)
-				.build();
-	}
-
-	private ScheduleImportRow parseRow(Row row, int rowNum) {
-		ScheduleImportRow importRow = new ScheduleImportRow();
-
-		// Column order per requirements: semesterCode, sectionCode, roomCode, lecturerCode,
-		// dayOfWeek, fromWeekNo, toWeekNo, slotStart, slotEnd, startTime, endTime, sessionType,
-		// groupName, practiceGroupNo, note
-
-		importRow.semesterCode = getCellValueAsString(row.getCell(0));
-		importRow.sectionCode = getCellValueAsString(row.getCell(1));
-		importRow.roomCode = getCellValueAsString(row.getCell(2));
-		importRow.lecturerCode = getCellValueAsString(row.getCell(3));
-		importRow.dayOfWeek = getCellValueAsString(row.getCell(4));
-		importRow.fromWeekNo = getCellValueAsInteger(row.getCell(5));
-		importRow.toWeekNo = getCellValueAsInteger(row.getCell(6));
-		importRow.slotStart = getCellValueAsInteger(row.getCell(7));
-		importRow.slotEnd = getCellValueAsInteger(row.getCell(8));
-		importRow.startTime = parseTime(row.getCell(9), rowNum);
-		importRow.endTime = parseTime(row.getCell(10), rowNum);
-		importRow.sessionType = getCellValueAsString(row.getCell(11));
-		importRow.groupName = getCellValueAsString(row.getCell(12));
-		importRow.practiceGroupNo = getCellValueAsInteger(row.getCell(13));
-		importRow.note = getCellValueAsString(row.getCell(14));
-
-		return importRow;
-	}
-
-	private String getCellValueAsString(Cell cell) {
-		if (cell == null) {
-			return "";
-		}
-		switch (cell.getCellType()) {
-		case STRING:
-			return cell.getStringCellValue().trim();
-		case NUMERIC:
-			return String.valueOf((long) cell.getNumericCellValue());
-		default:
-			return "";
-		}
-	}
-
-	private Integer getCellValueAsInteger(Cell cell) {
-		if (cell == null) {
-			return null;
-		}
-		try {
-			switch (cell.getCellType()) {
-			case NUMERIC:
-				return (int) cell.getNumericCellValue();
-			case STRING:
-				return Integer.parseInt(cell.getStringCellValue().trim());
-			default:
-				return null;
+			// numeric validations
+			if (row.fromWeekNo == null || row.fromWeekNo <= 0) rowErrors.add("fromWeekNo must be > 0");
+			if (row.toWeekNo == null) rowErrors.add("toWeekNo is required");
+			if (row.fromWeekNo != null && row.toWeekNo != null && row.toWeekNo < row.fromWeekNo) {
+				rowErrors.add("toWeekNo must be >= fromWeekNo");
 			}
-		} catch (Exception e) {
-			return null;
-		}
-	}
 
-	private LocalTime parseTime(Cell cell, int rowNum) {
-		if (cell == null) {
-			return null;
-		}
+			if (row.slotStart == null || row.slotStart <= 0) rowErrors.add("slotStart must be > 0");
+			if (row.slotEnd == null) rowErrors.add("slotEnd is required");
+			if (row.slotStart != null && row.slotEnd != null && row.slotEnd < row.slotStart) {
+				rowErrors.add("slotEnd must be >= slotStart");
+			}
 
-		try {
-			switch (cell.getCellType()) {
-			case NUMERIC:
-				// Excel time is stored as fraction of day
-				double timeValue = cell.getNumericCellValue();
-				int hours = (int) (timeValue * 24);
-				int minutes = (int) ((timeValue * 24 - hours) * 60);
-				return LocalTime.of(hours, minutes);
-			case STRING:
-				String timeStr = cell.getStringCellValue().trim();
-				if (timeStr.isEmpty()) {
-					return null;
-				}
-				// Try HH:mm:ss format first
-				try {
-					return LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm:ss"));
-				} catch (Exception e1) {
-					// Try HH:mm format
-					try {
-						return LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
-					} catch (Exception e2) {
-						return null;
+			if (row.startTime == null) rowErrors.add("startTime is required or has invalid format");
+			if (row.endTime == null) rowErrors.add("endTime is required or has invalid format");
+			if (row.startTime != null && row.endTime != null && !row.startTime.isBefore(row.endTime)) {
+				rowErrors.add("startTime must be before endTime");
+			}
+
+			if (row.sessionType.isEmpty()) {
+				rowErrors.add("sessionType is required");
+			} else if (!row.sessionType.equalsIgnoreCase("THEORY") && !row.sessionType.equalsIgnoreCase("PRACTICE")) {
+				rowErrors.add("sessionType must be THEORY or PRACTICE");
+			}
+
+			if (row.practiceGroupNo == null) row.practiceGroupNo = 0;
+
+			if (!rowErrors.isEmpty()) {
+				errors.add(TimetableImportError.builder()
+						.rowNumber(row.rowNum).semesterCode(row.semesterCode).sectionCode(row.sectionCode)
+						.errors(rowErrors).build());
+				continue;
+			}
+
+			// Entity Lookup
+			Optional<Semester> semesterOpt = semesterRepository.findBySemesterCode(row.semesterCode);
+			if (semesterOpt.isEmpty()) {
+				rowErrors.add("Semester with code '" + row.semesterCode + "' not found");
+				errors.add(buildError(row, rowErrors));
+				continue;
+			}
+			Semester semester = semesterOpt.get();
+
+			Optional<CourseSection> sectionOpt = courseSectionRepository.findBySectionCodeAndSemesterId(row.sectionCode, semester.getSemesterId());
+			if (sectionOpt.isEmpty()) {
+				rowErrors.add("Section '" + row.sectionCode + "' not found in semester '" + row.semesterCode + "'");
+				errors.add(buildError(row, rowErrors));
+				continue;
+			}
+			CourseSection section = sectionOpt.get();
+
+			Optional<Room> roomOpt = roomRepository.findByRoomCode(row.roomCode);
+			if (roomOpt.isEmpty()) {
+				rowErrors.add("Room '" + row.roomCode + "' not found");
+				errors.add(buildError(row, rowErrors));
+				continue;
+			}
+			Room room = roomOpt.get();
+
+			if (!row.lecturerCode.isEmpty()) {
+				Optional<Lecturer> lecturerOpt = lecturerRepository.findByLecturerCode(row.lecturerCode);
+				if (lecturerOpt.isEmpty()) {
+					rowErrors.add("Lecturer '" + row.lecturerCode + "' not found");
+				} else {
+					if (!lecturerOpt.get().getLecturerId().equals(section.getLecturerId())) {
+						rowErrors.add("Lecturer '" + row.lecturerCode + "' does not match section lecturer");
 					}
 				}
-			default:
-				return null;
 			}
-		} catch (Exception e) {
-			return null;
-		}
-	}
 
-	private List<String> validateRow(ScheduleImportRow row, int rowNum) {
-		List<String> errors = new ArrayList<>();
-
-		// Required fields
-		if (row.semesterCode == null || row.semesterCode.isEmpty()) {
-			errors.add("semesterCode is required");
-		}
-		if (row.sectionCode == null || row.sectionCode.isEmpty()) {
-			errors.add("sectionCode is required");
-		}
-		if (row.roomCode == null || row.roomCode.isEmpty()) {
-			errors.add("roomCode is required");
-		}
-
-		// dayOfWeek validation
-		if (row.dayOfWeek == null || row.dayOfWeek.isEmpty()) {
-			errors.add("dayOfWeek is required");
-		} else {
-			if (!isValidDayOfWeek(row.dayOfWeek)) {
-				errors.add("dayOfWeek must be MON, TUE, WED, THU, FRI, SAT, or SUN");
+			if (!rowErrors.isEmpty()) {
+				errors.add(buildError(row, rowErrors));
+				continue;
 			}
-		}
 
-		// fromWeekNo and toWeekNo
-		if (row.fromWeekNo == null) {
-			errors.add("fromWeekNo is required");
-		}
-		if (row.toWeekNo == null) {
-			errors.add("toWeekNo is required");
-		}
-		if (row.fromWeekNo != null && row.toWeekNo != null && row.fromWeekNo > row.toWeekNo) {
-			errors.add("fromWeekNo must be <= toWeekNo");
-		}
-
-		// Slot validation
-		if (row.slotStart == null) {
-			errors.add("slotStart is required");
-		}
-		if (row.slotEnd == null) {
-			errors.add("slotEnd is required");
-		}
-		if (row.slotStart != null && row.slotEnd != null && row.slotStart > row.slotEnd) {
-			errors.add("slotStart must be <= slotEnd");
-		}
-
-		// Time validation
-		if (row.startTime == null) {
-			errors.add("startTime is required or has invalid format");
-		}
-		if (row.endTime == null) {
-			errors.add("endTime is required or has invalid format");
-		}
-		if (row.startTime != null && row.endTime != null && !row.startTime.isBefore(row.endTime)) {
-			errors.add("startTime must be before endTime");
-		}
-
-		// sessionType validation
-		if (row.sessionType == null || row.sessionType.isEmpty()) {
-			errors.add("sessionType is required");
-		} else {
-			if (row.sessionType.equalsIgnoreCase("EXAM")) {
-				errors.add("EXAM sessions are not supported");
+			// Conflict checks
+			String dayOfWeekDb = DayOfWeekMapper.mapDayOfWeekToDb(row.dayOfWeek);
+			List<Schedule> roomConflicts = scheduleRepository.findRoomOverlaps(
+					semester.getSemesterId(), dayOfWeekDb, room.getRoomId(),
+					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
+			if (!roomConflicts.isEmpty()) {
+				rowErrors.add("Room conflict: room '" + room.getRoomCode() + "' is already booked");
 			}
-			if (!row.sessionType.equalsIgnoreCase("THEORY") && !row.sessionType.equalsIgnoreCase("PRACTICE")) {
-				errors.add("sessionType must be THEORY or PRACTICE");
+
+			List<Schedule> sectionConflicts = scheduleRepository.findSectionOverlaps(
+					semester.getSemesterId(), dayOfWeekDb, section.getSectionId(),
+					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
+			if (!sectionConflicts.isEmpty()) {
+				rowErrors.add("Section conflict: section '" + section.getSectionCode() + "' already has a class");
 			}
-		}
 
-		// practiceGroupNo
-		if (row.practiceGroupNo == null || row.practiceGroupNo < 0) {
-			row.practiceGroupNo = 0; // Default to 0 if not provided
-		}
+			List<Schedule> lecturerConflicts = scheduleRepository.findLecturerOverlaps(
+					semester.getSemesterId(), dayOfWeekDb, section.getLecturerId(),
+					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
+			if (!lecturerConflicts.isEmpty()) {
+				rowErrors.add("Lecturer conflict: lecturer already has a class at this time");
+			}
 
-		return errors;
-	}
+			// In-memory cross-row check (simplified logic: check if the exact same schedule logic exists in schedulesToSave)
+			for (Schedule prev : schedulesToSave) {
+				if (prev.getDayOfWeek().equals(dayOfWeekDb)
+						&& Math.max(prev.getFromWeekNo(), row.fromWeekNo) <= Math.min(prev.getToWeekNo(), row.toWeekNo)
+						&& prev.getStartTime().isBefore(row.endTime) && prev.getEndTime().isAfter(row.startTime)) {
+					if (prev.getRoomId().equals(room.getRoomId())) {
+						rowErrors.add("Cross-row conflict: Room " + room.getRoomCode() + " overlaps with another row in the same file");
+					}
+					if (prev.getSectionId().equals(section.getSectionId())) {
+						rowErrors.add("Cross-row conflict: Section " + section.getSectionCode() + " overlaps with another row");
+					}
+				}
+			}
 
-	private boolean isValidDayOfWeek(String day) {
-		String upper = day.toUpperCase();
-		return upper.equals("MON") || upper.equals("TUE") || upper.equals("WED") || upper.equals("THU")
-				|| upper.equals("FRI") || upper.equals("SAT") || upper.equals("SUN");
-	}
+			if (!rowErrors.isEmpty()) {
+				errors.add(buildError(row, rowErrors));
+				continue;
+			}
 
-	private String mapDayOfWeekToDb(String day) {
-		// Map from MON to Mon format expected in DB
-		return day.substring(0, 1).toUpperCase() + day.substring(1).toLowerCase();
-	}
-
-	private List<String> checkConflicts(Semester semester, CourseSection section, Room room,
-			ScheduleImportRow row, int rowNum) {
-		List<String> errors = new ArrayList<>();
-
-		String dayOfWeek = mapDayOfWeekToDb(row.dayOfWeek);
-
-		// Check room conflicts
-		List<Schedule> roomConflicts = scheduleRepository.findRoomOverlaps(
-				semester.getSemesterId(),
-				dayOfWeek,
-				room.getRoomId(),
-				row.fromWeekNo,
-				row.toWeekNo,
-				row.startTime,
-				row.endTime,
-				null
-		);
-		if (!roomConflicts.isEmpty()) {
-			errors.add("Room conflict: room '" + room.getRoomCode() + "' is already booked");
-		}
-
-		// Check section conflicts
-		List<Schedule> sectionConflicts = scheduleRepository.findSectionOverlaps(
-				semester.getSemesterId(),
-				dayOfWeek,
-				section.getSectionId(),
-				row.fromWeekNo,
-				row.toWeekNo,
-				row.startTime,
-				row.endTime,
-				null
-		);
-		if (!sectionConflicts.isEmpty()) {
-			errors.add("Section conflict: section '" + section.getSectionCode() + "' already has a class");
-		}
-
-		// Check lecturer conflicts (using lecturer_id from course_sections)
-		List<Schedule> lecturerConflicts = scheduleRepository.findLecturerOverlaps(
-				semester.getSemesterId(),
-				dayOfWeek,
-				section.getLecturerId(),
-				row.fromWeekNo,
-				row.toWeekNo,
-				row.startTime,
-				row.endTime,
-				null
-		);
-		if (!lecturerConflicts.isEmpty()) {
-			errors.add("Lecturer conflict: lecturer already has a class at this time");
-		}
-
-		return errors;
-	}
-
-	private void upsertSchedule(Semester semester, CourseSection section, Room room, ScheduleImportRow row) {
-		String dayOfWeek = mapDayOfWeekToDb(row.dayOfWeek);
-		SessionType sessionType = SessionType.valueOf(row.sessionType.toUpperCase());
-
-		// Check if exists by composite key
-		List<Schedule> existing = scheduleRepository.findBySectionId(section.getSectionId());
-		Schedule existingSchedule = existing.stream()
-				.filter(s -> s.getDayOfWeek().equals(dayOfWeek)
-						&& s.getFromWeekNo().equals(row.fromWeekNo)
-						&& s.getToWeekNo().equals(row.toWeekNo)
-						&& s.getSlotStart().equals(row.slotStart)
-						&& s.getSlotEnd().equals(row.slotEnd)
-						&& s.getSessionType().equals(sessionType)
-						&& s.getPracticeGroupNo().equals(row.practiceGroupNo))
-				.findFirst()
-				.orElse(null);
-
-		if (existingSchedule != null) {
-			// Update
-			existingSchedule.setRoomId(room.getRoomId());
-			existingSchedule.setStartTime(row.startTime);
-			existingSchedule.setEndTime(row.endTime);
-			existingSchedule.setStatus("active");
-			existingSchedule.setNote(row.note);
-			scheduleRepository.save(existingSchedule);
-		} else {
-			// Insert
+			// Add to save list
 			Schedule newSchedule = Schedule.builder()
 					.sectionId(section.getSectionId())
 					.roomId(room.getRoomId())
-					.dayOfWeek(dayOfWeek)
+					.dayOfWeek(dayOfWeekDb)
 					.fromWeekNo(row.fromWeekNo)
 					.toWeekNo(row.toWeekNo)
 					.slotStart(row.slotStart)
 					.slotEnd(row.slotEnd)
 					.startTime(row.startTime)
 					.endTime(row.endTime)
-					.sessionType(sessionType)
+					.sessionType(SessionType.valueOf(row.sessionType.toUpperCase()))
 					.practiceGroupNo(row.practiceGroupNo)
-					.status("active")
+					.status("ACTIVE")
 					.note(row.note)
 					.build();
-			scheduleRepository.save(newSchedule);
+
+			schedulesToSave.add(newSchedule);
+			if (!successfullySemesterIds.contains(semester.getSemesterId())) {
+				successfullySemesterIds.add(semester.getSemesterId());
+			}
+		}
+
+		if (!errors.isEmpty()) {
+			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+			return TimetableImportResult.builder()
+					.totalRows(totalRows)
+					.successRows(0)
+					.errorRows(errors.size())
+					.errors(errors)
+					.importedRows(new ArrayList<>())
+					.build();
+		}
+
+		// Save all
+		List<Schedule> savedSchedules = scheduleRepository.saveAll(schedulesToSave);
+		for (int i = 0; i < savedSchedules.size(); i++) {
+			ScheduleImportRow row = parsedRows.get(i);
+			importedRows.add(new TimetableImportRowResult(
+					row.rowNum, row.semesterCode, row.sectionCode, savedSchedules.get(i).getScheduleId()));
+		}
+
+		return TimetableImportResult.builder()
+				.totalRows(totalRows)
+				.successRows(savedSchedules.size())
+				.errorRows(0)
+				.errors(new ArrayList<>())
+				.importedRows(importedRows)
+				.build();
+	}
+
+	private TimetableImportError buildError(ScheduleImportRow row, List<String> errs) {
+		return TimetableImportError.builder()
+				.rowNumber(row.rowNum).semesterCode(row.semesterCode)
+				.sectionCode(row.sectionCode).errors(new ArrayList<>(errs)).build();
+	}
+
+	private void addError(List<TimetableImportError> errors, int rowNum, String semCode, String secCode, String err) {
+		errors.add(TimetableImportError.builder()
+				.rowNumber(rowNum).semesterCode(semCode).sectionCode(secCode).errors(List.of(err)).build());
+	}
+
+	private TimetableImportResult createErrorResult(String error) {
+		return TimetableImportResult.builder()
+				.totalRows(0).successRows(0).errorRows(1)
+				.errors(List.of(TimetableImportError.builder().rowNumber(0).semesterCode("").sectionCode("").errors(List.of(error)).build()))
+				.importedRows(new ArrayList<>())
+				.build();
+	}
+
+	private String getCellValueAsString(Cell cell) {
+		if (cell == null) return "";
+		switch (cell.getCellType()) {
+		case STRING: return cell.getStringCellValue().trim();
+		case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
+		default: return "";
 		}
 	}
 
-	private void callStoredProcedure(Long semesterId) {
-		jdbcTemplate.update("CALL sp_generate_class_sessions_for_semester(?)", semesterId);
+	private Integer getCellValueAsInteger(Cell cell) {
+		if (cell == null) return null;
+		try {
+			switch (cell.getCellType()) {
+			case NUMERIC: return (int) cell.getNumericCellValue();
+			case STRING: return Integer.parseInt(cell.getStringCellValue().trim());
+			default: return null;
+			}
+		} catch (Exception e) { return null; }
 	}
 
-	// Inner class for import row data
+	private LocalTime parseTime(Cell cell) {
+		if (cell == null) return null;
+		try {
+			switch (cell.getCellType()) {
+			case NUMERIC:
+				double timeValue = cell.getNumericCellValue();
+				int hours = (int) (timeValue * 24);
+				int minutes = (int) ((timeValue * 24 - hours) * 60);
+				return LocalTime.of(hours, minutes);
+			case STRING:
+				String timeStr = cell.getStringCellValue().trim();
+				if (timeStr.isEmpty()) return null;
+				try { return LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm:ss")); } 
+				catch (Exception e1) {
+					try { return LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm")); } 
+					catch (Exception e2) { return null; }
+				}
+			default: return null;
+			}
+		} catch (Exception e) { return null; }
+	}
+
 	private static class ScheduleImportRow {
+		int rowNum;
 		String semesterCode;
 		String sectionCode;
 		String roomCode;
@@ -514,9 +411,7 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 		LocalTime startTime;
 		LocalTime endTime;
 		String sessionType;
-		String groupName;
 		Integer practiceGroupNo;
 		String note;
 	}
 }
-

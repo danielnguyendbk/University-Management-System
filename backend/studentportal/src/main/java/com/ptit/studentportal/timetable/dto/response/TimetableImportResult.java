@@ -8,8 +8,9 @@ import lombok.Builder;
 public record TimetableImportResult(
 		Integer totalRows,
 		Integer successRows,
-		Integer failedRows,
-		List<TimetableImportError> errors
+		Integer errorRows,
+		List<TimetableImportError> errors,
+		List<TimetableImportRowResult> importedRows
 ) {
 }
 

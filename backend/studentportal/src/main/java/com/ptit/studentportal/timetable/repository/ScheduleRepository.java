@@ -13,12 +13,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
 	List<Schedule> findBySectionId(Long sectionId);
 
-	List<Schedule> findBySemesterId(Long semesterId);
+	@Query(value = "SELECT s.* FROM schedules s JOIN course_sections cs ON s.section_id = cs.section_id WHERE cs.semester_id = :semesterId", nativeQuery = true)
+	List<Schedule> findActiveSchedulesBySemesterId(@Param("semesterId") Long semesterId);
 
 	@Query(value = """
 			SELECT s.*
 			FROM schedules s
-			WHERE s.semester_id = :semesterId
+			JOIN course_sections cs ON s.section_id = cs.section_id
+			WHERE cs.semester_id = :semesterId
 			  AND s.day_of_week = :dayOfWeek
 			  AND s.room_id = :roomId
 			  AND s.from_week_no <= :toWeekNo
@@ -41,7 +43,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 	@Query(value = """
 			SELECT s.*
 			FROM schedules s
-			WHERE s.semester_id = :semesterId
+			JOIN course_sections cs ON s.section_id = cs.section_id
+			WHERE cs.semester_id = :semesterId
 			  AND s.day_of_week = :dayOfWeek
 			  AND s.section_id = :sectionId
 			  AND s.from_week_no <= :toWeekNo
@@ -65,7 +68,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 			SELECT s.*
 			FROM schedules s
 			JOIN course_sections sec ON sec.section_id = s.section_id
-			WHERE s.semester_id = :semesterId
+			WHERE sec.semester_id = :semesterId
 			  AND s.day_of_week = :dayOfWeek
 			  AND sec.lecturer_id = :lecturerId
 			  AND s.from_week_no <= :toWeekNo

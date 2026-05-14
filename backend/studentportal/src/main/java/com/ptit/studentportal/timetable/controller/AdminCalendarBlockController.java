@@ -21,7 +21,7 @@ import com.ptit.studentportal.timetable.service.CalendarBlockService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/admin/calendar-blocks")
+@RequestMapping("/api/admin/timetable/calendar-blocks")
 public class AdminCalendarBlockController {
 
 	private final CalendarBlockService calendarBlockService;

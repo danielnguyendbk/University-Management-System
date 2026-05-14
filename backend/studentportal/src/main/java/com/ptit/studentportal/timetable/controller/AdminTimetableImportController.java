@@ -12,7 +12,7 @@ import com.ptit.studentportal.timetable.dto.response.TimetableImportResult;
 import com.ptit.studentportal.timetable.service.TimetableImportService;
 
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping("/api/admin/timetable")
 public class AdminTimetableImportController {
 
 	private final TimetableImportService timetableImportService;
@@ -21,8 +21,8 @@ public class AdminTimetableImportController {
 		this.timetableImportService = timetableImportService;
 	}
 
-	@PostMapping("/timetable/import")
-	public ResponseEntity<ApiResponse<TimetableImportResult>> importSchedules(
+	@PostMapping("/import")
+	public ResponseEntity<?> importSchedules(
 			@RequestParam("file") MultipartFile file
 	) {
 		if (file.isEmpty()) {
@@ -31,6 +31,18 @@ public class AdminTimetableImportController {
 		}
 
 		TimetableImportResult result = timetableImportService.importSchedulesFromExcel(file);
+		if (result.errorRows() > 0) {
+			// Using raw map or modifying ApiResponse to include data if needed
+			// The frontend expects { "success": false, "message": "Import failed...", "data": result }
+			return ResponseEntity.badRequest().body(
+					java.util.Map.of(
+							"success", false,
+							"message", "Import failed. Please fix errors and upload again.",
+							"data", result
+					)
+			);
+		}
+		
 		return ResponseEntity.ok(ApiResponse.success("Import completed", result));
 	}
 }
