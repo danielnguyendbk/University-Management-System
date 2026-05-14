@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Bell,
@@ -18,75 +18,25 @@ import {
   X
 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "../../hooks/useAuth";
 
-const navigationByRole = {
-  STUDENT: [
-    { name: "Trang chủ", name_vi: "Tổng quan cá nhân", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
-    { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", path: "curriculum", icon: BookOpen },
-    { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", path: "course-registration", icon: ClipboardList },
-    { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", path: "schedule", icon: Calendar },
-    { name: "Lịch thi", name_vi: "Kế hoạch thi cử", path: "exam-schedule", icon: CalendarCheck },
-    { name: "Điểm số", name_vi: "Kết quả học tập", path: "grades", icon: GraduationCap },
-    { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", path: "tuition", icon: DollarSign },
-    { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", path: "e-invoice", icon: FileText },
-    { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", path: "submit-request", icon: Send },
-    { name: "Phản hồi", name_vi: "Đóng góp ý kiến", path: "feedback", icon: MessageSquare },
-  ],
-  LECTURER: [
-    { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
-    { name: "Lịch giảng dạy", name_vi: "Lịch dạy theo tuần", path: "teaching-schedule", icon: Calendar },
-    { name: "Lớp học phần", name_vi: "Danh sách lớp phụ trách", path: "sections", icon: BookOpen },
-    { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
-    { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
-    { name: "Phản hồi", name_vi: "Trao đổi với sinh viên", path: "feedback", icon: MessageSquare },
-  ],
-  ADMIN: [
-    { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Thông báo toàn hệ thống", path: "announcements", icon: Bell },
-    { name: "Tài khoản sinh viên", name_vi: "Quản lý tài khoản sinh viên", path: "student-accounts", icon: User },
-    { name: "Tài khoản giảng viên", name_vi: "Quản lý tài khoản giảng viên", path: "lecturer-accounts", icon: User },
-    { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
-    { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
-  ],
-};
+const navigation = [
+  { name: "Trang chủ", name_vi: "Tổng quan hệ thống", href: "/portal", icon: LayoutDashboard },
+  { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", href: "/portal/announcements", icon: Bell },
+  { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", href: "/portal/curriculum", icon: BookOpen },
+  { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", href: "/portal/course-registration", icon: ClipboardList },
+  { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", href: "/portal/schedule", icon: Calendar },
+  { name: "Lịch thi", name_vi: "Kế hoạch thi cử", href: "/portal/exam-schedule", icon: CalendarCheck },
+  { name: "Điểm số", name_vi: "Kết quả học tập", href: "/portal/grades", icon: GraduationCap },
+  { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", href: "/portal/tuition", icon: DollarSign },
+  { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", href: "/portal/e-invoice", icon: FileText },
+  { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", href: "/portal/submit-request", icon: Send },
+  { name: "Duyệt yêu cầu", name_vi: "Dành cho giảng viên", href: "/portal/request-approval", icon: CheckSquare },
+  { name: "Phản hồi", name_vi: "Đóng góp ý kiến", href: "/portal/feedback", icon: MessageSquare },
+];
 
 export function Root() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
-
-  const roleBasePath = {
-    STUDENT: "/portal/student",
-    LECTURER: "/portal/lecturer",
-    ADMIN: "/portal/admin",
-  };
-
-  const basePath = roleBasePath[user?.role] || roleBasePath.STUDENT;
-  const navigation = (navigationByRole[user?.role] || navigationByRole.STUDENT).map((item) => ({
-    ...item,
-    href: item.path ? `${basePath}/${item.path}` : basePath,
-  }));
-
-  const handleLogout = () => {
-    logout();
-    navigate("/", { replace: true });
-  };
-
-  const portalTitleByRole = {
-    STUDENT: "Cổng thông tin sinh viên",
-    LECTURER: "Cổng thông tin giảng viên",
-    ADMIN: "Cổng thông tin quản trị",
-  };
-
-  const portalSubtitleByRole = {
-    STUDENT: "Bảng điều khiển sinh viên",
-    LECTURER: "Bảng điều khiển giảng viên",
-    ADMIN: "Bảng điều khiển quản trị",
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -105,12 +55,8 @@ export function Root() {
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-semibold text-gray-900">
-                  {portalTitleByRole[user?.role] || portalTitleByRole.STUDENT}
-                </h1>
-                <p className="text-xs text-gray-500">
-                  {portalSubtitleByRole[user?.role] || portalSubtitleByRole.STUDENT}
-                </p>
+                <h1 className="font-semibold text-gray-900">Cổng thông tin sinh viên</h1>
+                <p className="text-xs text-gray-500">Bảng điều khiển sinh viên</p>
               </div>
             </div>
           </div>
@@ -135,23 +81,13 @@ export function Root() {
             </button>
             <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.fullName || user?.username || "Người dùng"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {user?.role ? `Vai trò: ${user.role}` : "Đang đăng nhập"}
-                </p>
+                <p className="text-sm font-medium text-gray-900">John Doe</p>
+                <p className="text-xs text-gray-500">ID: 2021001234</p>
               </div>
               <div className="w-10 h-10 bg-[#1E3A8A] rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-white" />
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              Đăng xuất
-            </button>
           </div>
         </div>
       </header>
@@ -165,8 +101,8 @@ export function Root() {
         >
           <nav className="p-4 space-y-1">
             {navigation.map((item) => {
-              const isActive = location.pathname === item.href ||
-                (item.href !== basePath && location.pathname.startsWith(item.href));
+              const isActive = location.pathname === item.href || 
+                (item.href !== "/portal" && location.pathname.startsWith(item.href));
               const Icon = item.icon;
               
               return (

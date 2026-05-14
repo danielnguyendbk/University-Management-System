@@ -1,27 +1,5 @@
-import { API_BASE_URL, clearStoredToken, getStoredToken, setStoredToken, parseApiError } from "./app";
-
-async function request(path, options = {}) {
-  const token = getStoredToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-
-  return response.json();
-}
+import { clearStoredToken, getStoredToken, setStoredToken } from "./app";
+import { request } from "./apiClient";
 
 export async function login(credentials) {
   const payload = await request("/auth/login", {
@@ -30,6 +8,7 @@ export async function login(credentials) {
   });
 
   const token = payload?.data?.token;
+
   if (token) {
     setStoredToken(token);
   }

@@ -1,30 +1,18 @@
 import { createBrowserRouter } from "react-router-dom";
 import { Root } from "./components/Root";
-import { LoginPage } from "./pages/auth/LoginPage";
-import { Dashboard } from "./pages/student/Dashboard";
-import { Announcements } from "./pages/student/Announcements";
-import { Curriculum } from "./pages/student/Curriculum";
-import { CourseRegistration } from "./pages/student/CourseRegistration";
-import { WeeklySchedule } from "./pages/student/WeeklySchedule";
-import { ExamSchedule } from "./pages/student/ExamSchedule";
-import { Grades } from "./pages/student/Grades";
-import { Tuition } from "./pages/student/Tuition";
-import { EInvoice } from "./pages/student/EInvoice";
-import { SubmitRequest } from "./pages/student/SubmitRequest";
+import { LoginPage } from "./components/LoginPage";
+import { Dashboard } from "./components/Dashboard";
+import { Announcements } from "./components/Announcements";
+import { Curriculum } from "./components/Curriculum";
+import { CourseRegistration } from "./components/CourseRegistration";
+import { WeeklySchedule } from "./components/WeeklySchedule";
+import { ExamSchedule } from "./components/ExamSchedule";
+import { Grades } from "./components/Grades";
+import { Tuition } from "./components/Tuition";
+import { EInvoice } from "./components/EInvoice";
+import { SubmitRequest } from "./components/SubmitRequest";
 import { RequestApproval } from "./components/RequestApproval";
-import { Feedback } from "./pages/student/Feedback";
-import { PortalHome } from "./components/PortalHome";
-import { PortalRedirect } from "./components/PortalRedirect";
-import { StudentPortalRoute, LecturerPortalRoute, AdminPortalRoute } from "./components/RolePortalRoute";
-import { LecturerDashboard } from "./pages/lecturer/LecturerDashboard";
-import { LecturerTeachingSchedule } from "./pages/lecturer/LecturerTeachingSchedule";
-import { LecturerClassSections } from "./pages/lecturer/LecturerClassSections";
-import { LecturerGradeEntry } from "./pages/lecturer/LecturerGradeEntry";
-import { AdminDashboard } from "./pages/admin/AdminDashboard";
-import { ManageStudentAccounts } from "./pages/admin/ManageStudentAccounts";
-import { ManageLecturerAccounts } from "./pages/admin/ManageLecturerAccounts";
-import { SectionAssignment } from "./pages/admin/SectionAssignment";
-import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
+import { Feedback } from "./components/Feedback";
 
 export const router = createBrowserRouter([
   {
@@ -33,13 +21,9 @@ export const router = createBrowserRouter([
   },
   {
     path: "/portal",
-    Component: PortalRedirect,
-  },
-  {
-    path: "/portal/student",
-    Component: StudentPortalRoute,
+    Component: Root,
     children: [
-      { index: true, Component: PortalHome },
+      { index: true, Component: Dashboard },
       { path: "announcements", Component: Announcements },
       { path: "curriculum", Component: Curriculum },
       { path: "course-registration", Component: CourseRegistration },
@@ -49,32 +33,8 @@ export const router = createBrowserRouter([
       { path: "tuition", Component: Tuition },
       { path: "e-invoice", Component: EInvoice },
       { path: "submit-request", Component: SubmitRequest },
-      { path: "feedback", Component: Feedback },
-    ],
-  },
-  {
-    path: "/portal/lecturer",
-    Component: LecturerPortalRoute,
-    children: [
-      { index: true, Component: LecturerDashboard },
-      { path: "announcements", Component: Announcements },
-      { path: "teaching-schedule", Component: LecturerTeachingSchedule },
-      { path: "sections", Component: LecturerClassSections },
-      { path: "grade-entry", Component: LecturerGradeEntry },
       { path: "request-approval", Component: RequestApproval },
       { path: "feedback", Component: Feedback },
-    ],
-  },
-  {
-    path: "/portal/admin",
-    Component: AdminPortalRoute,
-    children: [
-      { index: true, Component: AdminDashboard },
-      { path: "announcements", Component: Announcements },
-      { path: "student-accounts", Component: ManageStudentAccounts },
-      { path: "lecturer-accounts", Component: ManageLecturerAccounts },
-      { path: "section-assignment", Component: SectionAssignment },
-      { path: "registration-sessions", Component: RegistrationSessions },
     ],
   },
 ]);
