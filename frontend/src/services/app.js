@@ -1,5 +1,5 @@
 export const API_BASE_URL = "http://localhost:8080/api";
-export const AUTH_TOKEN_KEY = "student_portal_token";
+export const AUTH_TOKEN_KEY = "token";
 
 export function getStoredToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY);

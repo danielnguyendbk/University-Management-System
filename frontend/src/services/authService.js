@@ -1,31 +1,47 @@
-import { clearStoredToken, getStoredToken, setStoredToken } from "./app";
+import { getStoredToken } from "./app";
 import { request } from "./apiClient";
 
 export async function login(credentials) {
-  const payload = await request("/auth/login", {
+  const response = await request("/auth/login", {
     method: "POST",
     body: JSON.stringify(credentials),
   });
 
-  const token = payload?.data?.token;
+  // response is the JSON body: { success, message, data: { token, username, role, fullName } }
+  const payload = response?.data;
 
-  if (token) {
-    setStoredToken(token);
+  if (payload && payload.token) {
+    localStorage.setItem("token", payload.token);
+    localStorage.setItem("user", JSON.stringify({
+      username: payload.username,
+      role: payload.role,
+      fullName: payload.fullName
+    }));
   }
 
-  return payload?.data;
+  return payload;
 }
 
 export async function getCurrentUser() {
-  const payload = await request("/auth/me", {
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      return JSON.parse(userStr);
+    } catch (e) {
+      console.error("Error parsing user from localStorage", e);
+    }
+  }
+
+  const response = await request("/auth/me", {
     method: "GET",
   });
 
-  return payload?.data;
+  return response?.data;
 }
 
 export function logout() {
-  clearStoredToken();
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
 }
 
 export { getStoredToken };

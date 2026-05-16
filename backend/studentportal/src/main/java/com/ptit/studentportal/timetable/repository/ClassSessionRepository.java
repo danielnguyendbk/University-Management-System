@@ -27,6 +27,23 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 	@Query(value = """
 			SELECT cs.*
 			FROM class_sessions cs
+			WHERE cs.lecturer_id = :lecturerId
+			  AND cs.session_date = :sessionDate
+			  AND cs.session_status <> 'CANCELLED'
+			  AND NOT (:newSlotEnd < cs.slot_start OR :newSlotStart > cs.slot_end)
+			  AND (:excludeSessionId IS NULL OR cs.session_id <> :excludeSessionId)
+			""", nativeQuery = true)
+	List<ClassSession> findLecturerConflictOnDate(
+			@Param("lecturerId") Long lecturerId,
+			@Param("sessionDate") LocalDate sessionDate,
+			@Param("newSlotStart") Integer newSlotStart,
+			@Param("newSlotEnd") Integer newSlotEnd,
+			@Param("excludeSessionId") Long excludeSessionId
+	);
+
+	@Query(value = """
+			SELECT cs.*
+			FROM class_sessions cs
 			JOIN course_sections sec ON sec.section_id = cs.section_id
 			JOIN semesters sem ON sem.semester_id = sec.semester_id
 			WHERE cs.lecturer_id = :lecturerId

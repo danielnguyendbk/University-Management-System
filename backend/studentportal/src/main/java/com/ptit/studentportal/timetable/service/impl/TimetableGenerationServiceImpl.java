@@ -97,6 +97,23 @@ public class TimetableGenerationServiceImpl implements TimetableGenerationServic
 						skipped++;
 						continue;
 					}
+					// Lecturer conflict check khi update
+					if (section.getLecturerId() != null && schedule.getSlotStart() != null && schedule.getSlotEnd() != null) {
+						var lecturerConflicts = classSessionRepository.findLecturerConflictOnDate(
+								section.getLecturerId(), sessionDate,
+								schedule.getSlotStart(), schedule.getSlotEnd(),
+								session.getSessionId()
+						);
+						if (!lecturerConflicts.isEmpty()) {
+							var conflict = lecturerConflicts.get(0);
+							warnings.add("Lecturer conflict: lecturerId=" + section.getLecturerId()
+									+ " tren " + sessionDate + " slot " + schedule.getSlotStart() + "-" + schedule.getSlotEnd()
+									+ " trung voi sessionId=" + conflict.getSessionId()
+									+ " (scheduleId=" + conflict.getScheduleId() + ")");
+							skipped++;
+							continue;
+						}
+					}
 					applySchedule(session, schedule, section, week.getSemesterWeekId(), sessionDate, block);
 					try {
 						classSessionRepository.save(session);
@@ -108,6 +125,24 @@ public class TimetableGenerationServiceImpl implements TimetableGenerationServic
 						warnings.add("Trung lich: scheduleId=" + schedule.getScheduleId() + " - " + ex.getMostSpecificCause().getMessage());
 					}
 					continue;
+				}
+
+				// Lecturer conflict check khi create
+				if (section.getLecturerId() != null && schedule.getSlotStart() != null && schedule.getSlotEnd() != null) {
+					var lecturerConflicts = classSessionRepository.findLecturerConflictOnDate(
+							section.getLecturerId(), sessionDate,
+							schedule.getSlotStart(), schedule.getSlotEnd(),
+							null
+					);
+					if (!lecturerConflicts.isEmpty()) {
+						var conflict = lecturerConflicts.get(0);
+						warnings.add("Lecturer conflict: lecturerId=" + section.getLecturerId()
+								+ " tren " + sessionDate + " slot " + schedule.getSlotStart() + "-" + schedule.getSlotEnd()
+								+ " trung voi sessionId=" + conflict.getSessionId()
+								+ " (scheduleId=" + conflict.getScheduleId() + ")");
+						skipped++;
+						continue;
+					}
 				}
 
 				ClassSession session = new ClassSession();

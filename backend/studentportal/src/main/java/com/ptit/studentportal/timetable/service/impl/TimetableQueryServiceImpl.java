@@ -11,19 +11,46 @@ import com.ptit.studentportal.timetable.dto.response.ClassSessionViewProjection;
 import com.ptit.studentportal.timetable.entity.Schedule;
 import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.service.TimetableQueryService;
+import com.ptit.studentportal.user.UserRepository;
+import com.ptit.studentportal.student.StudentRepository;
+import com.ptit.studentportal.student.Student;
+import com.ptit.studentportal.user.User;
 
 @Service
 public class TimetableQueryServiceImpl implements TimetableQueryService {
 
     private final ClassSessionRepository classSessionRepository;
+    private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
 
-    public TimetableQueryServiceImpl(ClassSessionRepository classSessionRepository) {
+    public TimetableQueryServiceImpl(
+            ClassSessionRepository classSessionRepository,
+            UserRepository userRepository,
+            StudentRepository studentRepository
+    ) {
         this.classSessionRepository = classSessionRepository;
+        this.userRepository = userRepository;
+        this.studentRepository = studentRepository;
     }
 
     @Override
     public List<TimetableItemResponse> getStudentTimetable(Long studentId, LocalDate fromDate, LocalDate toDate) {
         return Collections.emptyList();
+    }
+
+    @Override
+    public List<TimetableItemResponse> getStudentTimetableByUsername(String username, LocalDate fromDate, LocalDate toDate) {
+        User user = userRepository.findByUsername(username).orElse(null);
+        if (user == null) {
+            return Collections.emptyList();
+        }
+
+        Student student = studentRepository.findByUser_UserId(user.getUserId()).orElse(null);
+        if (student == null) {
+            return Collections.emptyList();
+        }
+
+        return getStudentTimetable(student.getStudentId(), fromDate, toDate);
     }
 
     @Override

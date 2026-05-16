@@ -62,6 +62,11 @@ public class Semester {
 	private LocalDateTime registrationClose;
 
 	@Enumerated(EnumType.STRING)
+	@Column(name = "registration_status", nullable = false, length = 20)
+	@Builder.Default
+	private com.ptit.studentportal.registration.enums.RegistrationStatus registrationStatus = com.ptit.studentportal.registration.enums.RegistrationStatus.CLOSED;
+
+	@Enumerated(EnumType.STRING)
 	@Column(name = "status", length = 20)
 	private SemesterStatus status;
 

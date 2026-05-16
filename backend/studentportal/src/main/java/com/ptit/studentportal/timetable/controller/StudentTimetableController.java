@@ -14,6 +14,8 @@ import com.ptit.studentportal.commom.response.ApiResponse;
 import com.ptit.studentportal.timetable.dto.response.TimetableItemResponse;
 import com.ptit.studentportal.timetable.service.TimetableQueryService;
 
+import org.springframework.security.core.Authentication;
+
 @RestController
 @RequestMapping("/api/student/timetable")
 public class StudentTimetableController {
@@ -26,11 +28,12 @@ public class StudentTimetableController {
 
 	@GetMapping
 	public ResponseEntity<ApiResponse<List<TimetableItemResponse>>> getStudentTimetable(
-			@RequestParam Long studentId,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate
+			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+			Authentication authentication
 	) {
-		List<TimetableItemResponse> response = timetableQueryService.getStudentTimetable(studentId, fromDate, toDate);
+		String username = authentication.getName();
+		List<TimetableItemResponse> response = timetableQueryService.getStudentTimetableByUsername(username, fromDate, toDate);
 		return ResponseEntity.ok(ApiResponse.success("Student timetable loaded", response));
 	}
 }

@@ -11,6 +11,8 @@ public interface TimetableQueryService {
 
 	List<TimetableItemResponse> getStudentTimetable(Long studentId, LocalDate fromDate, LocalDate toDate);
 
+	List<TimetableItemResponse> getStudentTimetableByUsername(String username, LocalDate fromDate, LocalDate toDate);
+
 	List<TimetableItemResponse> getLecturerTimetable(Long lecturerId, LocalDate fromDate, LocalDate toDate);
 
 	List<TimetableItemResponse> getAdminTimetable(LocalDate fromDate, LocalDate toDate);

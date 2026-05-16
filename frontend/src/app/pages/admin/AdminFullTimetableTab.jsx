@@ -22,6 +22,8 @@ const breakRanges = [
   { start: "17:00", end: "17:30" },
 ];
 
+const DAY_LABELS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
+
 const normalizeSessionStatus = (session) =>
   String(session?.sessionStatus ?? session?.status ?? "scheduled").toLowerCase();
 
@@ -36,27 +38,43 @@ const timeAxis = buildTimeAxis();
 const rowCount = Math.max(timeAxis.length - 1, 0);
 const gridHeight = rowCount * ROW_HEIGHT;
 
-/**
- * Group flat session rows into { buildingCode, buildingName, rooms: [{ roomCode, sessions }] }
- * Only includes buildings/rooms that have sessions.
- */
-function groupSessionsByBuildingRoom(sessions = []) {
+/** Derive the 7 dates of a week given startDate (Mon) string "YYYY-MM-DD" */
+function getWeekDates(startDate) {
+  if (!startDate) return [];
+  const base = new Date(`${startDate}T00:00:00`);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    return d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  });
+}
+
+/** Format "YYYY-MM-DD" → "dd/MM" */
+function formatShort(iso) {
+  if (!iso) return "";
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
+/** Format "YYYY-MM-DD" → "dd/MM/YYYY" */
+function formatFull(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** Group flat session rows → { buildingCode, buildingName, rooms: [{ roomCode, sessions }] } */
+function groupByBuildingRoom(sessions = []) {
   const buildingMap = new Map();
-  for (const session of sessions) {
-    const bKey = session.buildingCode ?? "UNKNOWN";
-    if (!buildingMap.has(bKey)) {
-      buildingMap.set(bKey, {
-        buildingCode: session.buildingCode,
-        buildingName: session.buildingName,
-        roomMap: new Map(),
-      });
+  for (const s of sessions) {
+    const bk = s.buildingCode ?? "UNKNOWN";
+    if (!buildingMap.has(bk)) {
+      buildingMap.set(bk, { buildingCode: s.buildingCode, buildingName: s.buildingName, roomMap: new Map() });
     }
-    const building = buildingMap.get(bKey);
-    const rKey = session.roomCode ?? "UNKNOWN";
-    if (!building.roomMap.has(rKey)) {
-      building.roomMap.set(rKey, { roomCode: session.roomCode, sessions: [] });
-    }
-    building.roomMap.get(rKey).sessions.push(session);
+    const b = buildingMap.get(bk);
+    const rk = s.roomCode ?? "UNKNOWN";
+    if (!b.roomMap.has(rk)) b.roomMap.set(rk, { roomCode: s.roomCode, sessions: [] });
+    b.roomMap.get(rk).sessions.push(s);
   }
   return Array.from(buildingMap.values()).map((b) => ({
     buildingCode: b.buildingCode,
@@ -72,93 +90,91 @@ export function AdminFullTimetableTab() {
   const [rooms, setRooms] = useState([]);
   const [sections, setSections] = useState([]);
   const [rawSessions, setRawSessions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [selectedSemesterId, setSelectedSemesterId] = useState("");
   const [selectedWeekNo, setSelectedWeekNo] = useState("");
+  const [selectedDate, setSelectedDate] = useState(""); // "YYYY-MM-DD"
+
+  // Filters
   const [selectedBuildingId, setSelectedBuildingId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [selectedSessionType, setSelectedSessionType] = useState("");
   const [selectedLecturerId, setSelectedLecturerId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState("");
 
-  const [loading, setLoading] = useState(false);
-
-  // Load semesters
+  // ---------- Load semesters ----------
   useEffect(() => {
-    async function fetchSemesters() {
+    async function fetch() {
       try {
         setLoading(true);
         const data = await getSemesters();
         setSemesters(data || []);
         if (data?.length) {
           const latest = getLatestSemester(data);
-          const latestId = latest?.id ?? latest?.semesterId;
-          setSelectedSemesterId(latestId ? String(latestId) : "");
+          const id = latest?.semesterId ?? latest?.id;
+          setSelectedSemesterId(id ? String(id) : "");
         }
-      } catch {
-        toast.error("Không thể tải học kỳ.");
-      } finally {
-        setLoading(false);
-      }
+      } catch { toast.error("Không thể tải học kỳ."); }
+      finally { setLoading(false); }
     }
-    fetchSemesters();
+    fetch();
   }, []);
 
-  // Load weeks/buildings/rooms/sections when semester changes
+  // ---------- Load weeks / buildings / rooms / sections ----------
   useEffect(() => {
     if (!selectedSemesterId) return;
-    async function fetchSemesterData() {
+    async function fetch() {
       try {
         setLoading(true);
-        const [weeksData, buildingsData, roomsData, sectionsData] = await Promise.all([
+        const [weeks, blds, rms, secs] = await Promise.all([
           getSemesterWeeks(selectedSemesterId),
           getBuildings(),
           getRooms(),
           getCourseSections(selectedSemesterId),
         ]);
-        setSemesterWeeks(weeksData || []);
-        setBuildings(buildingsData || []);
-        setRooms(roomsData || []);
-        setSections(sectionsData || []);
-        // Reset dependent filters
+        setSemesterWeeks(weeks || []);
+        setBuildings(blds || []);
+        setRooms(rms || []);
+        setSections(secs || []);
         setSelectedBuildingId("");
         setSelectedRoomId("");
         setSelectedSectionId("");
         setSelectedLecturerId("");
-        if (weeksData?.length) {
-          const first = weeksData[0]?.weekNo ?? weeksData[0]?.id;
-          setSelectedWeekNo(first ? String(first) : "");
+        setSelectedDate("");
+        if (weeks?.length) {
+          setSelectedWeekNo(String(weeks[0].weekNo));
         }
-      } catch {
-        toast.error("Không thể tải dữ liệu học kỳ.");
-      } finally {
-        setLoading(false);
-      }
+      } catch { toast.error("Không thể tải dữ liệu học kỳ."); }
+      finally { setLoading(false); }
     }
-    fetchSemesterData();
+    fetch();
   }, [selectedSemesterId]);
 
-  // Unique lecturers from sections
-  const lecturers = useMemo(() => {
-    const seen = new Set();
-    return sections.filter((s) => s.lecturerId && !seen.has(s.lecturerId) && seen.add(s.lecturerId))
-      .map((s) => ({ lecturerId: s.lecturerId, lecturerCode: s.lecturerCode, lecturerName: s.lecturerName }));
-  }, [sections]);
-
-  // Selected lecturer/section label helpers
-  const selectedLecturer = useMemo(
-    () => lecturers.find((l) => String(l.lecturerId) === String(selectedLecturerId)),
-    [lecturers, selectedLecturerId]
-  );
-  const selectedSection = useMemo(
-    () => sections.find((s) => String(s.sectionId) === String(selectedSectionId)),
-    [sections, selectedSectionId]
+  // ---------- Derived: selected week object ----------
+  const selectedWeek = useMemo(
+    () => semesterWeeks.find((w) => String(w.weekNo) === String(selectedWeekNo)),
+    [semesterWeeks, selectedWeekNo]
   );
 
-  // Fetch timetable
+  // ---------- Week dates (7 items) ----------
+  const weekDates = useMemo(() => getWeekDates(selectedWeek?.startDate), [selectedWeek]);
+
+  // ---------- Auto-select date when week changes ----------
+  useEffect(() => {
+    if (!weekDates.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (weekDates.includes(today)) {
+      setSelectedDate(today);
+    } else {
+      setSelectedDate(weekDates[0]);
+    }
+  }, [weekDates]);
+
+  // ---------- Fetch timetable (full week) ----------
   useEffect(() => {
     if (!selectedSemesterId || !selectedWeekNo) return;
-    async function fetchTimetable() {
+    async function fetch() {
       try {
         setLoading(true);
         const data = await getFullTimetable({
@@ -171,75 +187,102 @@ export function AdminFullTimetableTab() {
           sectionId: selectedSectionId || undefined,
         });
         setRawSessions(data || []);
-      } catch (error) {
-        const msg = error?.response?.data?.message || "Không thể tải thời khóa biểu.";
-        toast.error(msg);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) {
+        toast.error(err?.response?.data?.message || "Không thể tải thời khóa biểu.");
+      } finally { setLoading(false); }
     }
-    fetchTimetable();
+    fetch();
   }, [selectedSemesterId, selectedWeekNo, selectedBuildingId, selectedRoomId, selectedSessionType, selectedLecturerId, selectedSectionId]);
 
-  // hasFocusedFilter: chỉ hiển thị tòa/phòng có session
+  // ---------- Auto-select date from data if no lịch hôm nay ----------
+  useEffect(() => {
+    if (!rawSessions.length || !weekDates.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (rawSessions.some((s) => s.sessionDate === today)) return;
+    const firstDate = rawSessions.find((s) => weekDates.includes(s.sessionDate))?.sessionDate;
+    if (firstDate && !weekDates.includes(today)) setSelectedDate(firstDate);
+  }, [rawSessions, weekDates]);
+
+  // ---------- Week navigation ----------
+  const currentWeekIndex = semesterWeeks.findIndex((w) => String(w.weekNo) === String(selectedWeekNo));
+  const canPrev = currentWeekIndex > 0;
+  const canNext = currentWeekIndex < semesterWeeks.length - 1;
+  const goWeek = (delta) => {
+    const next = semesterWeeks[currentWeekIndex + delta];
+    if (next) setSelectedWeekNo(String(next.weekNo));
+  };
+
+  // ---------- Derived ----------
   const hasFocusedFilter = Boolean(selectedLecturerId || selectedSectionId);
 
-  // Group sessions by building/room
-  const buildingGroups = useMemo(() => groupSessionsByBuildingRoom(rawSessions), [rawSessions]);
+  const lecturers = useMemo(() => {
+    const seen = new Set();
+    return sections.filter((s) => s.lecturerId && !seen.has(s.lecturerId) && seen.add(s.lecturerId))
+      .map((s) => ({ lecturerId: s.lecturerId, lecturerCode: s.lecturerCode, lecturerName: s.lecturerName }));
+  }, [sections]);
 
-  // Card title logic
+  const selectedLecturer = useMemo(() => lecturers.find((l) => String(l.lecturerId) === String(selectedLecturerId)), [lecturers, selectedLecturerId]);
+  const selectedSection = useMemo(() => sections.find((s) => String(s.sectionId) === String(selectedSectionId)), [sections, selectedSectionId]);
+
+  // Filter sessions by selectedDate
+  const dailySessions = useMemo(
+    () => rawSessions.filter((s) => s.sessionDate === selectedDate),
+    [rawSessions, selectedDate]
+  );
+
+  const buildingGroups = useMemo(() => groupByBuildingRoom(dailySessions), [dailySessions]);
+
+  const filteredRooms = useMemo(
+    () => rooms.filter((r) => !selectedBuildingId || String(r.buildingId) === String(selectedBuildingId)),
+    [rooms, selectedBuildingId]
+  );
+
+  // ---------- Titles ----------
   const getCardTitle = (building) => {
-    if (selectedLecturerId && selectedSectionId) {
-      return "Lịch theo bộ lọc đã chọn";
-    }
-    if (selectedLecturerId && selectedLecturer) {
-      return `Lịch của ${selectedLecturer.lecturerCode} - ${selectedLecturer.lecturerName}`;
-    }
-    if (selectedSectionId && selectedSection) {
-      return `Lịch lớp ${selectedSection.sectionCode}`;
-    }
+    if (selectedLecturerId && selectedSectionId) return "Lịch theo bộ lọc đã chọn";
+    if (selectedLecturerId && selectedLecturer) return `Lịch của ${selectedLecturer.lecturerCode} - ${selectedLecturer.lecturerName}`;
+    if (selectedSectionId && selectedSection) return `Lịch lớp ${selectedSection.sectionCode}`;
     return `${building.buildingName || building.buildingCode} — ${building.rooms.length} phòng`;
   };
 
+  const dayLabelForDate = (iso) => {
+    if (!weekDates.length) return "";
+    const idx = weekDates.indexOf(iso);
+    return idx >= 0 ? `${DAY_LABELS[idx]}, ${formatFull(iso)}` : formatFull(iso);
+  };
+
+  // ---------- Renderers ----------
   const renderSessionCard = (session) => {
     if (!isTimeInsideGrid(session.startTime) || !isTimeInsideGrid(session.endTime)) return null;
     const status = normalizeSessionStatus(session);
     const style = statusStyles[status] || statusStyles.scheduled;
     const top = getTopByTime(session.startTime);
-    const rawH = getHeightByTime(session.startTime, session.endTime);
-    const height = Math.min(rawH + ROW_HEIGHT, gridHeight - top);
+    const h = Math.min(getHeightByTime(session.startTime, session.endTime) + ROW_HEIGHT, gridHeight - top);
     const practiceGroupNo = Number(session.practiceGroupNo ?? 0);
 
     return (
       <div
         key={session.sessionId ?? `${session.courseCode}-${session.startTime}`}
-        className={`absolute left-1 right-1 rounded-md border shadow-sm px-2 py-1.5 ${style.bg} ${style.text} ${style.border}`}
-        style={{ top, height }}
+        className={`absolute left-1 right-1 rounded-md border shadow-sm px-2 py-1.5 overflow-hidden ${style.bg} ${style.text} ${style.border}`}
+        style={{ top, height: h }}
       >
-        <div className="text-xs font-semibold uppercase tracking-wide">{session.courseCode}</div>
-        <div className="text-sm font-semibold leading-tight">{session.courseName}</div>
-        <div className="text-xs text-gray-600">{session.sectionCode}</div>
-        <div className="text-xs text-gray-600">{session.lecturerName}</div>
-        {/* Trong focused view, hiển thị thêm phòng/tòa */}
+        <div className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{session.courseCode}</div>
+        <div className="text-xs font-semibold leading-tight">{session.courseName}</div>
+        <div className="text-[11px] text-gray-600">{session.sectionCode}</div>
+        <div className="text-[11px] text-gray-600">{session.lecturerName}</div>
         {hasFocusedFilter && (
-          <div className="text-xs text-gray-500">
-            {session.roomCode} {session.buildingName ? `· ${session.buildingName}` : ""}
-          </div>
+          <div className="text-[11px] text-gray-500">{session.roomCode}{session.buildingName ? ` · ${session.buildingName}` : ""}</div>
         )}
-        <div className="mt-1 text-xs font-medium">
-          {session.startTime?.slice(0, 5)} – {session.endTime?.slice(0, 5)}
-        </div>
+        <div className="mt-1 text-[11px] font-medium">{session.startTime?.slice(0, 5)} – {session.endTime?.slice(0, 5)}</div>
         <div className="mt-1 flex flex-wrap gap-1">
-          <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-gray-700">{style.label}</span>
+          <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-700">{style.label}</span>
           {session.sessionType && (
-            <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
-              {session.sessionType === "PRACTICE" ? "Thực hành" : "Lý thuyết"}
+            <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-700">
+              {session.sessionType === "PRACTICE" ? "TH" : "LT"}
             </span>
           )}
           {practiceGroupNo > 0 && (
-            <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
-              Nhóm {practiceGroupNo}
-            </span>
+            <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-700">Nhóm TH: {practiceGroupNo}</span>
           )}
         </div>
       </div>
@@ -249,16 +292,11 @@ export function AdminFullTimetableTab() {
   const renderRoomColumn = (room) => (
     <div key={room.roomCode} className="relative border-r border-gray-200" style={{ height: gridHeight }}>
       <div className="grid" style={{ gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)` }}>
-        {Array.from({ length: rowCount }).map((_, i) => (
-          <div key={i} className="border-b border-gray-100" />
-        ))}
+        {Array.from({ length: rowCount }).map((_, i) => <div key={i} className="border-b border-gray-100" />)}
       </div>
-      {breakRanges.map((range) => (
-        <div
-          key={range.start}
-          className="absolute inset-x-0 bg-slate-50/80"
-          style={{ top: getTopByTime(range.start), height: getHeightByTime(range.start, range.end) }}
-        />
+      {breakRanges.map((r) => (
+        <div key={r.start} className="absolute inset-x-0 bg-slate-50/80"
+          style={{ top: getTopByTime(r.start), height: getHeightByTime(r.start, r.end) }} />
       ))}
       {room.sessions.map(renderSessionCard)}
     </div>
@@ -266,52 +304,35 @@ export function AdminFullTimetableTab() {
 
   const renderBuildingSection = (building) => (
     <section key={building.buildingCode} className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">{getCardTitle(building)}</h3>
-        <p className="text-sm text-gray-500">
-          {hasFocusedFilter
-            ? `${building.rooms.length} phòng có lịch · ${building.buildingName || building.buildingCode}`
-            : "Lịch học trong tuần đã chọn"}
-        </p>
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900">{getCardTitle(building)}</h3>
+          <p className="text-sm text-gray-500">
+            {selectedDate ? dayLabelForDate(selectedDate) : ""}
+            {!hasFocusedFilter ? ` · ${building.rooms.length} phòng` : ""}
+          </p>
+        </div>
       </div>
       <div className="overflow-auto">
         <div className="min-w-[600px]">
-          {/* Room headers */}
-          <div
-            className="grid border-b border-gray-200 sticky top-0 bg-white z-20"
-            style={{ gridTemplateColumns: `72px repeat(${building.rooms.length}, minmax(180px, 1fr))` }}
-          >
+          <div className="grid border-b border-gray-200 sticky top-0 bg-white z-20"
+            style={{ gridTemplateColumns: `72px repeat(${building.rooms.length}, minmax(160px, 1fr))` }}>
             <div className="sticky left-0 z-30 bg-white border-r border-gray-200" />
             {building.rooms.map((room) => (
-              <div
-                key={room.roomCode}
-                className="h-12 flex items-center justify-center text-sm font-semibold text-gray-800 border-r border-gray-200"
-              >
+              <div key={room.roomCode} className="h-10 flex items-center justify-center text-sm font-semibold text-gray-800 border-r border-gray-200">
                 {room.roomCode}
               </div>
             ))}
           </div>
-          {/* Grid */}
-          <div
-            className="grid"
-            style={{ gridTemplateColumns: `72px repeat(${building.rooms.length}, minmax(180px, 1fr))` }}
-          >
+          <div className="grid" style={{ gridTemplateColumns: `72px repeat(${building.rooms.length}, minmax(160px, 1fr))` }}>
             {/* Time axis */}
-            <div
-              className="relative bg-[#1E3A8A] text-white border-r border-sky-600 sticky left-0 z-10"
-              style={{ height: gridHeight }}
-            >
+            <div className="relative bg-[#1E3A8A] text-white border-r border-sky-600 sticky left-0 z-10" style={{ height: gridHeight }}>
               <div className="grid" style={{ gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)` }}>
-                {Array.from({ length: rowCount }).map((_, i) => (
-                  <div key={i} className="border-b border-white/25" />
-                ))}
+                {Array.from({ length: rowCount }).map((_, i) => <div key={i} className="border-b border-white/25" />)}
               </div>
               {timeAxis.map((time, i) => (
-                <div
-                  key={time}
-                  className="absolute left-0 right-0 text-center text-xs font-semibold"
-                  style={{ top: i * ROW_HEIGHT + ROW_HEIGHT / 2, transform: "translateY(-50%)" }}
-                >
+                <div key={time} className="absolute left-0 right-0 text-center text-[10px] font-semibold"
+                  style={{ top: i * ROW_HEIGHT + ROW_HEIGHT / 2, transform: "translateY(-50%)" }}>
                   {time}
                 </div>
               ))}
@@ -323,157 +344,135 @@ export function AdminFullTimetableTab() {
     </section>
   );
 
-  // Filtered rooms for room dropdown (based on selected building)
-  const filteredRooms = useMemo(
-    () => rooms.filter((r) => !selectedBuildingId || String(r.buildingId) === String(selectedBuildingId)),
-    [rooms, selectedBuildingId]
-  );
-
+  // ---------- UI ----------
   return (
-    <div className="space-y-6">
-      {/* Filters */}
-      <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+    <div className="space-y-4">
+      {/* ── Filters ── */}
+      <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {/* Học kỳ */}
-          <select
-            value={selectedSemesterId}
+          <select value={selectedSemesterId}
             onChange={(e) => { setSelectedSemesterId(e.target.value); setSelectedWeekNo(""); }}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Chọn học kỳ</option>
             {semesters.map((s) => (
-              <option key={s.semesterId} value={s.semesterId}>
-                {s.semesterName || s.semesterCode || `Học kỳ ${s.semesterId}`}
-              </option>
+              <option key={s.semesterId} value={s.semesterId}>{s.semesterName || s.semesterCode || `Học kỳ ${s.semesterId}`}</option>
             ))}
           </select>
 
-          {/* Tuần */}
-          <select
-            value={selectedWeekNo}
-            onChange={(e) => setSelectedWeekNo(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
-            <option value="">Chọn tuần</option>
-            {semesterWeeks.map((w) => (
-              <option key={w.semesterWeekId} value={w.weekNo}>
-                Tuần {w.weekNo} ({w.startDate} – {w.endDate})
-              </option>
-            ))}
-          </select>
-
-          {/* Tòa nhà */}
-          <select
-            value={selectedBuildingId}
+          <select value={selectedBuildingId}
             onChange={(e) => { setSelectedBuildingId(e.target.value); setSelectedRoomId(""); }}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Tất cả tòa</option>
-            {buildings.map((b) => (
-              <option key={b.buildingId} value={b.buildingId}>
-                {b.buildingName || b.buildingCode}
-              </option>
-            ))}
+            {buildings.map((b) => <option key={b.buildingId} value={b.buildingId}>{b.buildingName || b.buildingCode}</option>)}
           </select>
 
-          {/* Phòng */}
-          <select
-            value={selectedRoomId}
-            onChange={(e) => setSelectedRoomId(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+          <select value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)}
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Tất cả phòng</option>
-            {filteredRooms.map((r) => (
-              <option key={r.roomId} value={r.roomId}>{r.roomCode}</option>
-            ))}
+            {filteredRooms.map((r) => <option key={r.roomId} value={r.roomId}>{r.roomCode}</option>)}
           </select>
 
-          {/* Loại buổi */}
-          <select
-            value={selectedSessionType}
-            onChange={(e) => setSelectedSessionType(e.target.value)}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+          <select value={selectedSessionType} onChange={(e) => setSelectedSessionType(e.target.value)}
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Tất cả loại</option>
             <option value="THEORY">Lý thuyết</option>
             <option value="PRACTICE">Thực hành</option>
           </select>
 
-          {/* Giảng viên */}
-          <select
-            value={selectedLecturerId}
+          <select value={selectedLecturerId}
             onChange={(e) => { setSelectedLecturerId(e.target.value); setSelectedSectionId(""); }}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Tất cả giảng viên</option>
-            {lecturers.map((l) => (
-              <option key={l.lecturerId} value={l.lecturerId}>
-                {l.lecturerName || l.lecturerCode}
-              </option>
-            ))}
+            {lecturers.map((l) => <option key={l.lecturerId} value={l.lecturerId}>{l.lecturerName || l.lecturerCode}</option>)}
           </select>
 
-          {/* Lớp học phần */}
-          <select
-            value={selectedSectionId}
+          <select value={selectedSectionId}
             onChange={(e) => { setSelectedSectionId(e.target.value); setSelectedLecturerId(""); }}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
-          >
+            className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700">
             <option value="">Tất cả lớp học phần</option>
-            {sections.map((sec) => (
-              <option key={sec.sectionId} value={sec.sectionId}>
-                {sec.sectionCode} – {sec.courseName || sec.courseCode}
-              </option>
-            ))}
+            {sections.map((sec) => <option key={sec.sectionId} value={sec.sectionId}>{sec.sectionCode} – {sec.courseName || sec.courseCode}</option>)}
           </select>
 
-          {/* Reset */}
           {(selectedBuildingId || selectedRoomId || selectedSessionType || selectedLecturerId || selectedSectionId) && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedBuildingId("");
-                setSelectedRoomId("");
-                setSelectedSessionType("");
-                setSelectedLecturerId("");
-                setSelectedSectionId("");
-              }}
-              className="h-11 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 hover:bg-gray-50"
-            >
+            <button type="button"
+              onClick={() => { setSelectedBuildingId(""); setSelectedRoomId(""); setSelectedSessionType(""); setSelectedLecturerId(""); setSelectedSectionId(""); }}
+              className="h-10 rounded-lg border border-gray-300 px-4 text-sm text-gray-600 hover:bg-gray-50">
               Xóa bộ lọc
             </button>
           )}
         </div>
 
-        {/* Focused filter badge */}
         {hasFocusedFilter && (
           <div className="mt-3 flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 rounded-lg px-4 py-2">
             <span>🔍</span>
             <span>
               Chế độ xem tập trung —{" "}
-              {selectedLecturerId && selectedLecturer ? `GV: ${selectedLecturer.lecturerName}` : ""}
-              {selectedLecturerId && selectedSectionId ? " · " : ""}
-              {selectedSectionId && selectedSection ? `Lớp: ${selectedSection.sectionCode}` : ""}
+              {selectedLecturer ? `GV: ${selectedLecturer.lecturerName}` : ""}
+              {selectedLecturer && selectedSection ? " · " : ""}
+              {selectedSection ? `Lớp: ${selectedSection.sectionCode}` : ""}
               . Chỉ hiển thị phòng có lịch.
             </span>
           </div>
         )}
       </section>
 
-      {/* Timetable */}
+      {/* ── Week Navigation ── */}
+      {selectedSemesterId && (
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm px-5 py-4 space-y-3">
+          {/* Arrow nav */}
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={!canPrev} onClick={() => goWeek(-1)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold">
+              ←
+            </button>
+            <div className="flex-1 text-center">
+              <span className="text-sm font-semibold text-gray-800">
+                {selectedWeek
+                  ? `Tuần ${selectedWeek.weekNo}: ${formatFull(selectedWeek.startDate)} – ${formatFull(selectedWeek.endDate)}`
+                  : "Chọn tuần"}
+              </span>
+            </div>
+            <button type="button" disabled={!canNext} onClick={() => goWeek(1)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-lg font-bold">
+              →
+            </button>
+          </div>
+
+          {/* Day tabs */}
+          {weekDates.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              {weekDates.map((date, idx) => {
+                const hasSessions = rawSessions.some((s) => s.sessionDate === date);
+                const isActive = date === selectedDate;
+                return (
+                  <button key={date} type="button" onClick={() => setSelectedDate(date)}
+                    className={`flex flex-col items-center px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                      ${isActive ? "bg-[#1E3A8A] text-white border-[#1E3A8A]" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}
+                      ${hasSessions ? "" : "opacity-50"}`}>
+                    <span>{DAY_LABELS[idx]}</span>
+                    <span className={isActive ? "text-blue-200" : "text-gray-400"}>{formatShort(date)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Grid ── */}
       {loading ? (
-        <div className="text-sm text-gray-500">Đang tải thời khóa biểu...</div>
+        <div className="text-sm text-gray-500 py-4">Đang tải thời khóa biểu...</div>
+      ) : !selectedDate ? (
+        <div className="text-sm text-gray-500">Vui lòng chọn học kỳ để bắt đầu.</div>
       ) : buildingGroups.length ? (
         <div className="space-y-6">
           {buildingGroups.map(renderBuildingSection)}
         </div>
       ) : (
-        <div className="text-sm text-gray-500">
-          {selectedSemesterId && selectedWeekNo
-            ? hasFocusedFilter
-              ? "Không có lịch phù hợp với bộ lọc này."
-              : "Không có dữ liệu thời khóa biểu cho tuần đã chọn."
-            : "Vui lòng chọn học kỳ và tuần để xem thời khóa biểu."}
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm px-6 py-10 text-center text-sm text-gray-500">
+          {hasFocusedFilter
+            ? "Không có lịch phù hợp với bộ lọc này trong ngày đã chọn."
+            : `Không có lịch học trong ngày ${dayLabelForDate(selectedDate)}.`}
         </div>
       )}
     </div>

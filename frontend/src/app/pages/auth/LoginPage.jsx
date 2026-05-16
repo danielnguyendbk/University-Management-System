@@ -3,61 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, AlertCircle, LoaderCircle, ShieldCheck, UserRound, LockKeyhole } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
-const announcements = [
-  {
-    id: 1,
-    title: "Mở đăng ký học kỳ Xuân",
-    description: "Đăng ký môn học cho học kỳ Xuân 2026 đã mở. Vui lòng đăng ký trước ngày 30/03/2026.",
-    date: "20/03/2026"
-  },
-  {
-    id: 2,
-    title: "Cập nhật hướng dẫn an toàn trong khuôn viên",
-    description: "Các quy trình an toàn mới đã được áp dụng. Tất cả sinh viên cần xem lại hướng dẫn đã cập nhật.",
-    date: "18/03/2026"
-  },
-  {
-    id: 3,
-    title: "Thư viện mở cửa kéo dài trong mùa thi",
-    description: "Thư viện trường sẽ kéo dài thời gian hoạt động trong thời gian thi cuối kỳ.",
-    date: "15/03/2026"
-  },
-  {
-    id: 4,
-    title: "Ngày hội việc làm - Tháng 4/2026",
-    description: "Ngày hội việc làm thường niên sẽ diễn ra vào 15-16/04. Đăng ký sớm để gặp các nhà tuyển dụng hàng đầu.",
-    date: "10/03/2026"
-  }
-];
-
-const tuitionNotices = [
-  {
-    id: 1,
-    title: "Học phí - Học kỳ Xuân 2026",
-    amount: "$4,500",
-    dueDate: "25/03/2026",
-    status: "overdue"
-  },
-  {
-    id: 2,
-    title: "Phí thực hành - Công nghệ thông tin",
-    amount: "$200",
-    dueDate: "30/03/2026",
-    status: "pending"
-  },
-  {
-    id: 3,
-    title: "Phí hoạt động sinh viên",
-    amount: "$150",
-    dueDate: "05/04/2026",
-    status: "pending"
-  }
-];
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, user, loading: authLoading } = useAuth();
-  const [username, setUsername] = useState("student01");
+  const [username, setUsername] = useState("n23dccn001");
   const [password, setPassword] = useState("123456");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -212,7 +162,7 @@ export function LoginPage() {
               </form>
 
               <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 p-4 text-sm text-slate-600">
-                Tài khoản test: <strong>student01 / 123456</strong>, <strong>lecturer01 / 123456</strong>, <strong>admin01 / 123456</strong>
+                Tài khoản test: <strong>n23dccn001 / 123456</strong>, <strong>gv001 / 123456</strong>, <strong>admin / 123456</strong>
               </div>
             </div>
           </section>

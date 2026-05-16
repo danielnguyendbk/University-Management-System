@@ -27,6 +27,7 @@ import { ManageLecturerAccounts } from "./pages/admin/ManageLecturerAccounts";
 import { SectionAssignment } from "./pages/admin/SectionAssignment";
 import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
 import { AdminTimetablePage } from "./pages/admin/AdminTimetablePage";
+import { AdminRegistrationPage } from "./pages/admin/AdminRegistrationPage";
 
 export const router = createBrowserRouter([
   {
@@ -77,7 +78,7 @@ export const router = createBrowserRouter([
       { path: "student-accounts", Component: ManageStudentAccounts },
       { path: "lecturer-accounts", Component: ManageLecturerAccounts },
       { path: "section-assignment", Component: SectionAssignment },
-      { path: "registration-sessions", Component: RegistrationSessions },
+      { path: "registration-sessions", Component: AdminRegistrationPage },
       { path: "timetable", Component: AdminTimetablePage },
     ],
   },

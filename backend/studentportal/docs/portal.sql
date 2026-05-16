@@ -290,13 +290,18 @@ AFTER end_time;
 -- =====================================
 CREATE TABLE exams (
     exam_id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    semester_id BIGINT UNSIGNED NULL,
     section_id          BIGINT UNSIGNED NOT NULL,
     room_id             BIGINT UNSIGNED NOT NULL,
     proctor_lecturer_id BIGINT UNSIGNED NULL,
     exam_type           ENUM('midterm', 'final', 'makeup', 'other') NOT NULL,
+    exam_method ENUM('WRITTEN', 'ORAL', 'PRACTICAL', 'ONLINE') NULL,
     exam_date           DATE NOT NULL,
     start_time          TIME NOT NULL,
     end_time            TIME NOT NULL,
+    seat_range VARCHAR(100) NULL,
+    student_count INT NULL,
+    status ENUM('DRAFT', 'SCHEDULED', 'CANCELLED', 'COMPLETED') NOT NULL DEFAULT 'SCHEDULED',
     note                VARCHAR(255) NULL,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -311,8 +316,29 @@ CREATE TABLE exams (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_exams_proctor
         FOREIGN KEY (proctor_lecturer_id) REFERENCES lecturers(lecturer_id)
-        ON UPDATE CASCADE ON DELETE SET NULL
+        ON UPDATE CASCADE ON DELETE SET NULL,
+	CONSTRAINT fk_exams_semester
+		FOREIGN KEY (semester_id) REFERENCES semesters(semester_id)
+		ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+CREATE TABLE exam_invigilators (
+    exam_id BIGINT UNSIGNED NOT NULL,
+    lecturer_id BIGINT UNSIGNED NOT NULL,
+    role ENUM('MAIN', 'ASSISTANT') NOT NULL DEFAULT 'ASSISTANT',
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (exam_id, lecturer_id),
+
+    CONSTRAINT fk_exam_invigilators_exam
+        FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+
+    CONSTRAINT fk_exam_invigilators_lecturer
+        FOREIGN KEY (lecturer_id) REFERENCES lecturers(lecturer_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
 
 -- =====================================
 -- 15. ENROLLMENTS
@@ -326,6 +352,8 @@ CREATE TABLE enrollments (
     enrollment_status ENUM('registered', 'dropped', 'cancelled', 'completed') NOT NULL DEFAULT 'registered',
     registered_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    dropped_at 		  DATETIME NULL,
+    note 			  VARCHAR(255) NULL,
     CONSTRAINT uq_enrollment UNIQUE (student_id, section_id),
     CONSTRAINT fk_enrollments_student
         FOREIGN KEY (student_id) REFERENCES students(student_id)
@@ -334,7 +362,26 @@ CREATE TABLE enrollments (
         FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+ALTER TABLE enrollments
+ADD COLUMN dropped_at DATETIME NULL AFTER registered_at,
+ADD COLUMN note VARCHAR(255) NULL AFTER dropped_at;
 
+CREATE TABLE enrollment_logs (
+    log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id BIGINT UNSIGNED NOT NULL,
+    section_id BIGINT UNSIGNED NOT NULL,
+    action ENUM('REGISTER', 'DROP', 'ADMIN_REGISTER', 'ADMIN_DROP') NOT NULL,
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_enrollment_logs_student
+        FOREIGN KEY (student_id) REFERENCES students(student_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT fk_enrollment_logs_section
+        FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
 -- =====================================
 -- 16. GRADES
 -- enrollments (1) -- (1) grades
@@ -1012,19 +1059,10 @@ ON DUPLICATE KEY UPDATE
   end_date = VALUES(end_date),
   registration_open = VALUES(registration_open),
   registration_close = VALUES(registration_close);
+  
 
--- 7) Semester weeks 1 -> 4
-INSERT INTO semester_weeks (semester_week_id, semester_id, week_no, start_date, end_date)
-VALUES
-(1, 1, 1, '2026-09-01', '2026-09-07'),
-(2, 1, 2, '2026-09-08', '2026-09-14'),
-(3, 1, 3, '2026-09-15', '2026-09-21'),
-(4, 1, 4, '2026-09-22', '2026-09-28')
-ON DUPLICATE KEY UPDATE
-  semester_id = VALUES(semester_id),
-  week_no = VALUES(week_no),
-  start_date = VALUES(start_date),
-  end_date = VALUES(end_date);
+
+
 
 -- 8) Rooms
 INSERT INTO rooms (room_id, room_code, building, room_type, capacity)
@@ -1260,3 +1298,5 @@ SET building_id = 2
 WHERE building = 'Tòa B';
 
 SET SQL_SAFE_UPDATES = 1;
+
+
