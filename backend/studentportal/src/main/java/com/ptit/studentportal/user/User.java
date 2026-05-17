@@ -42,6 +42,10 @@ public class User {
 	@Column(nullable = false, unique = true, length = 100)
 	private String email;
 
+	@Builder.Default
+	@Column(name = "force_password_change", nullable = false)
+	private boolean forcePasswordChange = false;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
 	private UserRole role;

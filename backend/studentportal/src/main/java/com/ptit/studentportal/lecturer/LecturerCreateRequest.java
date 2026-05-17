@@ -9,8 +9,8 @@ public record LecturerCreateRequest(
         @NotNull Long departmentId,
         @NotBlank @Size(max = 20) String lecturerCode,
         @NotBlank @Size(max = 150) String fullName,
-        @NotBlank @Size(max = 100) String workEmail,
+        @NotBlank @Size(max = 100) String email,
         @Size(max = 20) String phone,
-        @Size(max = 100) String academicDegree
+        @Size(max = 100) String academicTitle
 ) {
 }

@@ -18,9 +18,7 @@ public record StudentDTO(
 	LocalDate dateOfBirth,
 	Student.Gender gender,
 	String phone,
-	String permanentAddress,
-	String currentAddress,
-	String cohort,
+	String address,
 	Student.AcademicStatus academicStatus
 ) {
 }

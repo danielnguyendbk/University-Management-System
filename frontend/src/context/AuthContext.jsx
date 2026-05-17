@@ -1,5 +1,5 @@
 import { createContext, useEffect, useMemo, useState } from "react";
-import { getCurrentUser, getStoredToken, login as loginRequest, logout as logoutRequest } from "../services/authService";
+import { changePassword as changePasswordRequest, getCurrentUser, getStoredToken, login as loginRequest, logout as logoutRequest } from "../services/authService";
 
 export const AuthContext = createContext(null);
 
@@ -41,13 +41,19 @@ export function AuthProvider({ children }) {
     return loggedInUser;
   }
 
+  async function changePassword(body) {
+    const updatedUser = await changePasswordRequest(body);
+    setUser(updatedUser ? { ...updatedUser } : null);
+    return updatedUser;
+  }
+
   function logout() {
     logoutRequest();
     setUser(null);
   }
 
   const value = useMemo(
-    () => ({ user, loading, login, logout, setUser }),
+    () => ({ user, loading, login, logout, changePassword, setUser }),
     [user, loading]
   );
 

@@ -3,6 +3,7 @@ package com.ptit.studentportal.auth;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ptit.studentportal.commom.exception.AppException;
 import com.ptit.studentportal.lecturer.Lecturer;
@@ -52,7 +53,21 @@ public class AuthService {
 		String token = jwtService.generateToken(new CustomUserDetails(user));
 		String fullName = resolveFullName(user);
 
-		return new LoginResponse(token, user.getUsername(), user.getRole(), fullName);
+		return new LoginResponse(token, user.getUsername(), user.getRole(), fullName, user.isForcePasswordChange());
+	}
+
+	@Transactional
+	public CurrentUserResponse changePassword(CustomUserDetails userDetails, ChangePasswordRequest request) {
+		User user = userDetails.getUser();
+		if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+			throw new AppException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+		}
+
+		user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+		user.setForcePasswordChange(false);
+		userRepository.save(user);
+
+		return getCurrentUser(new CustomUserDetails(user));
 	}
 
 	public CurrentUserResponse getCurrentUser(CustomUserDetails userDetails) {
@@ -65,7 +80,8 @@ public class AuthService {
 				user.getEmail(),
 				user.getRole(),
 				user.getStatus(),
-				fullName
+				fullName,
+				user.isForcePasswordChange()
 		);
 	}
 

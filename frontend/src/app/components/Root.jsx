@@ -46,8 +46,8 @@ const navigationByRole = {
   ADMIN: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
     { name: "Thông báo", name_vi: "Thông báo toàn hệ thống", path: "announcements", icon: Bell },
-    { name: "Tài khoản sinh viên", name_vi: "Quản lý tài khoản sinh viên", path: "student-accounts", icon: User },
-    { name: "Tài khoản giảng viên", name_vi: "Quản lý tài khoản giảng viên", path: "lecturer-accounts", icon: User },
+    { name: "Sinh viên", name_vi: "Quản lý sinh viên", path: "students", icon: User },
+    { name: "Giảng viên", name_vi: "Quản lý giảng viên", path: "lecturers", icon: User },
     { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
   ],
@@ -62,7 +62,7 @@ export function Root() {
   const roleBasePath = {
     STUDENT: "/portal/student",
     LECTURER: "/portal/lecturer",
-    ADMIN: "/portal/admin",
+    ADMIN: "/admin",
   };
 
   const basePath = roleBasePath[user?.role] || roleBasePath.STUDENT;

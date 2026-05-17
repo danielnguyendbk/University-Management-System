@@ -65,9 +65,7 @@ public class StudentService {
 				.dateOfBirth(request.dateOfBirth())
 				.gender(request.gender())
 				.phone(request.phone())
-				.permanentAddress(request.permanentAddress())
-				.currentAddress(request.currentAddress())
-				.cohort(request.cohort())
+				.address(request.address())
 				.academicStatus(request.academicStatus())
 				.build();
 
@@ -89,9 +87,7 @@ public class StudentService {
 				student.getDateOfBirth(),
 				student.getGender(),
 				student.getPhone(),
-				student.getPermanentAddress(),
-				student.getCurrentAddress(),
-				student.getCohort(),
+				student.getAddress(),
 				student.getAcademicStatus()
 		);
 	}

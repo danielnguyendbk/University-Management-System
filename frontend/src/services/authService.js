@@ -45,6 +45,15 @@ export async function getCurrentUser() {
   return payload?.data;
 }
 
+export async function changePassword(body) {
+  const payload = await request("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  return payload?.data;
+}
+
 export function logout() {
   clearStoredToken();
 }

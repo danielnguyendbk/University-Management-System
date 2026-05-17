@@ -6,6 +6,7 @@ public record LoginResponse(
 	String token,
 	String username,
 	UserRole role,
-	String fullName
+	String fullName,
+	boolean forcePasswordChange
 ) {
 }

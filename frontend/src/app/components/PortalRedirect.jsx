@@ -5,7 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 const rolePath = {
   STUDENT: "/portal/student",
   LECTURER: "/portal/lecturer",
-  ADMIN: "/portal/admin",
+  ADMIN: "/admin",
 };
 
 export function PortalRedirect() {
