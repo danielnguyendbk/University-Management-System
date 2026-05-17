@@ -9,6 +9,7 @@ public record CurrentUserResponse(
         String email,
         UserRole role,
         UserStatus status,
-        String fullName
+        String fullName,
+        boolean forcePasswordChange
 ) {
 }

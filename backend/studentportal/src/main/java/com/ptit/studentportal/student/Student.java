@@ -12,8 +12,6 @@ import com.ptit.studentportal.user.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,6 +19,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Convert;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -86,23 +85,18 @@ public class Student {
 	@Column(name = "date_of_birth")
 	private LocalDate dateOfBirth;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = GenderConverter.class)
 	@Column(length = 20)
 	private Gender gender;
 
 	@Column(length = 20)
 	private String phone;
 
-	@Column(name = "permanent_address", length = 255)
-	private String permanentAddress;
+	@Column(name = "address", length = 255)
+	private String address;
 
-	@Column(name = "current_address", length = 255)
-	private String currentAddress;
-
-	@Column(length = 20)
-	private String cohort;
-
-	@Enumerated(EnumType.STRING)
+	@Builder.Default
+	@Convert(converter = AcademicStatusConverter.class)
 	@Column(name = "academic_status", nullable = false, length = 30)
 	private AcademicStatus academicStatus = AcademicStatus.STUDYING;
 

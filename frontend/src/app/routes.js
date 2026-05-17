@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import { Root } from "./components/Root";
 import { LoginPage } from "./pages/auth/LoginPage";
+import { ChangePasswordPage } from "./pages/auth/ChangePasswordPage";
 import { Dashboard } from "./pages/student/Dashboard";
 import { Announcements } from "./pages/student/Announcements";
 import { Curriculum } from "./pages/student/Curriculum";
@@ -23,13 +24,25 @@ import { LecturerGradeEntry } from "./pages/lecturer/LecturerGradeEntry";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { ManageStudentAccounts } from "./pages/admin/ManageStudentAccounts";
 import { ManageLecturerAccounts } from "./pages/admin/ManageLecturerAccounts";
+import { StudentDetailPage } from "./pages/admin/StudentDetailPage";
+import { LecturerDetailPage } from "./pages/admin/LecturerDetailPage";
 import { SectionAssignment } from "./pages/admin/SectionAssignment";
 import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
+import { Navigate } from "react-router-dom";
+import { createElement } from "react";
+
+function PortalAdminRedirect() {
+  return createElement(Navigate, { to: "/admin", replace: true });
+}
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: LoginPage,
+  },
+  {
+    path: "/change-password",
+    Component: ChangePasswordPage,
   },
   {
     path: "/portal",
@@ -67,11 +80,19 @@ export const router = createBrowserRouter([
   },
   {
     path: "/portal/admin",
+    Component: PortalAdminRedirect,
+  },
+  {
+    path: "/admin",
     Component: AdminPortalRoute,
     children: [
       { index: true, Component: AdminDashboard },
       { path: "announcements", Component: Announcements },
+      { path: "students", Component: ManageStudentAccounts },
+      { path: "students/:id", Component: StudentDetailPage },
       { path: "student-accounts", Component: ManageStudentAccounts },
+      { path: "lecturers", Component: ManageLecturerAccounts },
+      { path: "lecturers/:id", Component: LecturerDetailPage },
       { path: "lecturer-accounts", Component: ManageLecturerAccounts },
       { path: "section-assignment", Component: SectionAssignment },
       { path: "registration-sessions", Component: RegistrationSessions },

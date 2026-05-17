@@ -13,8 +13,7 @@ public record LecturerDTO(
         Long departmentId,
         String lecturerCode,
         String fullName,
-        String workEmail,
         String phone,
-        String academicDegree
+        String academicTitle
 ) {
 }
