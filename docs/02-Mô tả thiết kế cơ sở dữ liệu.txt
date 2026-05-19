@@ -1,0 +1,93 @@
+Mô tả Chi Tiết Cơ Sở Dữ Liệu – Cổng Thông Tin Sinh Viên & Giảng Viên
+1. Tổng Quan
+Cơ sở dữ liệu student_portal được xây dựng trên MySQL (InnoDB, utf8mb4), phục vụ hệ thống cổng thông tin dành cho sinh viên, giảng viên và quản trị viên của một trường đại học. Hệ thống bao gồm 26 bảng dữ liệu và 1 view, tổ chức thành các nhóm chức năng chính:
+•	Quản lý tài khoản & xác thực
+•	Cơ cấu tổ chức (khoa, chương trình đào tạo)
+•	Hồ sơ sinh viên & giảng viên
+•	Học phần, lớp học phần & thời khoá biểu
+•	Đăng ký học & điểm số
+•	Học phí & thanh toán
+•	Thông báo, yêu cầu & phản hồi
+2. Nhóm Tài Khoản & Xác Thực
+users – Tài khoản đăng nhập
+Bảng trung tâm lưu thông tin đăng nhập chung cho tất cả người dùng. Mỗi tài khoản có một role xác định quyền hạn: student, lecturer, hoặc admin. Trạng thái tài khoản (status) gồm active, inactive, locked giúp kiểm soát quyền truy cập.
+refresh_tokens – Quản lý JWT Refresh Token
+Lưu trữ và blacklist các refresh token khi người dùng đăng xuất. Mỗi token được hash trước khi lưu (token_hash), có thời hạn (expires_at) và cờ thu hồi (revoked). Đây là cơ chế bảo mật quan trọng cho luồng xác thực JWT.
+3. Nhóm Cơ Cấu Tổ Chức
+departments – Khoa
+Lưu thông tin các đơn vị học thuật trong trường. Mỗi khoa có mã định danh duy nhất (department_code) và tên khoa. Khoa là gốc rễ liên kết tới giảng viên, học phần và chương trình đào tạo.
+programs – Chương trình đào tạo (ngành)
+Mỗi chương trình thuộc một khoa, có tổng số tín chỉ yêu cầu (total_credits > 0) và trạng thái vòng đời: active, inactive, archived. Sinh viên đăng ký theo học một chương trình cụ thể.
+4. Nhóm Hồ Sơ Người Dùng
+students – Sinh viên
+Lưu hồ sơ đầy đủ của sinh viên: thông tin cá nhân (họ tên, ngày sinh, giới tính, địa chỉ thường trú/tạm trú, số điện thoại), năm nhập học (enrollment_year) và trạng thái học tập (academic_status): studying, paused, graduated, dropped_out. Mỗi sinh viên liên kết 1-1 với một tài khoản users và thuộc một chương trình đào tạo.
+lecturers – Giảng viên
+Tương tự students, giảng viên có hồ sơ riêng với email công tác do trường cấp (work_email, khác với users.email), chức danh học thuật (academic_title) và thuộc về một khoa. Liên kết 1-1 với tài khoản users.
+5. Nhóm Học Phần & Chương Trình
+courses – Học phần
+Mô tả từng môn học: mã học phần, tên, số tín chỉ (credits > 0), loại (required/elective), trạng thái kích hoạt và mô tả. Mỗi học phần thuộc một khoa quản lý.
+program_courses – Học phần trong chương trình đào tạo
+Bảng trung gian nhiều-nhiều giữa programs và courses. Ghi nhận học kỳ gợi ý học (recommended_semester) và liệu môn học đó có bắt buộc (is_required) trong chương trình không.
+course_prerequisites – Môn học tiên quyết
+Self-join trên bảng courses. Mỗi bản ghi mô tả rằng course_id yêu cầu phải hoàn thành prerequisite_course_id trước. Do MySQL không hỗ trợ CHECK constraint với điều kiện self-reference, ràng buộc chống tự tham chiếu (course_id <> prerequisite_course_id) được thực thi bằng hai TRIGGER: trg_course_prereq_no_self_insert và trg_course_prereq_no_self_update, kích hoạt trước mỗi thao tác INSERT và UPDATE.
+6. Nhóm Lớp Học & Thời Khoá Biểu
+semesters – Học kỳ
+Quản lý các học kỳ với ngày bắt đầu/kết thúc và cửa sổ thời gian đăng ký học phần (registration_open, registration_close). Các ràng buộc CHECK đảm bảo tính hợp lệ của ngày tháng.
+rooms – Phòng học / Phòng thi
+Thông tin phòng gồm mã phòng, toà nhà, loại phòng (classroom, lab, exam_room, hall, office, other) và sức chứa tối đa.
+course_sections – Lớp học phần
+Một học phần trong một học kỳ có thể mở nhiều lớp (section). Mỗi lớp do một giảng viên phụ trách, có sức chứa tối đa và trạng thái: draft, open, closed, cancelled. Cặp (semester_id, section_code) là duy nhất.
+schedules – Thời khoá biểu
+Mỗi bản ghi là một slot học trong tuần của một lớp học phần: phòng học, thứ trong tuần, tiết bắt đầu/kết thúc và giờ cụ thể. Hai ràng buộc UNIQUE quan trọng:
+•	room_id: Không có hai lớp dùng cùng phòng, cùng thứ, cùng tiết.
+•	section_id: Một lớp không bị xếp hai lịch trùng tiết.
+exams – Lịch thi
+Lưu thông tin thi theo lớp học phần: loại thi (midterm, final, makeup, other), phòng thi, ngày giờ, và giảng viên coi thi (proctor_lecturer_id có thể NULL nếu chưa phân công). Ràng buộc UNIQUE trên (room_id, exam_date, start_time) ngăn trùng phòng thi.
+7. Nhóm Đăng Ký Học & Điểm Số
+enrollments – Đăng ký học phần
+Ghi nhận sinh viên đăng ký vào lớp học phần nào. Trạng thái gồm registered, dropped, cancelled, completed. Cặp (student_id, section_id) là duy nhất, tránh đăng ký trùng.
+grades – Điểm số
+Liên kết 1-1 với enrollments. Lưu ba thành phần điểm:
+•	attendance_score (chuyên cần) – trọng số 10%
+•	midterm_score (giữa kỳ) – trọng số 30%
+•	final_score (cuối kỳ) – trọng số 60%
+total_score là GENERATED COLUMN tự động tính theo công thức trên, đảm bảo không bao giờ mất đồng bộ.
+gpa_history – Lịch sử GPA
+Snapshot GPA của từng sinh viên theo từng học kỳ: GPA học kỳ (semester_gpa), GPA tích lũy (cumulative_gpa) và tổng tín chỉ tích lũy. Dữ liệu này phục vụ tra cứu lịch sử học tập và xét học bổng, cảnh báo học vụ.
+8. Nhóm Học Phí & Thanh Toán
+tuition_fees – Học phí theo học kỳ
+Mỗi sinh viên có một bản ghi học phí duy nhất cho mỗi học kỳ. Gồm tổng học phí (total_amount), mức giảm (discount_amount) và trạng thái: unpaid, partial, paid, overdue, waived.
+payments – Giao dịch thanh toán
+Một khoản học phí có thể thanh toán nhiều lần (ví dụ: trả góp). Mỗi giao dịch lưu phương thức (qr, bank_transfer, cash), số tiền, mã giao dịch (transaction_code unique) và trạng thái: pending, success, failed.
+e_invoices – Hoá đơn điện tử
+Liên kết 1-1 với một giao dịch payments thành công. Gồm số hoá đơn duy nhất, ngày phát hành, số tiền, trạng thái (issued/cancelled) và URL truy xuất hoá đơn.
+9. Nhóm Tương Tác & Tiện Ích
+request_types – Loại yêu cầu
+Danh mục các loại yêu cầu hành chính được hỗ trợ. Mặc định có 3 loại: phúc khảo điểm (recheck_grade), xin nghỉ học (leave_request), in bảng điểm (transcript). Có thể mở rộng thêm.
+student_requests – Yêu cầu của sinh viên
+Sinh viên gửi yêu cầu hành chính có tiêu đề và nội dung, hệ thống theo dõi trạng thái (pending, approved, rejected), người xử lý (processed_by) và thời điểm xử lý.
+request_attachments – Tệp đính kèm yêu cầu
+Một yêu cầu có thể đính kèm nhiều tệp (minh chứng, đơn từ). Lưu tên file và URL truy cập. Khi yêu cầu bị xoá, các attachment tự xoá theo (ON DELETE CASCADE).
+notifications – Thông báo
+Hệ thống thông báo đa dạng với nhiều loại (general, tuition, academic, exam, system), mức độ quan trọng (is_important), thời gian hiệu lực (published_at, expires_at) và đối tượng nhận (target_type): toàn trường, sinh viên, giảng viên, lớp học phần, chương trình, hoặc tuỳ chỉnh.
+notification_recipients – Người nhận thông báo
+Bảng chi tiết xác định ai nhận thông báo nào, đã đọc chưa (is_read) và thời điểm đọc. Đây là cơ sở để hiển thị badge thông báo chưa đọc trên giao diện.
+feedbacks – Phản hồi / Góp ý
+Sinh viên gửi góp ý, khiếu nại về học tập, dịch vụ. Quản trị viên xem xét và phản hồi (response_note). Trạng thái gồm pending, reviewed, resolved, rejected.
+10. View & Index
+View vw_section_capacity
+Tổng hợp thông tin sĩ số thực tế của từng lớp học phần: số sinh viên đang đăng ký (current_capacity), sức chứa tối đa và chỗ còn lại (remaining_capacity). Chỉ tính các enrollment có trạng thái registered hoặc completed.
+Indexes
+Hệ thống có 18 index bổ sung (ngoài PRIMARY KEY và UNIQUE) tập trung vào các cột thường xuyên dùng trong WHERE/JOIN như status, student_id, semester_id, exam_date, user_id... giúp tối ưu hiệu năng truy vấn trên dữ liệu lớn.
+11. Các Ràng Buộc Toàn Vẹn Dữ Liệu Đáng Chú Ý
+Ràng buộc	Mô tả
+chk_courses_credits	Số tín chỉ học phần phải > 0
+chk_grades_*	Điểm thành phần phải trong khoảng 0–10
+chk_gpa_*	GPA phải trong khoảng 0–4
+chk_semesters_dates	Ngày kết thúc học kỳ phải sau ngày bắt đầu
+chk_course_prerequisites_no_self	Không thể tự là tiên quyết của chính mình
+room_id	Ngăn trùng phòng học cùng tiết
+exam_room_id	Ngăn trùng phòng thi cùng ngày giờ
+Enrollment_id	Một sinh viên chỉ đăng ký một lớp một lần
+tuition_fee_id	Một sinh viên chỉ có một khoản học phí mỗi học kỳ
+

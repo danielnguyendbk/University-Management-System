@@ -15,7 +15,8 @@ import {
   Search,
   User,
   Menu,
-  X
+  X,
+  LockKeyhole
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
@@ -33,6 +34,7 @@ const navigationByRole = {
     { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", path: "e-invoice", icon: FileText },
     { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", path: "submit-request", icon: Send },
     { name: "Phản hồi", name_vi: "Đóng góp ý kiến", path: "feedback", icon: MessageSquare },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   LECTURER: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
@@ -42,6 +44,7 @@ const navigationByRole = {
     { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
     { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
     { name: "Phản hồi", name_vi: "Trao đổi với sinh viên", path: "feedback", icon: MessageSquare },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   ADMIN: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
@@ -50,6 +53,7 @@ const navigationByRole = {
     { name: "Tài khoản giảng viên", name_vi: "Quản lý tài khoản giảng viên", path: "lecturer-accounts", icon: User },
     { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
 };
 

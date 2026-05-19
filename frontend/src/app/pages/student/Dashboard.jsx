@@ -1,154 +1,270 @@
-import { BookOpen, TrendingUp, DollarSign, Clock, AlertCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Award, BookOpen, RefreshCw, UserCircle2 } from "lucide-react";
 import { PageHeader } from "../../components/common/PageHeader";
-import { StatCard } from "../../components/common/StatCard";
+import { useAuth } from "../../../hooks/useAuth";
+import { getStudentGrades } from "../../../services/gradeService";
 
-const upcomingClasses = [
-  { id: 1, course: "Cấu trúc dữ liệu và giải thuật", time: "09:00", room: "A-301", lecturer: "TS. Smith" },
-  { id: 2, course: "Hệ quản trị cơ sở dữ liệu", time: "11:00", room: "B-205", lecturer: "PGS. Johnson" },
-  { id: 3, course: "Phát triển web", time: "14:00", room: "C-104", lecturer: "TS. Williams" },
-];
+function scoreToHeight(score) {
+  if (score === null || score === undefined) {
+    return 8;
+  }
 
-const recentAnnouncements = [
-  { id: 1, title: "Mở đăng ký học kỳ Xuân", date: "20/03/2026", important: true },
-  { id: 2, title: "Kéo dài giờ mở cửa thư viện", date: "18/03/2026", important: false },
-  { id: 3, title: "Ngày hội việc làm - 04/2026", date: "15/03/2026", important: true },
-];
+  const safeScore = Math.max(0, Math.min(10, Number(score)));
+  return Math.max(16, Math.round((safeScore / 10) * 220));
+}
 
 export function Dashboard() {
+  const { user } = useAuth();
+  const [gradeData, setGradeData] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState("");
+  const [hoveredCourse, setHoveredCourse] = useState(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const studentId = user?.studentId;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDashboardData() {
+      if (!studentId) {
+        if (mounted) {
+          setError("Không tìm thấy mã sinh viên trong phiên đăng nhập.");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (mounted) {
+          setLoading(true);
+          setError("");
+        }
+
+        const data = await getStudentGrades(studentId);
+
+        if (mounted) {
+          setGradeData(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err.message || "Không thể tải dữ liệu trang chủ sinh viên.");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDashboardData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [studentId, refreshTick]);
+
+  const semesters = gradeData?.semesters ?? [];
+
+  useEffect(() => {
+    if (!semesters.length) {
+      return;
+    }
+
+    const hasSelected = semesters.some((semester) => String(semester.semesterId) === selectedSemesterId);
+    if (!hasSelected) {
+      setSelectedSemesterId(String(semesters[0].semesterId));
+    }
+  }, [semesters, selectedSemesterId]);
+
+  const currentSemester = useMemo(
+    () => semesters.find((semester) => String(semester.semesterId) === selectedSemesterId) ?? semesters[0],
+    [semesters, selectedSemesterId]
+  );
+
+  const chartRows = currentSemester?.courses ?? [];
+
+  const summaryRows = [
+    { label: "Họ và tên", value: user?.fullName || gradeData?.fullName || "Chưa có dữ liệu" },
+    { label: "Mã sinh viên", value: gradeData?.studentCode || user?.username || "Chưa có dữ liệu" },
+    { label: "Vai trò", value: user?.role || "STUDENT" },
+    { label: "Ngày sinh", value: user?.student?.dateOfBirth || gradeData?.dateOfBirth || "-" },
+    { label: "Giới tính", value: user?.student?.gender || "-" },
+    { label: "Số điện thoại", value: user?.student?.phone || "-" },
+    { label: "Địa chỉ thường trú", value: user?.student?.permanentAddress || "-" },
+    { label: "Địa chỉ hiện tại", value: user?.student?.currentAddress || "-" },
+    { label: "Niên khóa", value: user?.student?.enrollmentYear || "-" },
+    { label: "Trạng thái", value: user?.student?.academicStatus || "-" },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <PageHeader title="Trang chủ" subtitle="Chào mừng quay lại, John Doe" />
+      <PageHeader title="Trang chủ" subtitle={`Chào mừng quay lại, ${user?.fullName || "sinh viên"}`} />
 
-      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Student profile">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Hồ sơ sinh viên</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 flex items-start gap-3 text-red-800">
+          <AlertCircle className="w-5 h-5 mt-0.5" />
           <div>
-            <p className="text-sm text-gray-500 mb-1">Họ và tên</p>
-            <p className="font-medium text-gray-900">John Doe</p>
+            <p className="font-semibold">Không tải được dữ liệu</p>
+            <p className="text-sm">{error}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-500 mb-1">Mã sinh viên</p>
-            <p className="font-medium text-gray-900">2021001234</p>
+        </div>
+      ) : null}
+
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Student information">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <UserCircle2 className="w-5 h-5 text-[#1E3A8A]" />
+            <h2 className="text-lg font-semibold text-gray-900">Thông tin sinh viên</h2>
           </div>
-          <div>
-            <p className="text-sm text-gray-500 mb-1">Chương trình</p>
-            <p className="font-medium text-gray-900">Công nghệ thông tin - Cử nhân</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500 mb-1">Tình trạng học tập</p>
-            <span className="inline-flex px-3 py-1 bg-green-50 text-green-700 text-sm font-medium rounded-full">
-              Đang học
-            </span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setRefreshTick((current) => current + 1)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Làm mới
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {summaryRows.map((row) => (
+            <div key={row.label} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p className="text-xs uppercase tracking-wide text-gray-500">{row.label}</p>
+              <p className="mt-1 text-base font-semibold text-gray-900">{row.value}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Quick statistics">
-        <StatCard
-          label="Môn học hiện tại"
-          value="6"
-          note="18 tín chỉ"
-          icon={<BookOpen className="w-5 h-5" />}
-        />
-        <StatCard
-          label="GPA hiện tại"
-          value="3.75"
-          note="+0.12 so với học kỳ trước"
-          icon={<TrendingUp className="w-5 h-5" />}
-        />
-        <StatCard
-          label="Tình trạng học phí"
-          value="$4,500"
-          note="Quá hạn"
-          icon={<DollarSign className="w-5 h-5" />}
-        />
-      </section>
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Academic performance chart">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-[#1E3A8A]" />
+            <h2 className="text-lg font-semibold text-gray-900">Biểu đồ kết quả học tập</h2>
+          </div>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Schedule and announcements">
-        <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Lịch học hôm nay</h2>
-            <Clock className="w-5 h-5 text-gray-400" />
+          <div className="flex items-center gap-3">
+            <label htmlFor="dashboard-semester" className="text-sm font-medium text-gray-700">
+              Hiển thị theo học kỳ
+            </label>
+            <select
+              id="dashboard-semester"
+              value={selectedSemesterId}
+              onChange={(event) => setSelectedSemesterId(event.target.value)}
+              className="min-w-64 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900"
+              disabled={loading || !semesters.length}
+            >
+              {!semesters.length ? (
+                <option value="">Chưa có học kỳ</option>
+              ) : null}
+              {semesters.map((semester) => (
+                <option key={semester.semesterId} value={semester.semesterId}>
+                  {semester.semesterName} - {semester.academicYear}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="space-y-4">
-            {upcomingClasses.map((cls) => (
-              <div key={cls.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex-shrink-0 w-16 text-center">
-                  <p className="text-sm font-semibold text-[#1E3A8A]">{cls.time}</p>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 mb-1">{cls.course}</p>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <span>Phòng: {cls.room}</span>
-                    <span>•</span>
-                    <span>{cls.lecturer}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className="w-full mt-4 py-2 text-sm text-[#1E3A8A] font-medium hover:bg-blue-50 rounded-lg transition-colors">
-            Xem toàn bộ thời khóa biểu →
-          </button>
-        </article>
-
-        <article className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Thông báo gần đây</h2>
-            <span className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded-full font-medium">
-              3 mới
-            </span>
-          </div>
-          <div className="space-y-3">
-            {recentAnnouncements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className={`p-4 rounded-lg border ${
-                  announcement.important
-                    ? "bg-blue-50 border-blue-200"
-                    : "bg-gray-50 border-gray-200"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  {announcement.important && (
-                    <AlertCircle className="w-4 h-4 text-[#1E3A8A] flex-shrink-0 mt-0.5" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm mb-1">
-                      {announcement.title}
-                    </p>
-                    <p className="text-xs text-gray-500">{announcement.date}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className="w-full mt-4 py-2 text-sm text-[#1E3A8A] font-medium hover:bg-blue-50 rounded-lg transition-colors">
-            Xem tất cả thông báo →
-          </button>
-        </article>
-      </section>
-
-      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Quick actions">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Thao tác nhanh</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button className="p-4 border border-gray-200 rounded-lg hover:border-[#1E3A8A] hover:bg-blue-50 transition-colors text-center">
-            <BookOpen className="w-6 h-6 text-[#1E3A8A] mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Đăng ký môn học</p>
-          </button>
-          <button className="p-4 border border-gray-200 rounded-lg hover:border-[#1E3A8A] hover:bg-blue-50 transition-colors text-center">
-            <DollarSign className="w-6 h-6 text-[#1E3A8A] mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Thanh toán học phí</p>
-          </button>
-          <button className="p-4 border border-gray-200 rounded-lg hover:border-[#1E3A8A] hover:bg-blue-50 transition-colors text-center">
-            <Clock className="w-6 h-6 text-[#1E3A8A] mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Xem thời khóa biểu</p>
-          </button>
-          <button className="p-4 border border-gray-200 rounded-lg hover:border-[#1E3A8A] hover:bg-blue-50 transition-colors text-center">
-            <TrendingUp className="w-6 h-6 text-[#1E3A8A] mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-900">Xem điểm</p>
-          </button>
         </div>
+
+        {loading ? (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+            Đang tải biểu đồ kết quả học tập...
+          </div>
+        ) : !currentSemester ? (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+            Chưa có dữ liệu học kỳ để hiển thị biểu đồ.
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+              <p>
+                {currentSemester.semesterName} - {currentSemester.academicYear}
+              </p>
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-blue-700">
+                <Award className="w-4 h-4" />
+                GPA học kỳ: {Number(currentSemester.semesterGpa ?? 0).toFixed(2)}
+              </div>
+            </div>
+
+            {hoveredCourse ? (
+              <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                <p className="font-semibold">
+                  {hoveredCourse.courseCode} - {hoveredCourse.courseName}
+                </p>
+                <p className="text-blue-800">
+                  Điểm tổng kết: {hoveredCourse.totalScore !== null && hoveredCourse.totalScore !== undefined
+                    ? Number(hoveredCourse.totalScore).toFixed(2)
+                    : "N/A"}
+                  {" | "}
+                  Điểm hệ 4: {hoveredCourse.points !== null && hoveredCourse.points !== undefined
+                    ? Number(hoveredCourse.points).toFixed(1)
+                    : "N/A"}
+                </p>
+              </div>
+            ) : null}
+
+            {chartRows.length === 0 ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
+                Học kỳ này chưa có môn học để hiển thị.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[720px]">
+                  <div className="h-[280px] flex gap-3">
+                    <div className="w-10 relative border-r border-gray-200">
+                      {[10, 8, 6, 4, 2, 0].map((tick) => (
+                        <div
+                          key={tick}
+                          className="absolute right-2 text-[11px] text-gray-500"
+                          style={{ bottom: `${(tick / 10) * 240}px` }}
+                        >
+                          {tick}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="relative flex-1 border-l border-b border-gray-200 px-4 pt-2 pb-4 flex items-end gap-3 h-[260px]">
+                      {[10, 8, 6, 4, 2].map((tick) => (
+                        <div
+                          key={`grid-${tick}`}
+                          className="absolute left-0 right-0 border-t border-dashed border-gray-200"
+                          style={{ bottom: `${(tick / 10) * 240}px` }}
+                        />
+                      ))}
+
+                      {chartRows.map((course) => (
+                        <div key={course.enrollmentId} className="relative flex-1 min-w-[92px] flex flex-col items-center gap-2 z-10">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {course.totalScore !== null && course.totalScore !== undefined
+                              ? Number(course.totalScore).toFixed(2)
+                              : "N/A"}
+                          </span>
+                          <div
+                            className="w-full max-w-[72px] rounded-t-md bg-gradient-to-t from-[#1E3A8A] to-[#3b82f6] transition-transform duration-150 hover:scale-105"
+                            style={{ height: `${scoreToHeight(course.totalScore)}px` }}
+                            onMouseEnter={() => setHoveredCourse(course)}
+                            onMouseLeave={() => setHoveredCourse(null)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid" style={{ gridTemplateColumns: `repeat(${chartRows.length}, minmax(92px, 1fr))` }}>
+                    {chartRows.map((course) => (
+                      <div key={`${course.enrollmentId}-label`} className="px-2 text-center">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{course.courseCode}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{course.courseName}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </section>
     </div>
   );

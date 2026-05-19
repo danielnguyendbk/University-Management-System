@@ -1,6 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import { Root } from "./components/Root";
 import { LoginPage } from "./pages/auth/LoginPage";
+import { ForgotPassword } from "./pages/auth/ForgotPassword";
+import { ResetPassword } from "./pages/auth/ResetPassword";
+import { ChangePassword } from "./pages/shared/ChangePassword";
 import { Dashboard } from "./pages/student/Dashboard";
 import { Announcements } from "./pages/student/Announcements";
 import { Curriculum } from "./pages/student/Curriculum";
@@ -31,6 +34,8 @@ export const router = createBrowserRouter([
     path: "/",
     Component: LoginPage,
   },
+  { path: "/forgot-password", Component: ForgotPassword },
+  { path: "/reset-password", Component: ResetPassword },
   {
     path: "/portal",
     Component: PortalRedirect,
@@ -50,6 +55,7 @@ export const router = createBrowserRouter([
       { path: "e-invoice", Component: EInvoice },
       { path: "submit-request", Component: SubmitRequest },
       { path: "feedback", Component: Feedback },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
   {
@@ -63,6 +69,7 @@ export const router = createBrowserRouter([
       { path: "grade-entry", Component: LecturerGradeEntry },
       { path: "request-approval", Component: RequestApproval },
       { path: "feedback", Component: Feedback },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
   {
@@ -75,6 +82,7 @@ export const router = createBrowserRouter([
       { path: "lecturer-accounts", Component: ManageLecturerAccounts },
       { path: "section-assignment", Component: SectionAssignment },
       { path: "registration-sessions", Component: RegistrationSessions },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
 ]);

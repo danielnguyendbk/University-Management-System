@@ -9,6 +9,10 @@ public record CurrentUserResponse(
         String email,
         UserRole role,
         UserStatus status,
-        String fullName
+        String fullName,
+        Long studentId,
+        Long lecturerId,
+        StudentProfile student,
+        LecturerProfile lecturer
 ) {
 }

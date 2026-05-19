@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Calendar, AlertCircle, LoaderCircle, ShieldCheck, UserRound, LockKeyhole } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -57,7 +57,7 @@ const tuitionNotices = [
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, user, loading: authLoading } = useAuth();
-  const [username, setUsername] = useState("student01");
+  const [username, setUsername] = useState("lecturer01");
   const [password, setPassword] = useState("123456");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -125,7 +125,7 @@ export function LoginPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur p-5 shadow-sm">
                 <p className="text-sm text-slate-500">Test account</p>
-                <p className="mt-2 font-semibold text-slate-900">student01</p>
+                <p className="mt-2 font-semibold text-slate-900">lecturer01</p>
                 <p className="text-sm text-slate-600">Password: 123456</p>
               </div>
               <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur p-5 shadow-sm">
@@ -174,7 +174,7 @@ export function LoginPage() {
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
                       className="w-full outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
-                      placeholder="student01"
+                      placeholder="lecturer01"
                       autoComplete="username"
                     />
                   </div>
@@ -210,6 +210,10 @@ export function LoginPage() {
                   {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
                 </button>
               </form>
+
+              <div className="mt-3 text-sm text-center">
+                <Link to="/forgot-password" className="text-blue-600 hover:underline">Quên mật khẩu?</Link>
+              </div>
 
               <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 p-4 text-sm text-slate-600">
                 Tài khoản test: <strong>student01 / 123456</strong>, <strong>lecturer01 / 123456</strong>, <strong>admin01 / 123456</strong>

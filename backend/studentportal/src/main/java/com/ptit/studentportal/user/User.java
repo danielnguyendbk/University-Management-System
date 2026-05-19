@@ -5,10 +5,12 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.ptit.studentportal.persistence.converter.UserRoleConverter;
+import com.ptit.studentportal.persistence.converter.UserStatusConverter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.Convert;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -42,12 +44,13 @@ public class User {
 	@Column(nullable = false, unique = true, length = 100)
 	private String email;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = UserRoleConverter.class)
 	@Column(nullable = false, length = 20)
 	private UserRole role;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = UserStatusConverter.class)
 	@Column(nullable = false, length = 20)
+	@lombok.Builder.Default
 	private UserStatus status = UserStatus.ACTIVE;
 
 	@CreationTimestamp
