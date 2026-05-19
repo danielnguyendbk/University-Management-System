@@ -25,6 +25,47 @@ export function LecturerDashboard() {
         subtitle={`Xin chào, ${user?.fullName || user?.username || "giảng viên"}. Đây là tổng quan nhanh về lịch dạy, lớp phụ trách và các yêu cầu chờ xử lý.`}
       />
 
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Lecturer information">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-[#1E3A8A]" />
+            <h2 className="text-lg font-semibold text-gray-900">Thông tin giảng viên</h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Họ và tên</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.fullName || user?.fullName || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Mã giảng viên</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.lecturerCode || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Vai trò</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.role || "LECTURER"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Email làm việc</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.workEmail || user?.email || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Số điện thoại</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.phone || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Học hàm / Học vị</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.academicTitle || "-"}</p>
+          </div>
+        </div>
+      </section>
+
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard label="Lớp phụ trách" value="3" note="2 lớp đang mở" icon={<BookOpen className="w-5 h-5" />} />
         <StatCard label="Tiết dạy hôm nay" value="3" note="Từ 07:30 đến 13:30" icon={<Calendar className="w-5 h-5" />} />

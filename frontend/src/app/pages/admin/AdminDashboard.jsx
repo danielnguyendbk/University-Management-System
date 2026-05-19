@@ -19,6 +19,32 @@ export function AdminDashboard() {
         subtitle={`Xin chào, ${user?.fullName || user?.username || "quản trị viên"}. Đây là nơi điều phối các tác vụ hệ thống quan trọng.`}
       />
 
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" aria-label="Admin information">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <UserRound className="w-5 h-5 text-[#1E3A8A]" />
+            <h2 className="text-lg font-semibold text-gray-900">Thông tin quản trị viên</h2>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Họ và tên</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.fullName || user?.username || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Tên đăng nhập</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.username || "-"}</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500">Email</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{user?.email || "-"}</p>
+          </div>
+        </div>
+      </section>
+
       <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard label="Sinh viên" value="1,248" note="12 tài khoản chờ duyệt" icon={<Users className="w-5 h-5" />} />
         <StatCard label="Giảng viên" value="86" note="4 tài khoản mới" icon={<UserRound className="w-5 h-5" />} />

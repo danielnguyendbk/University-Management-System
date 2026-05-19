@@ -100,6 +100,10 @@
 			<version>0.12.5</version>
 			<scope>runtime</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -132,8 +136,9 @@
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
-							</annotationProcessorPaths>
-						</configuration>
+							</annotationProcessorPaths>						<compilerArgs>
+							<arg>-Xlint:all,-deprecation,-removal</arg>
+						</compilerArgs>						</configuration>
 					</execution>
 					<execution>
 						<id>default-testCompile</id>
@@ -147,8 +152,9 @@
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
-							</annotationProcessorPaths>
-						</configuration>
+							</annotationProcessorPaths>						<compilerArgs>
+							<arg>-Xlint:all,-deprecation,-removal</arg>
+						</compilerArgs>						</configuration>
 					</execution>
 				</executions>
 			</plugin>

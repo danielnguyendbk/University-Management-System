@@ -55,8 +55,8 @@ public class Lecturer {
     @Column(length = 20)
     private String phone;
 
-    @Column(name = "academic_degree", length = 100)
-    private String academicDegree;
+    @Column(name = "academic_title", length = 100)
+    private String academicTitle;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

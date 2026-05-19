@@ -70,7 +70,7 @@ public class LecturerService {
                 .fullName(request.fullName())
                 .workEmail(request.workEmail())
                 .phone(request.phone())
-                .academicDegree(request.academicDegree())
+                .academicTitle(request.academicTitle())
                 .build();
 
         Lecturer saved = lecturerRepository.save(lecturer);
@@ -90,7 +90,7 @@ public class LecturerService {
                 lecturer.getFullName(),
                 lecturer.getWorkEmail(),
                 lecturer.getPhone(),
-                lecturer.getAcademicDegree()
+                lecturer.getAcademicTitle()
         );
     }
 }

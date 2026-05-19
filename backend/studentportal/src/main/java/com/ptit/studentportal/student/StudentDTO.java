@@ -20,7 +20,7 @@ public record StudentDTO(
 	String phone,
 	String permanentAddress,
 	String currentAddress,
-	String cohort,
+	Integer enrollmentYear,
 	Student.AcademicStatus academicStatus
 ) {
 }

@@ -1,10 +1,12 @@
 package com.ptit.studentportal.auth;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
+@Disabled("Debug helper for manual login verification")
 class AuthServiceLoginDebugTest {
 
     @Autowired

@@ -15,6 +15,6 @@ public record LecturerDTO(
         String fullName,
         String workEmail,
         String phone,
-        String academicDegree
+        String academicTitle
 ) {
 }

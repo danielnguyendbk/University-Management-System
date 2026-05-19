@@ -9,11 +9,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.ptit.studentportal.user.User;
+import com.ptit.studentportal.persistence.converter.StudentAcademicStatusConverter;
+import com.ptit.studentportal.persistence.converter.StudentGenderConverter;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -86,7 +87,7 @@ public class Student {
 	@Column(name = "date_of_birth")
 	private LocalDate dateOfBirth;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = StudentGenderConverter.class)
 	@Column(length = 20)
 	private Gender gender;
 
@@ -99,11 +100,12 @@ public class Student {
 	@Column(name = "current_address", length = 255)
 	private String currentAddress;
 
-	@Column(length = 20)
-	private String cohort;
+	@Column(name = "enrollment_year")
+	private Integer enrollmentYear;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = StudentAcademicStatusConverter.class)
 	@Column(name = "academic_status", nullable = false, length = 30)
+	@lombok.Builder.Default
 	private AcademicStatus academicStatus = AcademicStatus.STUDYING;
 
 	@CreationTimestamp

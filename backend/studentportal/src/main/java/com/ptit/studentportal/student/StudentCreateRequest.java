@@ -16,7 +16,7 @@ public record StudentCreateRequest(
         @Size(max = 20) String phone,
         @Size(max = 255) String permanentAddress,
         @Size(max = 255) String currentAddress,
-        @Size(max = 20) String cohort,
+        Integer enrollmentYear,
         @NotNull Student.AcademicStatus academicStatus
 ) {
 }
