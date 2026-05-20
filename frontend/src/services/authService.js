@@ -11,8 +11,8 @@ export async function login(credentials) {
   const payload = response?.data;
 
   if (payload && payload.token) {
-    localStorage.setItem("token", payload.token);
-    localStorage.setItem("user", JSON.stringify({
+    sessionStorage.setItem("token", payload.token);
+    sessionStorage.setItem("user", JSON.stringify({
       username: payload.username,
       role: payload.role,
       fullName: payload.fullName
@@ -23,12 +23,12 @@ export async function login(credentials) {
 }
 
 export async function getCurrentUser() {
-  const userStr = localStorage.getItem("user");
+  const userStr = sessionStorage.getItem("user");
   if (userStr) {
     try {
       return JSON.parse(userStr);
     } catch (e) {
-      console.error("Error parsing user from localStorage", e);
+      console.error("Error parsing user from sessionStorage", e);
     }
   }
 
@@ -40,8 +40,8 @@ export async function getCurrentUser() {
 }
 
 export function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
 }
 
 export { getStoredToken };

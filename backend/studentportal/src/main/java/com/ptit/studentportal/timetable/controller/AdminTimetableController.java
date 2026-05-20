@@ -110,4 +110,10 @@ public class AdminTimetableController {
 		timetableCommandService.unlockSemester(semesterId);
 		return ResponseEntity.ok(ApiResponse.success("Semester unlocked successfully", null));
 	}
+
+	@PostMapping("/semesters/{semesterId}/weeks/generate")
+	public ResponseEntity<ApiResponse<Void>> generateSemesterWeeks(@PathVariable Long semesterId) {
+		timetableCommandService.generateSemesterWeeks(semesterId);
+		return ResponseEntity.ok(ApiResponse.success("Semester weeks generated successfully", null));
+	}
 }

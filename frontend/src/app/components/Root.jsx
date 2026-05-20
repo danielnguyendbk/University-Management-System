@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useIdleLogout } from "../hooks/useIdleLogout";
 
 const navigationByRole = {
   STUDENT: [
@@ -28,7 +29,7 @@ const navigationByRole = {
     { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", path: "curriculum", icon: BookOpen },
     { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", path: "course-registration", icon: ClipboardList },
     { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", path: "schedule", icon: Calendar },
-    { name: "Lịch thi", name_vi: "Kế hoạch thi cử", path: "exam-schedule", icon: CalendarCheck },
+    { name: "Lịch thi", name_vi: "Kế hoạch thi cử", path: "exams", icon: CalendarCheck },
     { name: "Điểm số", name_vi: "Kết quả học tập", path: "grades", icon: GraduationCap },
     { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", path: "tuition", icon: DollarSign },
     { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", path: "e-invoice", icon: FileText },
@@ -39,6 +40,7 @@ const navigationByRole = {
     { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
     { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
     { name: "Lịch giảng dạy", name_vi: "Lịch dạy theo tuần", path: "schedule", icon: Calendar },
+    { name: "Lịch coi thi", name_vi: "Kế hoạch coi thi cử", path: "exams", icon: CalendarCheck },
     { name: "Lớp học phần", name_vi: "Danh sách lớp phụ trách", path: "sections", icon: BookOpen },
     { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
     { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
@@ -52,10 +54,12 @@ const navigationByRole = {
     { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
     { name: "Thời khóa biểu", name_vi: "Tạo và quản lý lịch học", path: "timetable", icon: CalendarDays },
+    { name: "Quản lý lịch thi", name_vi: "Xếp lịch & gán giám thị", path: "exams", icon: CalendarCheck },
   ],
 };
 
 export function Root() {
+  useIdleLogout();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -75,7 +79,8 @@ export function Root() {
 
   const handleLogout = () => {
     logout();
-    navigate("/", { replace: true });
+    sessionStorage.clear();
+    navigate("/login", { replace: true });
   };
 
   const portalTitleByRole = {

@@ -21,5 +21,7 @@ public interface TimetableCommandService {
 	void lockSemester(Long semesterId);
 
 	void unlockSemester(Long semesterId);
+
+	void generateSemesterWeeks(Long semesterId);
 }
 

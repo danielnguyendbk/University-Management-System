@@ -6,6 +6,7 @@ public record MyEnrollmentResponse(
         Long enrollmentId,
         Long sectionId,
         String sectionCode,
+        String classCode,
         String courseCode,
         String courseName,
         Integer credits,

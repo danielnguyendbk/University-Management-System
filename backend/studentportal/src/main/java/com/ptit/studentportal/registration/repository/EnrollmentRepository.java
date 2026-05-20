@@ -64,4 +64,12 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
             @Param("studentId") Long studentId,
             @Param("semesterId") Long semesterId
     );
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM enrollments
+            WHERE section_id = :sectionId
+              AND enrollment_status IN ('registered', 'completed')
+            """, nativeQuery = true)
+    Integer countStudentsForSection(@Param("sectionId") Long sectionId);
 }

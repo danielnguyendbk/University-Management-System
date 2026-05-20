@@ -1,11 +1,26 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Calendar, AlertCircle, LoaderCircle, ShieldCheck, UserRound, LockKeyhole } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
 
+const announcements = [
+  {
+    id: 1,
+    title: "Thông báo hệ thống",
+    description: "Chào mừng bạn đến với Student Portal PTIT. Hệ thống đang hoạt động bình thường.",
+  },
+  {
+    id: 2,
+    title: "Lịch đăng ký học phần",
+    description: "Thời gian đăng ký học phần học kỳ 2 đã bắt đầu. Sinh viên vui lòng kiểm tra lịch đăng ký.",
+  }
+];
+
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const message = location.state?.message;
   const { login, user, loading: authLoading } = useAuth();
   const [username, setUsername] = useState("n23dccn001");
   const [password, setPassword] = useState("123456");
@@ -111,8 +126,15 @@ export function LoginPage() {
                   Đăng nhập hệ thống
                 </p>
                 <h3 className="mt-4 text-2xl font-semibold text-slate-900">Dùng tài khoản test để vào portal</h3>
-                <p className="mt-2 text-slate-600">JWT sẽ được lưu localStorage và tự gọi `/api/auth/me`.</p>
+                <p className="mt-2 text-slate-600">JWT sẽ được lưu sessionStorage và tự gọi `/api/auth/me`.</p>
               </div>
+
+              {message && (
+                <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                  <span>{message}</span>
+                </div>
+              )}
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>

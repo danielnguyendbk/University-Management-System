@@ -14,6 +14,8 @@ import com.ptit.studentportal.timetable.dto.response.ClassSessionViewProjection;
 
 public interface ClassSessionRepository extends JpaRepository<ClassSession, Long> {
 
+	List<ClassSession> findBySectionId(Long sectionId);
+
 	List<ClassSession> findBySectionIdAndSessionDateBetween(Long sectionId, LocalDate fromDate, LocalDate toDate);
 
 	List<ClassSession> findByLecturerIdAndSessionDateBetween(Long lecturerId, LocalDate fromDate, LocalDate toDate);
@@ -93,8 +95,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			  cs.slot_end as slotEnd, 
 			  cs.start_time as startTime, 
 			  cs.end_time as endTime,
-			  cs.session_type as sessionType, 
-			  cs.practice_group_no as practiceGroupNo, 
+			  COALESCE(s.session_type, 'THEORY') as sessionType, 
+			  COALESCE(s.practice_group_no, 0) as practiceGroupNo, 
 			  cs.session_status as sessionStatus, 
 			  cs.note as note
 			FROM class_sessions cs
@@ -105,14 +107,15 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			LEFT JOIN rooms r ON r.room_id = cs.room_id
 			LEFT JOIN buildings b ON b.building_id = r.building_id
 			LEFT JOIN lecturers l ON l.lecturer_id = cs.lecturer_id
+			LEFT JOIN schedules s ON s.schedule_id = cs.schedule_id
 			WHERE sem.semester_id = :semesterId
 			  AND sw.week_no = :weekNo
 			  AND (:buildingId IS NULL OR b.building_id = :buildingId)
 			  AND (:roomId IS NULL OR r.room_id = :roomId)
-			  AND (:sessionType IS NULL OR cs.session_type = :sessionType)
+			  AND (:sessionType IS NULL OR COALESCE(s.session_type, 'THEORY') = :sessionType)
 			  AND (:lecturerId IS NULL OR cs.lecturer_id = :lecturerId)
 			  AND (:sectionId IS NULL OR cs.section_id = :sectionId)
-			ORDER BY cs.session_date ASC, cs.slot_start ASC
+			  ORDER BY cs.session_date ASC, cs.slot_start ASC
 			""", nativeQuery = true)
 	List<ClassSessionViewProjection> findClassSessionsView(
 			@Param("semesterId") Long semesterId,
@@ -123,5 +126,138 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			@Param("lecturerId") Long lecturerId,
 			@Param("sectionId") Long sectionId
 	);
+
+	@Query(value = """
+			SELECT
+			    cs.session_id AS sessionId,
+			    cs.section_id AS sectionId,
+			    cs.schedule_id AS scheduleId,
+			    sec.semester_id AS semesterId,
+			    NULL AS weekNo,
+			    cs.session_date AS sessionDate,
+			    NULL AS dayOfWeek,
+			    NULL AS dayOfWeekLabel,
+			    sec.section_code AS sectionCode,
+			    c.course_code AS courseCode,
+			    c.course_name AS courseName,
+			    r.room_code AS roomCode,
+			    NULL AS buildingCode,
+			    NULL AS buildingName,
+			    NULL AS lecturerCode,
+			    l.full_name AS lecturerName,
+			    cs.slot_start AS slotStart,
+			    cs.slot_end AS slotEnd,
+			    cs.start_time AS startTime,
+			    cs.end_time AS endTime,
+			    COALESCE(s.session_type, 'THEORY') AS sessionType,
+			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    cs.session_status AS sessionStatus,
+			    cs.note AS note
+			FROM class_sessions cs
+			JOIN course_sections sec ON sec.section_id = cs.section_id
+			JOIN courses c ON c.course_id = sec.course_id
+			JOIN enrollments e ON e.section_id = sec.section_id
+			JOIN students st ON st.student_id = e.student_id
+			LEFT JOIN rooms r ON r.room_id = cs.room_id
+			LEFT JOIN lecturers l ON l.lecturer_id = cs.lecturer_id
+			LEFT JOIN schedules s ON s.schedule_id = cs.schedule_id
+			WHERE st.student_id = :studentId
+			  AND LOWER(e.enrollment_status) IN ('registered', 'completed')
+			  AND cs.session_date BETWEEN :fromDate AND :toDate
+			  AND LOWER(cs.session_status) <> 'cancelled'
+			ORDER BY cs.session_date, cs.start_time
+			""", nativeQuery = true)
+	List<ClassSessionViewProjection> findStudentTimetable(
+			@Param("studentId") Long studentId,
+			@Param("fromDate") LocalDate fromDate,
+			@Param("toDate") LocalDate toDate
+	);
+
+	@Query(value = """
+			SELECT
+			    cs.session_id AS sessionId,
+			    cs.section_id AS sectionId,
+			    cs.schedule_id AS scheduleId,
+			    sec.semester_id AS semesterId,
+			    NULL AS weekNo,
+			    cs.session_date AS sessionDate,
+			    NULL AS dayOfWeek,
+			    NULL AS dayOfWeekLabel,
+			    sec.section_code AS sectionCode,
+			    c.course_code AS courseCode,
+			    c.course_name AS courseName,
+			    r.room_code AS roomCode,
+			    NULL AS buildingCode,
+			    NULL AS buildingName,
+			    NULL AS lecturerCode,
+			    l.full_name AS lecturerName,
+			    cs.slot_start AS slotStart,
+			    cs.slot_end AS slotEnd,
+			    cs.start_time AS startTime,
+			    cs.end_time AS endTime,
+			    COALESCE(s.session_type, 'THEORY') AS sessionType,
+			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    cs.session_status AS sessionStatus,
+			    cs.note AS note
+			FROM class_sessions cs
+			JOIN course_sections sec ON sec.section_id = cs.section_id
+			JOIN courses c ON c.course_id = sec.course_id
+			LEFT JOIN rooms r ON r.room_id = cs.room_id
+			LEFT JOIN lecturers l ON l.lecturer_id = cs.lecturer_id
+			LEFT JOIN schedules s ON s.schedule_id = cs.schedule_id
+			WHERE cs.section_id = :sectionId
+			  AND cs.session_date BETWEEN :fromDate AND :toDate
+			  AND LOWER(cs.session_status) <> 'cancelled'
+			ORDER BY cs.session_date, cs.start_time
+			""", nativeQuery = true)
+	List<ClassSessionViewProjection> findSectionTimetable(
+			@Param("sectionId") Long sectionId,
+			@Param("fromDate") LocalDate fromDate,
+			@Param("toDate") LocalDate toDate
+	);
+
+	@Query(value = """
+			SELECT
+			    cs.session_id AS sessionId,
+			    cs.section_id AS sectionId,
+			    cs.schedule_id AS scheduleId,
+			    sec.semester_id AS semesterId,
+			    NULL AS weekNo,
+			    cs.session_date AS sessionDate,
+			    NULL AS dayOfWeek,
+			    NULL AS dayOfWeekLabel,
+			    sec.section_code AS sectionCode,
+			    c.course_code AS courseCode,
+			    c.course_name AS courseName,
+			    r.room_code AS roomCode,
+			    NULL AS buildingCode,
+			    NULL AS buildingName,
+			    NULL AS lecturerCode,
+			    l.full_name AS lecturerName,
+			    cs.slot_start AS slotStart,
+			    cs.slot_end AS slotEnd,
+			    cs.start_time AS startTime,
+			    cs.end_time AS endTime,
+			    COALESCE(s.session_type, 'THEORY') AS sessionType,
+			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    cs.session_status AS sessionStatus,
+			    cs.note AS note
+			FROM class_sessions cs
+			JOIN course_sections sec ON sec.section_id = cs.section_id
+			JOIN courses c ON c.course_id = sec.course_id
+			LEFT JOIN rooms r ON r.room_id = cs.room_id
+			LEFT JOIN lecturers l ON l.lecturer_id = cs.lecturer_id
+			LEFT JOIN schedules s ON s.schedule_id = cs.schedule_id
+			WHERE cs.lecturer_id = :lecturerId
+			  AND cs.session_date BETWEEN :fromDate AND :toDate
+			  AND LOWER(cs.session_status) <> 'cancelled'
+			ORDER BY cs.session_date, cs.start_time
+			""", nativeQuery = true)
+	List<ClassSessionViewProjection> findLecturerTimetable(
+			@Param("lecturerId") Long lecturerId,
+			@Param("fromDate") LocalDate fromDate,
+			@Param("toDate") LocalDate toDate
+	);
 }
+
 

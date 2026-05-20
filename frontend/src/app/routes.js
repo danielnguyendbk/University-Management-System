@@ -6,7 +6,7 @@ import { Announcements } from "./pages/student/Announcements";
 import { Curriculum } from "./pages/student/Curriculum";
 import { CourseRegistration } from "./pages/student/CourseRegistration";
 import { WeeklySchedule } from "./pages/student/WeeklySchedule";
-import { ExamSchedule } from "./pages/student/ExamSchedule";
+import { StudentExams } from "./pages/student/StudentExams";
 import { Grades } from "./pages/student/Grades";
 import { Tuition } from "./pages/student/Tuition";
 import { EInvoice } from "./pages/student/EInvoice";
@@ -21,6 +21,7 @@ import { LecturerTeachingSchedule } from "./pages/lecturer/LecturerTeachingSched
 import { LecturerWeeklySchedule } from "./pages/lecturer/LecturerWeeklySchedule";
 import { LecturerClassSections } from "./pages/lecturer/LecturerClassSections";
 import { LecturerGradeEntry } from "./pages/lecturer/LecturerGradeEntry";
+import { LecturerExams } from "./pages/lecturer/LecturerExams";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { ManageStudentAccounts } from "./pages/admin/ManageStudentAccounts";
 import { ManageLecturerAccounts } from "./pages/admin/ManageLecturerAccounts";
@@ -28,10 +29,15 @@ import { SectionAssignment } from "./pages/admin/SectionAssignment";
 import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
 import { AdminTimetablePage } from "./pages/admin/AdminTimetablePage";
 import { AdminRegistrationPage } from "./pages/admin/AdminRegistrationPage";
+import { AdminExams } from "./pages/admin/AdminExams";
 
 export const router = createBrowserRouter([
   {
     path: "/",
+    Component: LoginPage,
+  },
+  {
+    path: "/login",
     Component: LoginPage,
   },
   {
@@ -47,7 +53,8 @@ export const router = createBrowserRouter([
       { path: "curriculum", Component: Curriculum },
       { path: "course-registration", Component: CourseRegistration },
       { path: "schedule", Component: WeeklySchedule },
-      { path: "exam-schedule", Component: ExamSchedule },
+      { path: "exam-schedule", Component: StudentExams }, // Map legacy path to new beautiful page
+      { path: "exams", Component: StudentExams },          // Map /portal/student/exams
       { path: "grades", Component: Grades },
       { path: "tuition", Component: Tuition },
       { path: "e-invoice", Component: EInvoice },
@@ -65,6 +72,7 @@ export const router = createBrowserRouter([
       { path: "schedule", Component: LecturerWeeklySchedule },
       { path: "sections", Component: LecturerClassSections },
       { path: "grade-entry", Component: LecturerGradeEntry },
+      { path: "exams", Component: LecturerExams },         // Map /portal/lecturer/exams
       { path: "request-approval", Component: RequestApproval },
       { path: "feedback", Component: Feedback },
     ],
@@ -80,6 +88,7 @@ export const router = createBrowserRouter([
       { path: "section-assignment", Component: SectionAssignment },
       { path: "registration-sessions", Component: AdminRegistrationPage },
       { path: "timetable", Component: AdminTimetablePage },
+      { path: "exams", Component: AdminExams },             // Map /portal/admin/exams
     ],
   },
 ]);

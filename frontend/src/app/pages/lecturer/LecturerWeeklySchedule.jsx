@@ -1,5 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
-import { getLecturerTimetable } from "../../../services/lecturerTimetableApi";
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { getLecturerTimetable, getLecturerSemesterWeeks, getLecturerCalendarBlocks } from "../../../services/lecturerTimetableApi";
+import { lecturerCourseSectionApi } from "../../../api/lecturerCourseSectionApi";
+import { useAcademicWeeks } from "../../../hooks/useAcademicWeeks";
 import {
   buildTimeAxis,
   getHeightByTime,
@@ -32,115 +34,111 @@ const formatDateFull = (date) => {
   return `${day}/${month}/${year}`;
 };
 
-const addDays = (date, amount) => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + amount);
-  return next;
-};
-
 const formatDate = (date) => {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${day}/${month}`;
 };
 
-const formatDateToISO = (date) => {
+function formatDateToISO(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-};
+}
 
 export function LecturerWeeklySchedule({ showCancelled = true }) {
-  const [currentDate, setCurrentDate] = useState(() => getWeekDatesFromMonday(new Date())[0] || new Date());
+  const fetchSemesters = useCallback(() => lecturerCourseSectionApi.getSemesters(), []);
+  const fetchWeeks = useCallback((semId) => getLecturerSemesterWeeks(semId), []);
+  const fetchCalendarBlocks = useCallback((semId) => getLecturerCalendarBlocks(semId), []);
+
+  const {
+    semesters,
+    selectedSemesterId,
+    setSelectedSemesterId,
+    semesterWeeks,
+    selectedWeekIndex,
+    setSelectedWeekIndex,
+    selectedWeek,
+    calendarBlocks,
+    loading: weeksLoading,
+    errorMessage: weeksErrorMessage,
+    weekDates,
+    weekDays,
+    handlePreviousWeek,
+    handleNextWeek,
+  } = useAcademicWeeks({
+    fetchSemesters,
+    fetchWeeks,
+    fetchCalendarBlocks,
+  });
+
   const [timetableItems, setTimetableItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [timetableLoading, setTimetableLoading] = useState(false);
+  const [timetableError, setTimetableError] = useState("");
 
-  const weekDates = useMemo(() => {
-    return getWeekDatesFromMonday(currentDate);
-  }, [currentDate]);
+  const loading = weeksLoading || timetableLoading;
+  const errorMessage = weeksErrorMessage || timetableError;
 
-  const weekDays = useMemo(() => {
-    const labels = [
-      "Thứ 2",
-      "Thứ 3",
-      "Thứ 4",
-      "Thứ 5",
-      "Thứ 6",
-      "Thứ 7",
-      "Chủ nhật",
-    ];
-
-    return labels.map((label, index) => {
-      const baseDate = weekDates[index] || weekDates[0] || new Date();
-      const date = addDays(baseDate, index);
-
-      return {
-        index,
-        label,
-        date,
-        dateString: formatDateToISO(date),
-      };
-    });
-  }, [weekDates]);
-
+  // Fetch timetable when week changes
   useEffect(() => {
     async function fetchTimetable() {
-      const fromDate = weekDates[0] ? formatDateToISO(weekDates[0]) : null;
-      const toDate = weekDates[6] ? formatDateToISO(weekDates[6]) : null;
+      if (!selectedWeek) return;
 
-      if (!fromDate || !toDate) return;
+      const fromDate = weekDates[0] ? formatDateToISO(weekDates[0]) : selectedWeek.startDate;
+      const toDate = weekDates[6] ? formatDateToISO(weekDates[6]) : selectedWeek.endDate;
 
       try {
-        setLoading(true);
-        setErrorMessage("");
+        setTimetableLoading(true);
+        setTimetableError("");
 
-        const data = await getLecturerTimetable(fromDate, toDate);
-        setTimetableItems(data);
+        const raw = await getLecturerTimetable(fromDate, toDate);
+        const items = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+          ? raw.data
+          : [];
+
+        setTimetableItems(items);
       } catch (error) {
         console.error("Lỗi tải lịch giảng dạy:", error);
-        setErrorMessage("Không thể tải lịch giảng dạy.");
+        setTimetableItems([]);
+        setTimetableError("Không thể tải lịch giảng dạy.");
       } finally {
-        setLoading(false);
+        setTimetableLoading(false);
       }
     }
-
     fetchTimetable();
-  }, [weekDates]);
+  }, [selectedWeek, weekDates]);
 
   const courseColors = useMemo(() => {
     const map = {};
     let paletteIndex = 0;
-
-    timetableItems.forEach((item) => {
+    const items = Array.isArray(timetableItems) ? timetableItems : [];
+    items.forEach((item) => {
       const key = item.courseCode ?? item.courseName ?? item.sectionId ?? item.sessionId;
-
       if (!map[key]) {
         map[key] = coursePalette[paletteIndex % coursePalette.length];
         paletteIndex += 1;
       }
     });
-
     return map;
   }, [timetableItems]);
 
   const getBlockStyle = (startTime, endTime) => {
-    const top = getTopByTime(startTime);
+    const top = Math.max(getTopByTime(startTime), 0);
     const height = getHeightByTime(startTime, endTime);
 
+    // UI kiểu thời khóa biểu trường: phủ luôn ô mang nhãn giờ kết thúc
+    const visualHeight = height + ROW_HEIGHT;
+
     return {
-      top: Math.max(top, 0),
-      height: Math.max(height, ROW_HEIGHT),
+      top,
+      height: Math.min(
+        Math.max(visualHeight, ROW_HEIGHT),
+        gridHeight - top
+      ),
     };
-  };
-
-  const handlePreviousWeek = () => {
-    setCurrentDate((prev) => addDays(prev, -7));
-  };
-
-  const handleNextWeek = () => {
-    setCurrentDate((prev) => addDays(prev, 7));
   };
 
   return (
@@ -148,42 +146,54 @@ export function LecturerWeeklySchedule({ showCancelled = true }) {
       {/* Filter toolbar */}
       <div className="bg-white border-y border-x border-[#1E3A8A] rounded-lg py-4 px-3">
         <div className="flex flex-col gap-2 max-w-[920px]">
-          <div className="grid grid-cols-1 md:grid-cols-[720px_auto] gap-6 items-center">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">
-                Tuần: {formatDateFull(weekDates[0] || new Date())} -{" "}
-                {formatDateFull(weekDates[6] || new Date())}
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-[330px_445px] gap-3">
+            {semesters.length === 0 && !loading ? (
+              <div className="text-sm text-gray-500 flex items-center h-11 px-3 border border-gray-300 rounded-lg bg-gray-50">
+                Không có dữ liệu học kỳ.
+              </div>
+            ) : (
               <select
-                value={formatDateToISO(currentDate)}
-                onChange={(e) => {
-                  const selectedDate = new Date(`${e.target.value}T00:00:00`);
-                  const mondayOfWeek = getWeekDatesFromMonday(selectedDate)[0];
-                  setCurrentDate(mondayOfWeek);
-                }}
+                value={selectedSemesterId || ""}
+                onChange={(e) => setSelectedSemesterId(Number(e.target.value))}
+                className="h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 font-medium"
+              >
+                {Array.isArray(semesters) &&
+                  semesters.map((s) => (
+                    <option key={s.semesterId ?? s.id} value={s.semesterId ?? s.id}>
+                      {s.semesterName || s.semesterCode || s.name || `${s.semesterCode} - ${s.semesterYear}`}
+                    </option>
+                  ))}
+              </select>
+            )}
+            
+            <div className="flex items-center text-sm font-semibold text-[#1E3A8A] border border-blue-100 rounded-lg px-3 bg-blue-50/50">
+              Lịch Giảng Dạy Giảng Viên
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-[720px_auto] gap-6 items-center">
+            {semesterWeeks.length === 0 && !loading ? (
+              <div className="text-sm text-gray-500 flex items-center h-11 w-full px-3 border border-gray-300 rounded-lg bg-gray-50">
+                Không có dữ liệu tuần học.
+              </div>
+            ) : (
+              <select
+                value={selectedWeekIndex}
+                onChange={(e) => setSelectedWeekIndex(Number(e.target.value))}
                 className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
               >
-                {Array.from({ length: 52 }).map((_, weekIndex) => {
-                  const baseDate = new Date(weekDates[0] || new Date());
-                  const weekStart = addDays(baseDate, weekIndex * 7);
-                  const weekEnd = addDays(weekStart, 6);
-                  const startISO = formatDateToISO(weekStart);
-                  const currentISO = formatDateToISO(currentDate);
-
-                  return (
-                    <option key={weekIndex} value={startISO}>
-                      Tuần {weekIndex + 1} [từ {formatDateFull(weekStart)} đến{" "}
-                      {formatDateFull(weekEnd)}]
+                {Array.isArray(semesterWeeks) &&
+                  semesterWeeks.map((week, index) => (
+                    <option key={week.semesterWeekId} value={index}>
+                      Tuần {week.weekNo} [từ ngày {formatDateFull(new Date(`${week.startDate}T00:00:00`))} đến ngày {formatDateFull(new Date(`${week.endDate}T00:00:00`))}]
                     </option>
-                  );
-                })}
+                  ))}
               </select>
-            </div>
-
+            )}
             <button
               type="button"
               onClick={() => window.print()}
-              className="h-11 px-6 rounded-lg border border-blue-500 text-blue-600 hover:bg-[#1E3A8A] hover:text-white text-sm font-medium flex items-center justify-center gap-2"
+              className="h-11 px-6 rounded-lg border border-blue-500 text-blue-600 hover:bg-[#1E3A8A] hover:text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors duration-200"
             >
               <span className="text-lg">🖨</span>
               <span>In</span>
@@ -192,267 +202,172 @@ export function LecturerWeeklySchedule({ showCancelled = true }) {
         </div>
       </div>
 
-      {loading && (
-        <div className="text-sm text-gray-500">Đang tải lịch giảng dạy...</div>
-      )}
-      {!loading && errorMessage && (
-        <div className="text-sm text-rose-600">{errorMessage}</div>
-      )}
+      {loading && <div className="text-sm text-gray-500">Đang tải...</div>}
+      {!loading && errorMessage && <div className="text-sm text-rose-600 font-semibold">{errorMessage}</div>}
       {!loading && !errorMessage && timetableItems.length === 0 && (
-        <div className="text-sm text-gray-500">Không có lịch giảng dạy trong tuần này.</div>
+        <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500">
+          Chưa có lịch giảng dạy trong tuần này.
+        </div>
       )}
 
       {/* Schedule Grid */}
       <div className="bg-white rounded-xl shadow-sm border-y border-x border-[#1E3A8A] overflow-hidden">
         <div className="overflow-x-auto">
-          {/* Header row */}
           <div className="relative">
-            {/* Arrow buttons */}
             <button
               type="button"
               onClick={handlePreviousWeek}
-              className="absolute left-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center leading-none"
+              className="absolute left-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center rounded-full shadow-md bg-white border border-gray-200 hover:text-blue-600 transition-all duration-200"
             >
-              <span className="block text-2xl leading-none -translate-y-[1px]">
-                ←
-              </span>
+              <span className="text-2xl">←</span>
             </button>
-
             <button
               type="button"
               onClick={handleNextWeek}
-              className="absolute right-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center leading-none"
+              className="absolute right-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center rounded-full shadow-md bg-white border border-gray-200 hover:text-blue-600 transition-all duration-200"
             >
-              <span className="block text-2xl leading-none -translate-y-[1px]">
-                →
-              </span>
+              <span className="text-2xl">→</span>
             </button>
 
-            {/* Header grid */}
-            <div
-              className="grid border-b border-gray-300 bg-white"
-              style={{
-                gridTemplateColumns: timetableColumns,
-              }}
-            >
+            <div className="grid border-b border-gray-300 bg-white" style={{ gridTemplateColumns: timetableColumns }}>
               <div className="h-12 border-r border-gray-300 bg-white" />
-
               {weekDays.map((day) => (
-                <div
-                  key={day.dateString}
-                  className="h-12 flex items-center justify-center border-r border-gray-300 text-sm font-semibold text-gray-800"
-                >
+                <div key={day.dateString} className="h-12 flex items-center justify-center border-r border-gray-300 text-sm font-semibold text-gray-800">
                   <span>{day.label}</span>
-                  <span className="ml-1 text-gray-500 font-normal">
-                    ({formatDate(day.date)})
-                  </span>
+                  <span className="ml-1 text-gray-500 font-normal">({formatDate(day.date)})</span>
                 </div>
               ))}
-
               <div className="h-12 bg-white" />
             </div>
           </div>
 
-          {/* Body grid */}
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: timetableColumns,
-            }}
-          >
-            {/* Left time axis */}
-            <div
-              className="relative bg-[#1E3A8A] text-white sm border-r border-sky-600"
-              style={{ height: gridHeight }}
-            >
-              <div
-                className="grid"
-                style={{
-                  gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)`,
-                }}
-              >
-                {Array.from({ length: rowCount }).map((_, index) => (
-                  <div
-                    key={`time-line-${index}`}
-                    className="border-b border-white/25"
-                  />
-                ))}
-              </div>
-
-              {timeSlots.map((time, index) => (
-                <div
-                  key={time}
-                  className="absolute left-0 right-0 text-center text-sm font-semibold"
-                  style={{
-                    top: index * ROW_HEIGHT + ROW_HEIGHT / 2,
-                    transform: "translateY(-50%)",
-                  }}
-                >
+          <div className="grid" style={{ gridTemplateColumns: timetableColumns }}>
+            {/* Left Time Axis */}
+            <div className="relative bg-[#1E3A8A] text-white border-r border-sky-600" style={{ height: gridHeight }}>
+              {timeSlots.slice(0, -1).map((time, index) => (
+                <div key={time} className="flex items-center justify-center border-b border-white/25 text-xs font-semibold" style={{ height: `${ROW_HEIGHT}px` }}>
                   {time}
                 </div>
               ))}
             </div>
 
-            {/* Day columns */}
+            {/* Schedule Columns for each day */}
             {weekDays.map((day) => {
               const dayItems = timetableItems.filter((item) => {
                 const status = String(item.sessionStatus ?? item.status ?? "").toLowerCase();
                 if (!showCancelled && status === "cancelled") return false;
-                return (
-                  item.sessionDate === day.dateString &&
-                  isTimeInsideGrid(item.startTime) &&
-                  isTimeInsideGrid(item.endTime)
-                );
+                return item.sessionDate === day.dateString && isTimeInsideGrid(item.startTime) && isTimeInsideGrid(item.endTime);
+              });
+
+              // Check if this day falls within any calendar block with teachingAllowed = false
+              const dayBlock = calendarBlocks.find((block) => {
+                const start = block.startDate || block.fromDate;
+                const end = block.endDate || block.toDate;
+                const allowed = block.teachingAllowed ?? block.allowTeaching ?? block.allow_teaching;
+                return day.dateString >= start && day.dateString <= end && !allowed;
               });
 
               return (
-                <div
-                  key={day.label}
-                  className="relative border-r border-gray-300 bg-white"
-                  style={{ height: gridHeight }}
-                >
-                  {/* Horizontal grid lines */}
-                  <div
-                    className="grid"
-                    style={{
-                      gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)`,
-                    }}
-                  >
+                <div key={day.label} className="relative border-r border-gray-300 bg-white" style={{ height: gridHeight }}>
+                  <div className="grid" style={{ gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)` }}>
                     {Array.from({ length: rowCount }).map((_, index) => (
-                      <div
-                        key={`${day.label}-row-${index}`}
-                        className="border-b border-gray-200"
-                      />
+                      <div key={`${day.label}-row-${index}`} className="border-b border-gray-200" />
                     ))}
                   </div>
 
-                  {/* Course blocks */}
                   {dayItems.map((item) => {
-                    const colorKey =
-                      item.courseName ?? item.sectionId ?? item.sessionId;
+                    const colorKey = item.courseName ?? item.sectionId ?? item.sessionId;
                     const palette = courseColors[colorKey] || coursePalette[0];
-                    const status = String(
-                      item.sessionStatus ?? item.status ?? ""
-                    ).toLowerCase();
-                    const isCancelled =
-                      status === "cancelled" || status === "canceled";
+                    const status = String(item.sessionStatus ?? item.status ?? "").toLowerCase();
+                    const isCancelled = status === "cancelled" || status === "canceled";
+                    const isOff = isCancelled || !!dayBlock;
+                    const offTitle = dayBlock?.title || item.cancellationReason || "Nghỉ lễ";
+                    const offNote = dayBlock?.note || item.note || "";
+                    const { top, height } = getBlockStyle(item.startTime, item.endTime);
+                    const fullOffNote = `Ghi chú: ${offTitle}${offNote ? ` - ${offNote}` : ""}`;
 
-                    const { top, height } = getBlockStyle(
-                      item.startTime,
-                      item.endTime
-                    );
-
-                    const isPractice =
-                      item.practice || item.sessionType === "PRACTICE";
-                    const practiceGroupNo = Number(
-                      item.practiceGroupNo || item.practice_group_no || 0
-                    );
+                    const isPractice = item.practice || item.sessionType === "PRACTICE";
+                    const practiceGroupNo = Number(item.practiceGroupNo || item.practice_group_no || 0);
                     const slotStart = item.slotStart || "";
                     const slotEnd = item.slotEnd || "";
 
                     return (
                       <div
                         key={item.sessionId}
-                        className={`
-                          absolute left-2 right-2 z-10
-                          rounded-sm border border-l-4 shadow-sm
-                          px-3 py-2 overflow-hidden
-                          ${
-                            isCancelled
-                              ? "bg-rose-50 border-rose-200 border-l-rose-400 text-rose-900"
-                              : palette.bg
-                          }
-                          ${
-                            isCancelled
-                              ? "border-rose-200"
-                              : palette.border
-                          }
-                          ${
-                            isCancelled
-                              ? "border-l-rose-400"
-                              : palette.accent
-                          }
-                          ${isCancelled ? "text-rose-900" : palette.text}
-                        `}
+                        className={`group absolute left-2 right-2 rounded-md border border-l-4 shadow-md px-3 py-2 session-card transition-all duration-200 hover:shadow-lg ${isOff
+                          ? "bg-rose-50/95 border-rose-300 border-l-rose-500 text-rose-950 hover:bg-rose-100/95"
+                          : `${palette.bg} ${palette.border} ${palette.accent} ${palette.text} hover:scale-[1.01]`
+                          }`}
                         style={{ top, height }}
                       >
-                        <div className="text-sm leading-snug">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-bold">
-                                {item.courseName}
-                              </p>
-                              <p className="font-semibold">
-                                ({item.courseCode})
-                              </p>
+                        <div className="text-xs leading-snug flex flex-col h-full justify-between">
+                          <div>
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="truncate pr-1">
+                                <p className="font-bold text-sm truncate" title={item.courseName}>
+                                  {item.courseName}
+                                </p>
+                                <p className="font-semibold text-[10px] opacity-80 mt-0.5">
+                                  {item.courseCode}
+                                </p>
+                              </div>
                             </div>
 
-                            {isPractice && (
-                              <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
-                                Thực hành
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                              {/* Session Type Badge */}
+                              {isPractice ? (
+                                <span className="shrink-0 rounded bg-orange-100/80 px-1.5 py-0.5 text-[9px] font-bold text-orange-700 border border-orange-200/50">
+                                  Thực hành
+                                </span>
+                              ) : (
+                                <span className="shrink-0 rounded bg-sky-100/80 px-1.5 py-0.5 text-[9px] font-bold text-sky-700 border border-sky-200/50">
+                                  Lý thuyết
+                                </span>
+                              )}
+                            </div>
 
-                            {isCancelled && (
-                              <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                                Nghỉ
-                              </span>
-                            )}
+                            <div className="mt-2 space-y-0.5 text-[11px] opacity-90 font-medium">
+                              <p className="truncate">
+                                Nhóm/Lớp: <span className="font-bold">{item.sectionCode || item.groupName || "N/A"}</span>
+                              </p>
+                              {item.groupName && item.groupName !== item.sectionCode && (
+                                <p className="truncate">
+                                  Nhóm: <span className="font-bold">{item.groupName}</span>
+                                </p>
+                              )}
+                              <p className="truncate">
+                                Phòng: <span className="font-bold text-sky-800">{item.roomCode || item.roomName || "N/A"}</span>
+                              </p>
+                              {(slotStart || slotEnd) && (
+                                <p className="truncate">
+                                  Tiết: <span className="font-bold">{slotStart}-{slotEnd}</span>
+                                </p>
+                              )}
+                              {isPractice && practiceGroupNo > 0 && (
+                                <p className="truncate font-semibold text-orange-700">
+                                  Nhóm TH: <span className="font-bold">{practiceGroupNo}</span>
+                                </p>
+                              )}
+                              {/* 'Nghỉ' Badge */}
+                              {isOff && (
+                                <span className="shrink-0 inline-block mt-1 rounded bg-red-100 px-1.5 py-0.5 text-[9px] font-bold text-red-700 border border-red-200/80 uppercase tracking-wide animate-pulse">
+                                  Nghỉ
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <p className="text-xs mt-1">
-                            Lớp:{" "}
-                            <span className="font-semibold">
-                              {item.sectionCode || item.groupName || "N/A"}
-                            </span>
-                          </p>
-
-                          {item.groupName && item.groupName !== item.sectionCode && (
-                            <p className="text-xs">
-                              Nhóm:{" "}
-                              <span className="font-semibold">
-                                {item.groupName}
-                              </span>
-                            </p>
-                          )}
-
-                          <p className="text-xs">
-                            Phòng:{" "}
-                            <span className="font-semibold">
-                              {item.roomCode || item.roomName || "N/A"}
-                            </span>
-                          </p>
-
-                          {(slotStart || slotEnd) && (
-                            <p className="text-xs">
-                              Tiết:{" "}
-                              <span className="font-semibold">
-                                {slotStart}-{slotEnd}
-                              </span>
-                            </p>
-                          )}
-
-                          <p className="mt-1 text-xs opacity-80">
-                            {item.startTime} - {item.endTime}
-                          </p>
-
-                          {isPractice && practiceGroupNo > 0 && (
-                            <p className="text-xs mt-1 font-semibold opacity-90">
-                              Nhóm thực hành: {practiceGroupNo}
-                            </p>
-                          )}
-
-                          {item.note && (
-                            <p className="mt-1 text-xs opacity-80">
-                              {item.note}
-                            </p>
-                          )}
-
-                          {isCancelled && item.cancellationReason && (
-                            <p className="mt-1 text-xs opacity-80">
-                              {item.cancellationReason}
-                            </p>
-                          )}
+                          <div className="group overflow-visible hover:z-[999] mt-2 pt-1 border-t border-dashed border-gray-200/50">
+                            {/* Note in class block if holiday/cancelled */}
+                            {isOff && (
+                              <div className="pointer-events-none absolute left-[calc(100%-10px)] bottom-3 z-[999] hidden group-hover:block">
+                                <div className="w-[260px] max-h-[120px] overflow-y-auto rounded-lg border border-red-200 bg-white px-3 py-2 text-left text-xs leading-relaxed text-red-900 shadow-xl">
+                                  {fullOffNote}
+                                </div>
+                              </div>
+                            )}
+                            <p className="text-[10px] font-bold opacity-75">{item.startTime} - {item.endTime}</p>
+                          </div>
                         </div>
                       </div>
                     );
@@ -461,70 +376,13 @@ export function LecturerWeeklySchedule({ showCancelled = true }) {
               );
             })}
 
-            {/* Right blue strip */}
-            <div
-              className="relative bg-[#1E3A8A] text-white sm border-r border-sky-600"
-              style={{ height: gridHeight }}
-            >
-              <div
-                className="grid"
-                style={{
-                  gridTemplateRows: `repeat(${rowCount}, ${ROW_HEIGHT}px)`,
-                }}
-              >
-                {Array.from({ length: rowCount }).map((_, index) => (
-                  <div
-                    key={`time-line-${index}`}
-                    className="border-b border-white/25"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer with navigation arrows */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handlePreviousWeek}
-              className="absolute left-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center leading-none"
-            >
-              <span className="block text-2xl leading-none -translate-y-[1px]">
-                ←
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleNextWeek}
-              className="absolute right-1 top-1/2 z-30 h-8 w-8 -translate-y-1/2 font-bold text-gray-700 hover:bg-gray-50 flex items-center justify-center leading-none"
-            >
-              <span className="block text-2xl leading-none -translate-y-[1px]">
-                →
-              </span>
-            </button>
-
-            <div
-              className="grid border-t border-gray-300 bg-white"
-              style={{
-                gridTemplateColumns: timetableColumns,
-              }}
-            >
-              <div className="h-12 border-r border-gray-300 bg-white" />
-
-              {weekDays.map((day) => (
-                <div
-                  key={`footer-${day.dateString}`}
-                  className="h-12 flex items-center justify-center border-r border-gray-300 text-sm font-semibold text-gray-800"
-                >
-                  <span>{day.label}</span>
-                  <span className="ml-1 text-gray-500 font-normal">
-                    ({formatDate(day.date)})
-                  </span>
+            {/* Right Time Axis */}
+            <div className="relative bg-[#1E3A8A] text-white border-l border-sky-600" style={{ height: gridHeight }}>
+              {timeSlots.slice(0, -1).map((time, index) => (
+                <div key={time} className="flex items-center justify-center border-b border-white/25 text-xs font-semibold" style={{ height: `${ROW_HEIGHT}px` }}>
+                  {time}
                 </div>
               ))}
-
-              <div className="h-12 bg-white" />
             </div>
           </div>
         </div>

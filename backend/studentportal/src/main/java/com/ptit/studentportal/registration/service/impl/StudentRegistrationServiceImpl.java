@@ -74,23 +74,20 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         Student student = studentRepository.findByUser_UserId(user.getUserId()).orElse(null);
         if (student == null) return List.of();
         Long studentId = student.getStudentId();
+        Long programId = student.getProgramId();
 
-        List<CourseSection> sections = sectionRepository.findBySemesterId(semesterId);
+        List<AvailableSectionProjection> projections = sectionRepository.findAvailableSectionsForProgram(programId, semesterId);
         Semester semester = semesterRepository.findById(semesterId).orElse(null);
         
-        return sections.stream()
-                .filter(s -> "open".equalsIgnoreCase(s.getStatus()))
-                .map(s -> {
-                    var course = courseRepository.findById(s.getCourseId()).orElse(null);
-                    var lecturer = s.getLecturerId() != null ? lecturerRepository.findById(s.getLecturerId()).orElse(null) : null;
-                    
-                    boolean alreadyRegistered = enrollmentRepository.findByStudentIdAndSectionId(studentId, s.getSectionId())
+        return projections.stream()
+                .map(p -> {
+                    boolean alreadyRegistered = enrollmentRepository.findByStudentIdAndSectionId(studentId, p.getSectionId())
                             .map(e -> "registered".equals(e.getEnrollmentStatus())).orElse(false);
                     
-                    boolean sameCourseRegistered = !alreadyRegistered && !enrollmentRepository.findRegisteredInSameCourse(studentId, semesterId, s.getCourseId(), s.getSectionId()).isEmpty();
+                    boolean sameCourseRegistered = !alreadyRegistered && !enrollmentRepository.findRegisteredInSameCourse(studentId, semesterId, p.getCourseId(), p.getSectionId()).isEmpty();
                     
-                    int currentCapacity = (int) enrollmentRepository.findBySectionIdAndEnrollmentStatus(s.getSectionId(), "registered").size();
-                    int remaining = s.getMaxCapacity() - currentCapacity;
+                    int currentCapacity = p.getCurrentCapacity();
+                    int remaining = p.getRemainingCapacity();
 
                     boolean canRegister = semester != null && semester.getRegistrationStatus() == RegistrationStatus.OPEN;
                     if (canRegister) {
@@ -106,20 +103,22 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
                     else if (sameCourseRegistered) { canRegister = false; blockedReason = "Đã đăng ký lớp khác cùng môn"; }
 
                     return new AvailableSectionResponse(
-                            s.getSectionId(),
-                            s.getSectionCode(),
-                            s.getCourseId(),
-                            course != null ? course.getCourseCode() : "",
-                            course != null ? course.getCourseName() : "",
-                            course != null ? course.getCredits() : 0,
-                            lecturer != null ? lecturer.getFullName() : "Chưa phân công",
-                            s.getMaxCapacity(),
+                            p.getSectionId(),
+                            p.getSectionCode(),
+                            p.getClassId(),
+                            p.getClassCode(),
+                            p.getCourseId(),
+                            p.getCourseCode(),
+                            p.getCourseName(),
+                            p.getCredits(),
+                            p.getLecturerName() != null ? p.getLecturerName() : "Chưa phân công",
+                            p.getMaxCapacity(),
                             currentCapacity,
                             remaining,
-                            s.getStatus(),
+                            p.getStatus(),
                             alreadyRegistered,
                             sameCourseRegistered,
-                            getScheduleText(s.getSectionId()),
+                            getScheduleText(p.getSectionId()),
                             canRegister,
                             blockedReason
                     );
@@ -137,18 +136,27 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         List<Enrollment> enrollments = enrollmentRepository.findByStudentAndSemester(studentId, semesterId);
         Semester semester = semesterRepository.findById(semesterId).orElse(null);
 
-        return enrollments.stream().map(e -> {
+        return enrollments.stream()
+                .filter(e -> "registered".equalsIgnoreCase(e.getEnrollmentStatus()))
+                .map(e -> {
             var section = sectionRepository.findById(e.getSectionId()).orElse(null);
             var course = section != null ? courseRepository.findById(section.getCourseId()).orElse(null) : null;
             var lecturer = (section != null && section.getLecturerId() != null) ? lecturerRepository.findById(section.getLecturerId()).orElse(null) : null;
             
-            boolean canDrop = "registered".equals(e.getEnrollmentStatus()) 
+            String classCode = "";
+            if (section != null && section.getClassId() != null) {
+                classCode = sectionRepository.findClassCodeById(section.getClassId());
+                if (classCode == null) classCode = "";
+            }
+
+            boolean canDrop = "registered".equalsIgnoreCase(e.getEnrollmentStatus()) 
                     && semester != null && semester.getRegistrationStatus() == RegistrationStatus.OPEN;
             
             return new MyEnrollmentResponse(
                     e.getEnrollmentId(),
                     e.getSectionId(),
                     section != null ? section.getSectionCode() : "",
+                    classCode,
                     course != null ? course.getCourseCode() : "",
                     course != null ? course.getCourseName() : "",
                     course != null ? course.getCredits() : 0,
@@ -176,6 +184,12 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         // 3. Find CourseSection by sectionId
         CourseSection section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new BusinessException("Lớp học phần không tồn tại"));
+
+        // 3.5. Check if course belongs to student's program courses
+        long countInProgram = courseRepository.countByProgramIdAndCourseId(student.getProgramId(), section.getCourseId());
+        if (countInProgram == 0) {
+            throw new BusinessException("Bạn không được đăng ký môn học ngoài chương trình đào tạo.");
+        }
 
         // 4. Find Semester from section.semesterId
         Semester semester = semesterRepository.findById(section.getSemesterId())
@@ -208,7 +222,7 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
 
         // 9. Check if already registered
         var existing = enrollmentRepository.findByStudentIdAndSectionId(studentId, section.getSectionId());
-        if (existing.isPresent() && "registered".equals(existing.get().getEnrollmentStatus())) {
+        if (existing.isPresent() && "registered".equalsIgnoreCase(existing.get().getEnrollmentStatus())) {
             throw new BusinessException("Bạn đã đăng ký lớp học phần này.");
         }
 
@@ -227,6 +241,7 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
             enrollment.setEnrollmentStatus("registered");
             enrollment.setRegisteredAt(now);
             enrollment.setDroppedAt(null);
+            enrollment.setNote(null);
         } else {
             enrollment = Enrollment.builder()
                     .studentId(studentId)
@@ -298,7 +313,7 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         }
 
         // 9. Check enrollment.enrollmentStatus == 'registered'
-        if (!"registered".equals(enrollment.getEnrollmentStatus())) {
+        if (!"registered".equalsIgnoreCase(enrollment.getEnrollmentStatus())) {
             throw new BusinessException("Chỉ có thể hủy lớp đang đăng ký.");
         }
 

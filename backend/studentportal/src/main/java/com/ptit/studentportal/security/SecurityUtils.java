@@ -10,8 +10,13 @@ public class SecurityUtils {
 
     public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof User) {
-            return (User) authentication.getPrincipal();
+        if (authentication != null) {
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof CustomUserDetails) {
+                return ((CustomUserDetails) principal).getUser();
+            } else if (principal instanceof User) {
+                return (User) principal;
+            }
         }
         return null;
     }
@@ -21,3 +26,4 @@ public class SecurityUtils {
         return user != null ? user.getUserId() : null;
     }
 }
+

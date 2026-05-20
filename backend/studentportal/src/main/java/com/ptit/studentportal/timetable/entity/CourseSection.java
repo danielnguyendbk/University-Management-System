@@ -37,6 +37,9 @@ public class CourseSection {
 	@Column(name = "semester_id", nullable = false)
 	private Long semesterId;
 
+	@Column(name = "class_id")
+	private Long classId;
+
 	@Column(name = "lecturer_id", nullable = false)
 	private Long lecturerId;
 

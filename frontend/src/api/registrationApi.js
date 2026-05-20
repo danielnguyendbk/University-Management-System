@@ -22,7 +22,8 @@ export const registrationApi = {
   },
 
   student: {
-    getSemesters: () => apiClient.get("/student/registration/semesters"),
+    getSemesters: () =>
+      apiClient.get("/student/registration/semesters"),
     getAvailableSections: (semesterId) =>
       apiClient.get("/student/registration/available-sections", {
         params: { semesterId },

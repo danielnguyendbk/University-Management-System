@@ -150,6 +150,7 @@ export function CourseRegistration() {
       if (res.data.success) {
         setNotification({ open: true, message: 'Đăng ký thành công!', severity: 'success' });
         fetchAvailableSections();
+        fetchMySections();
       }
     } catch (err) {
       setNotification({ open: true, message: err.response?.data?.message || 'Đăng ký thất bại', severity: 'error' });
@@ -163,6 +164,7 @@ export function CourseRegistration() {
       if (res.data.success) {
         setNotification({ open: true, message: 'Hủy đăng ký thành công!', severity: 'success' });
         fetchMySections();
+        fetchAvailableSections();
       }
     } catch (err) {
       setNotification({ open: true, message: err.response?.data?.message || 'Hủy đăng ký thất bại', severity: 'error' });
@@ -189,8 +191,22 @@ export function CourseRegistration() {
           ) : (
             availableSections.map((row) => (
               <TableRow key={row.sectionId} hover>
-                <TableCell sx={{ fontWeight: 'bold' }}>{row.courseCode}</TableCell>
-                <TableCell>{row.courseName}</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{row.sectionCode}</Typography>
+                    <Typography variant="caption" color="text.secondary">Môn: {row.courseCode}</Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: '500' }}>{row.courseName}</Typography>
+                    {row.classCode && (
+                      <Typography variant="caption" display="block" sx={{ color: 'primary.main', mt: 0.5 }}>
+                        <strong>Lớp:</strong> {row.classCode}
+                      </Typography>
+                    )}
+                  </Box>
+                </TableCell>
                 <TableCell align="center">{row.credits}</TableCell>
                 <TableCell>{row.lecturerName || 'Chưa phân công'}</TableCell>
                 <TableCell sx={{ fontSize: '0.85rem' }}>
@@ -222,7 +238,7 @@ export function CourseRegistration() {
                   ) : (
                     <Tooltip title={row.blockedReason || "Không thể đăng ký"}>
                       <Box>
-                        <Button variant="outlined" disabled size="small">{row.alreadyRegistered ? 'Đã đăng ký' : 'Chặn'}</Button>
+                        <Button variant="outlined" disabled size="small">{row.alreadyRegistered ? 'Đã đăng ký' : row.sameCourseRegistered ? 'Đã đk môn này' : 'Chặn'}</Button>
                       </Box>
                     </Tooltip>
                   )}

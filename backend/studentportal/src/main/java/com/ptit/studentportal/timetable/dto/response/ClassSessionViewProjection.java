@@ -5,6 +5,7 @@ import java.time.LocalTime;
 
 public interface ClassSessionViewProjection {
     Long getSessionId();
+    Long getSectionId();
     Long getScheduleId();
     Long getSemesterId();
     Integer getWeekNo();

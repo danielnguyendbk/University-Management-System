@@ -143,7 +143,7 @@ export function AdminRegistrationPage() {
       ) : (
         <Grid container spacing={3}>
           {semesters.map((s) => (
-            <Grid item xs={12} md={6} lg={4} key={s.semesterId}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={s.semesterId}>
               <Card elevation={2} sx={{ borderRadius: 3, position: 'relative', overflow: 'visible' }}>
                 <Box sx={{ position: 'absolute', top: -10, right: 20, zIndex: 1 }}>
                   <Chip 

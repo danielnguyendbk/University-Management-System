@@ -322,6 +322,33 @@ CREATE TABLE exams (
 		ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+
+CREATE TABLE student_classes (
+    class_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    class_code VARCHAR(50) NOT NULL UNIQUE,
+
+    department_id BIGINT UNSIGNED NOT NULL,
+    program_id BIGINT UNSIGNED NOT NULL,
+    specialization_code VARCHAR(50) NULL,
+
+    cohort_year YEAR NOT NULL,
+
+    class_type VARCHAR(80) NULL,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_student_classes_department
+        FOREIGN KEY (department_id) REFERENCES departments(department_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT fk_student_classes_program
+        FOREIGN KEY (program_id) REFERENCES programs(program_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 CREATE TABLE exam_invigilators (
     exam_id BIGINT UNSIGNED NOT NULL,
     lecturer_id BIGINT UNSIGNED NOT NULL,

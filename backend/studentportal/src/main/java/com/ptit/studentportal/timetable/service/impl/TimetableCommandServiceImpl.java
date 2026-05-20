@@ -20,6 +20,8 @@ import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import com.ptit.studentportal.timetable.service.TimetableCommandService;
 import com.ptit.studentportal.timetable.enums.TimetableStatus;
 import com.ptit.studentportal.timetable.entity.Semester;
+import com.ptit.studentportal.timetable.repository.SemesterWeekRepository;
+import com.ptit.studentportal.timetable.entity.SemesterWeek;
 import com.ptit.studentportal.timetable.validator.TimetableValidator;
 
 @Service
@@ -30,17 +32,20 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 	private final ClassSessionRepository classSessionRepository;
 	private final TimetableValidator timetableValidator;
 	private final SemesterRepository semesterRepository;
+	private final SemesterWeekRepository semesterWeekRepository;
 
 	public TimetableCommandServiceImpl(
 			ScheduleRepository scheduleRepository,
 			ClassSessionRepository classSessionRepository,
 			TimetableValidator timetableValidator,
-			SemesterRepository semesterRepository
+			SemesterRepository semesterRepository,
+			SemesterWeekRepository semesterWeekRepository
 	) {
 		this.scheduleRepository = scheduleRepository;
 		this.classSessionRepository = classSessionRepository;
 		this.timetableValidator = timetableValidator;
 		this.semesterRepository = semesterRepository;
+		this.semesterWeekRepository = semesterWeekRepository;
 	}
 
 	@Override
@@ -134,6 +139,54 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
 		semester.setTimetableStatus(TimetableStatus.DRAFT);
 		semesterRepository.save(semester);
+	}
+
+	@Override
+	public void generateSemesterWeeks(Long semesterId) {
+		Semester semester = semesterRepository.findById(semesterId)
+				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
+
+		String semesterCode = semester.getSemesterCode();
+		String semesterYear = semester.getSemesterYear(); // e.g. "2025-2026"
+
+		int fromWeek, toWeek;
+		if (semesterCode.contains("HK1")) {
+			fromWeek = 1;
+			toWeek = 22;
+		} else if (semesterCode.contains("HK2")) {
+			fromWeek = 23;
+			toWeek = 46;
+		} else {
+			// Fallback or other semesters
+			fromWeek = 1;
+			toWeek = 10;
+		}
+
+		// academicYearStartDate = Aug 11 of the start year
+		String startYearStr = semesterYear.split("-")[0];
+		LocalDate academicYearStartDate = LocalDate.of(Integer.parseInt(startYearStr), 8, 11);
+
+		for (int weekNo = fromWeek; weekNo <= toWeek; weekNo++) {
+			LocalDate startDate = academicYearStartDate.plusDays((long) (weekNo - 1) * 7);
+			LocalDate endDate = startDate.plusDays(6);
+
+			var existing = semesterWeekRepository.findBySemesterIdAndWeekNo(semesterId, weekNo);
+			SemesterWeek week;
+			if (existing.isPresent()) {
+				week = existing.get();
+				week.setStartDate(startDate);
+				week.setEndDate(endDate);
+			} else {
+				week = SemesterWeek.builder()
+						.semesterId(semesterId)
+						.weekNo(weekNo)
+						.startDate(startDate)
+						.endDate(endDate)
+						.breakWeek(false)
+						.build();
+			}
+			semesterWeekRepository.save(week);
+		}
 	}
 }
 

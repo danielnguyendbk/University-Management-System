@@ -10,7 +10,7 @@ export const apiClient = axios.create({
 
 // Request interceptor to add the bearer token to all requests
 apiClient.interceptors.request.use((config) => {
-  const token = getStoredToken();
+  const token = sessionStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,9 +23,12 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      // Handle unauthorized/forbidden access (e.g., redirect to login or clear token)
-      console.error('Unauthorized/Forbidden access:', error.response.status);
+    const status = error.response?.status;
+    if (status === 401) {
+      sessionStorage.clear();
+      window.location.href = "/login";
+    } else if (status === 403) {
+      console.warn("Truy cập bị từ chối (403 Forbidden): Bạn không có quyền truy cập endpoint này.");
     }
     return Promise.reject(error);
   }
