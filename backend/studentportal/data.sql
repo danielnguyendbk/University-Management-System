@@ -1,12 +1,15 @@
-DROP DATABASE IF EXISTS student_portal;
 
-CREATE DATABASE IF NOT EXISTS student_portal
+drop database merge_migration;
+CREATE DATABASE IF NOT EXISTS merge_migration
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
-USE student_portal;
+USE merge_migration;
+
+
 
 -- =====================================
+-- 1. USERS
 -- 1. USERS
 -- =====================================
 CREATE TABLE users (
@@ -33,6 +36,20 @@ CREATE TABLE refresh_tokens (
     revoked    BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_refresh_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+CREATE TABLE password_reset_tokens (
+    reset_id      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id       BIGINT UNSIGNED NOT NULL,
+    token_hash    VARCHAR(255) NOT NULL UNIQUE,
+    expires_at    DATETIME NOT NULL,
+    used_at       DATETIME NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_password_reset_tokens_user
         FOREIGN KEY (user_id) REFERENCES users(user_id)
         ON UPDATE CASCADE
         ON DELETE CASCADE
@@ -73,17 +90,38 @@ CREATE TABLE programs (
 -- users (1) -- (1) students
 -- programs (1) -- (N) students
 -- =====================================
+
+CREATE TABLE student_classes (
+    class_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    class_code VARCHAR(30) NOT NULL UNIQUE,
+    department_id VARCHAR(20) NOT NULL,
+    program_id VARCHAR(50) NOT NULL,
+    specialization_id VARCHAR(50) NULL,
+
+    cohort_year YEAR NOT NULL,
+
+    class_type VARCHAR(50) NOT NULL,
+    status ENUM('active', 'inactive', 'archived') NOT NULL DEFAULT 'active',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+
 CREATE TABLE students (
     student_id       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id          BIGINT UNSIGNED NOT NULL UNIQUE,
     program_id       BIGINT UNSIGNED NOT NULL,
+    class_id 		 BIGINT UNSIGNED NULL,
     student_code     VARCHAR(20)  NOT NULL UNIQUE,
     full_name        VARCHAR(150) NOT NULL,
     date_of_birth    DATE NULL,
-    gender           ENUM('male', 'female', 'other') NULL,
+    gender           ENUM('MALE', 'FEMALE', 'OTHER') NULL,
     phone            VARCHAR(20)  NULL,
-    address VARCHAR(255) NULL,
-    academic_status  ENUM('studying', 'paused', 'graduated', 'dropped_out') NOT NULL DEFAULT 'studying',
+    permanent_address VARCHAR(255) NULL,
+    current_address   VARCHAR(255) NULL,
+    enrollment_year  YEAR NULL,               -- đổi từ cohort VARCHAR -> rõ nghĩa hơn
+    academic_status  ENUM('studying', 'paused', 'graduated', 'drop_out') NOT NULL DEFAULT 'studying',
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_students_user
@@ -91,8 +129,13 @@ CREATE TABLE students (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_students_program
         FOREIGN KEY (program_id) REFERENCES programs(program_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT fk_students_class
+		FOREIGN KEY (class_id) REFERENCES student_classes(class_id)
+		ON UPDATE CASCADE
+		ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
 
 -- =====================================
 -- 6. LECTURERS
@@ -105,6 +148,7 @@ CREATE TABLE lecturers (
     department_id   BIGINT UNSIGNED NOT NULL,
     lecturer_code   VARCHAR(20)  NOT NULL UNIQUE,
     full_name       VARCHAR(150) NOT NULL,
+    work_email      VARCHAR(100) NOT NULL UNIQUE,   -- email trường cấp (khác users.email)
     phone           VARCHAR(20)  NULL,
     academic_title  VARCHAR(100) NULL,              -- đổi từ academic_degree -> title phù hợp hơn
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -171,7 +215,6 @@ CREATE TABLE course_prerequisites (
     prerequisite_course_id BIGINT UNSIGNED NOT NULL,
     created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (course_id, prerequisite_course_id),
-    
     CONSTRAINT fk_course_prereq_course
         FOREIGN KEY (course_id) REFERENCES courses(course_id)
         ON UPDATE CASCADE ON DELETE CASCADE,
@@ -179,6 +222,7 @@ CREATE TABLE course_prerequisites (
         FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
 -- Thay thế CHECK bằng trigger
 DELIMITER $$
 
@@ -205,12 +249,17 @@ END$$
 DELIMITER ;
 
 
+-- =====================================
+-- 10. SEMESTERS
+-- =====================================
 CREATE TABLE semesters (
     semester_id        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    semester_name      VARCHAR(50) NOT NULL,
-    academic_year      VARCHAR(20) NOT NULL,
+    semester_code      VARCHAR(50) NOT NULL,
+    semester_year      VARCHAR(20) NOT NULL,
+    price_per_credit DECIMAL(12,2) NULL,
     start_date         DATE NOT NULL,
     end_date           DATE NOT NULL,
+    tuition_due_date DATE NULL,
     registration_open  DATETIME NULL,
     registration_close DATETIME NULL,
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -223,18 +272,31 @@ CREATE TABLE semesters (
     )
 ) ENGINE=InnoDB;
 
+
+-- tòa
+CREATE TABLE buildings (
+    building_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    building_code VARCHAR(20) NOT NULL UNIQUE,
+    building_name VARCHAR(100) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- =====================================
 -- 11. ROOMS
 -- =====================================
 CREATE TABLE rooms (
     room_id   BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     room_code VARCHAR(20) NOT NULL UNIQUE,
-    building  VARCHAR(100) NULL,
+    building_id BIGINT UNSIGNED NULL,
     room_type ENUM('classroom', 'lab', 'exam_room', 'hall', 'office', 'other') NOT NULL DEFAULT 'classroom',
     capacity  INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT chk_rooms_capacity CHECK (capacity > 0)
+    CONSTRAINT chk_rooms_capacity CHECK (capacity > 0),
+    CONSTRAINT fk_rooms_building	
+		FOREIGN KEY (building_id) REFERENCES buildings(building_id)
+		ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- =====================================
@@ -247,6 +309,7 @@ CREATE TABLE course_sections (
     section_id   BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     course_id    BIGINT UNSIGNED NOT NULL,
     semester_id  BIGINT UNSIGNED NOT NULL,
+    class_id BIGINT UNSIGNED NULL,
     lecturer_id  BIGINT UNSIGNED NOT NULL,
     section_code VARCHAR(20) NOT NULL,
     max_capacity INT NOT NULL DEFAULT 50,
@@ -263,8 +326,14 @@ CREATE TABLE course_sections (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_sections_lecturer
         FOREIGN KEY (lecturer_id) REFERENCES lecturers(lecturer_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT fk_course_sections_class
+		FOREIGN KEY (class_id) REFERENCES student_classes(class_id)
+		ON UPDATE CASCADE
+		ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+
 
 -- =====================================
 -- 13. SCHEDULES
@@ -277,15 +346,22 @@ CREATE TABLE schedules (
     section_id   BIGINT UNSIGNED NOT NULL,
     room_id      BIGINT UNSIGNED NOT NULL,
     day_of_week  ENUM('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun') NOT NULL,
+    from_week_no INT NULL,
+    to_week_no INT NULL,
+    slot_start   INT NOT NULL,      -- đổi từ period_start -> slot_start
+    slot_end     INT NOT NULL,      -- đổi từ period_end   -> slot_end
     start_time   TIME NOT NULL,
     end_time     TIME NOT NULL,
+    session_type ENUM('theory', 'practice') NOT NULL DEFAULT 'theory',
+    practice_group_no TINYINT UNSIGNED NOT NULL DEFAULT 0,
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_schedules_slot CHECK (slot_end >= slot_start),
     CONSTRAINT chk_schedules_time CHECK (end_time > start_time),
     -- Chống trùng phòng cùng tiết
-    CONSTRAINT uq_room_slot UNIQUE (room_id, day_of_week, start_time),
+    CONSTRAINT uq_room_slot UNIQUE (room_id, day_of_week, slot_start),
     -- Chống lớp bị xếp 2 lịch trùng tiết
-    CONSTRAINT uq_section_slot UNIQUE (section_id, day_of_week, start_time),
+    CONSTRAINT uq_section_slot UNIQUE (section_id, day_of_week, slot_start),
     CONSTRAINT fk_schedules_section
         FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
         ON UPDATE CASCADE ON DELETE CASCADE,
@@ -293,6 +369,9 @@ CREATE TABLE schedules (
         FOREIGN KEY (room_id) REFERENCES rooms(room_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+
+
 
 -- =====================================
 -- 14. EXAMS
@@ -302,13 +381,18 @@ CREATE TABLE schedules (
 -- =====================================
 CREATE TABLE exams (
     exam_id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    semester_id BIGINT UNSIGNED NULL,
     section_id          BIGINT UNSIGNED NOT NULL,
     room_id             BIGINT UNSIGNED NOT NULL,
     proctor_lecturer_id BIGINT UNSIGNED NULL,
     exam_type           ENUM('midterm', 'final', 'makeup', 'other') NOT NULL,
+    exam_method ENUM('written', 'oral', 'practical', 'online') NULL,
     exam_date           DATE NOT NULL,
     start_time          TIME NOT NULL,
     end_time            TIME NOT NULL,
+    seat_range VARCHAR(100) NULL,
+    student_count INT NULL,
+    status ENUM('draft', 'scheduled', 'cancel', 'completed') NOT NULL DEFAULT 'scheduled',
     note                VARCHAR(255) NULL,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -323,21 +407,47 @@ CREATE TABLE exams (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_exams_proctor
         FOREIGN KEY (proctor_lecturer_id) REFERENCES lecturers(lecturer_id)
-        ON UPDATE CASCADE ON DELETE SET NULL
+        ON UPDATE CASCADE ON DELETE SET NULL,
+	CONSTRAINT fk_exams_semester
+		FOREIGN KEY (semester_id) REFERENCES semesters(semester_id)
+		ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+CREATE TABLE exam_invigilators (
+    exam_id BIGINT UNSIGNED NOT NULL,
+    lecturer_id BIGINT UNSIGNED NOT NULL,
+    role ENUM('main', 'assistant') NOT NULL DEFAULT 'assistant',
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (exam_id, lecturer_id),
+
+    CONSTRAINT fk_exam_invigilators_exam
+        FOREIGN KEY (exam_id) REFERENCES exams(exam_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+
+    CONSTRAINT fk_exam_invigilators_lecturer
+        FOREIGN KEY (lecturer_id) REFERENCES lecturers(lecturer_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
 
 -- =====================================
 -- 15. ENROLLMENTS
 -- students (1) -- (N) enrollments
 -- course_sections (1) -- (N) enrollments
 -- =====================================
+
 CREATE TABLE enrollments (
     enrollment_id     BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     student_id        BIGINT UNSIGNED NOT NULL,
     section_id        BIGINT UNSIGNED NOT NULL,
+    practice_group_no TINYINT UNSIGNED NOT NULL DEFAULT 0,
     enrollment_status ENUM('registered', 'dropped', 'cancelled', 'completed') NOT NULL DEFAULT 'registered',
     registered_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    dropped_at 		  DATETIME NULL,
+    note 			  VARCHAR(255) NULL,
     CONSTRAINT uq_enrollment UNIQUE (student_id, section_id),
     CONSTRAINT fk_enrollments_student
         FOREIGN KEY (student_id) REFERENCES students(student_id)
@@ -346,6 +456,25 @@ CREATE TABLE enrollments (
         FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+
+
+CREATE TABLE enrollment_logs (
+    log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    student_id BIGINT UNSIGNED NOT NULL,
+    section_id BIGINT UNSIGNED NOT NULL,
+    action ENUM('register', 'drop', 'admin_register', 'admin_drop') NOT NULL,
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_enrollment_logs_student
+        FOREIGN KEY (student_id) REFERENCES students(student_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT fk_enrollment_logs_section
+        FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+);
 
 -- =====================================
 -- 16. GRADES
@@ -357,21 +486,20 @@ CREATE TABLE grades (
     grade_id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     enrollment_id    BIGINT UNSIGNED NOT NULL UNIQUE,
     attendance_score DECIMAL(4,2) NULL,
+    exercise_score   DECIMAL(4,2) NULL,
+    practice_score  DECIMAL(4,2) NULL,
     midterm_score    DECIMAL(4,2) NULL,
     final_score      DECIMAL(4,2) NULL,
     -- Generated: 10% chuyên cần + 30% giữa kỳ + 60% cuối kỳ
-    total_score      DECIMAL(4,2) GENERATED ALWAYS AS (
-        ROUND(
-            COALESCE(attendance_score, 0) * 0.10 +
-            COALESCE(midterm_score,    0) * 0.30 +
-            COALESCE(final_score,      0) * 0.60,
-        2)
-    ) STORED,
-    
+    total_score DECIMAL(4,2) NULL,
+    letter_grade     VARCHAR(5) NULL,
+    result           ENUM('pass', 'fail', 'incompleted') NULL,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_grades_attendance CHECK (attendance_score IS NULL OR (attendance_score BETWEEN 0 AND 10)),
     CONSTRAINT chk_grades_midterm    CHECK (midterm_score    IS NULL OR (midterm_score    BETWEEN 0 AND 10)),
+    CONSTRAINT chk_grades_exercise      CHECK (exercise_score      IS NULL OR (exercise_score      BETWEEN 0 AND 10)),
+    CONSTRAINT chk_grades_practice      CHECK (practice_score      IS NULL OR (practice_score      BETWEEN 0 AND 10)),
     CONSTRAINT chk_grades_final      CHECK (final_score      IS NULL OR (final_score      BETWEEN 0 AND 10)),
     CONSTRAINT fk_grades_enrollment
         FOREIGN KEY (enrollment_id) REFERENCES enrollments(enrollment_id)
@@ -433,7 +561,9 @@ CREATE TABLE student_requests (
     request_type_id BIGINT UNSIGNED NOT NULL,
     title           VARCHAR(150) NOT NULL,
     content         TEXT NOT NULL,
-    status          ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    section_id      BIGINT UNSIGNED NULL,
+    section_code    VARCHAR(50) NULL,
+    status          ENUM('pending', 'approved', 'reject') NOT NULL DEFAULT 'pending',
     processed_by    BIGINT UNSIGNED NULL,
     processed_at    DATETIME NULL,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -444,6 +574,9 @@ CREATE TABLE student_requests (
     CONSTRAINT fk_requests_type
         FOREIGN KEY (request_type_id) REFERENCES request_types(request_type_id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT fk_requests_section
+        FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
+        ON UPDATE CASCADE ON DELETE SET NULL,
     CONSTRAINT fk_requests_processed_by
         FOREIGN KEY (processed_by) REFERENCES users(user_id)
         ON UPDATE CASCADE ON DELETE SET NULL
@@ -477,7 +610,7 @@ CREATE TABLE notifications (
     is_important      BOOLEAN NOT NULL DEFAULT FALSE,
     published_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at        DATETIME NULL,
-    status            ENUM('draft', 'published', 'archived') NOT NULL DEFAULT 'published',
+    status            ENUM('drafft', 'published', 'archived') NOT NULL DEFAULT 'published',
     target_type       ENUM('all', 'student', 'lecturer', 'section', 'program', 'custom') NOT NULL DEFAULT 'custom',
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -514,11 +647,15 @@ CREATE TABLE notification_recipients (
 -- =====================================
 CREATE TABLE tuition_fees (
     tuition_fee_id  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    invoice_code VARCHAR(50) NULL UNIQUE,
     student_id      BIGINT UNSIGNED NOT NULL,
     semester_id     BIGINT UNSIGNED NOT NULL,
+    total_credits INT NOT NULL DEFAULT 0,
     total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-    status          ENUM('unpaid', 'partial', 'paid', 'overdue', 'waived') NOT NULL DEFAULT 'unpaid',
+    final_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
+    paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    status          ENUM('unpaid', 'partical', 'paid', 'overdue', 'waived') NOT NULL DEFAULT 'unpaid',
     due_date        DATE NULL,
     note            VARCHAR(255) NULL,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -526,6 +663,7 @@ CREATE TABLE tuition_fees (
     CONSTRAINT uq_tuition_fee UNIQUE (student_id, semester_id),
     CONSTRAINT chk_tuition_total    CHECK (total_amount    >= 0),
     CONSTRAINT chk_tuition_discount CHECK (discount_amount >= 0),
+    CONSTRAINT chk_tuition_final    CHECK (final_amount    >= 0),
     CONSTRAINT fk_tuition_fees_student
         FOREIGN KEY (student_id) REFERENCES students(student_id)
         ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -534,6 +672,7 @@ CREATE TABLE tuition_fees (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+
 -- =====================================
 -- 24. PAYMENTS
 -- tuition_fees (1) -- (N) payments
@@ -541,18 +680,26 @@ CREATE TABLE tuition_fees (
 CREATE TABLE payments (
     payment_id       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tuition_fee_id   BIGINT UNSIGNED NOT NULL,
-    payment_method   ENUM('qr', 'bank_transfer', 'cash') NOT NULL DEFAULT 'qr',
+    order_code VARCHAR(80) NULL UNIQUE,
+    payment_method   ENUM('qr','cash') NOT NULL DEFAULT 'qr',
+    processed_by VARCHAR(100) NOT NULL DEFAULT 'system',
     amount           DECIMAL(12,2) NOT NULL,
     transaction_code VARCHAR(100) NULL UNIQUE,
+    qr_image_url TEXT NULL,
     payment_status   ENUM('pending', 'success', 'failed') NOT NULL DEFAULT 'pending',
+    note VARCHAR(255) NULL,
     paid_at          DATETIME NULL,
+    raw_webhook_payload JSON NULL,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expired_at DATETIME NULL,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_payments_amount CHECK (amount > 0),
     CONSTRAINT fk_payments_tuition_fee
         FOREIGN KEY (tuition_fee_id) REFERENCES tuition_fees(tuition_fee_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+describe payments;
 
 -- =====================================
 -- 25. E_INVOICES
@@ -653,3 +800,397 @@ GROUP BY
     cs.section_id, cs.section_code, cs.course_id,
     cs.semester_id, cs.lecturer_id, cs.max_capacity;
     
+
+
+
+
+CREATE TABLE semester_weeks (
+    semester_week_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    semester_id      BIGINT UNSIGNED NOT NULL,
+    cohort_year YEAR NOT NULL ,
+    week_no          INT NOT NULL,
+    start_date       DATE NOT NULL,
+    end_date         DATE NOT NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_semester_week UNIQUE (semester_id, week_no),
+    CONSTRAINT chk_semester_weeks_date CHECK (end_date >= start_date),
+    CONSTRAINT fk_semester_weeks_semester
+        FOREIGN KEY (semester_id) REFERENCES semesters(semester_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+	CONSTRAINT uq_semester_week UNIQUE (semester_id, cohort_year, week_no)
+) ENGINE=InnoDB;
+
+
+
+CREATE TABLE class_sessions (
+    session_id        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    schedule_id       BIGINT UNSIGNED NULL,
+    section_id        BIGINT UNSIGNED NOT NULL,
+    practice_group_no TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    semester_week_id  BIGINT UNSIGNED NOT NULL,
+    session_date      DATE NOT NULL,
+    room_id           BIGINT UNSIGNED NULL,
+    lecturer_id       BIGINT UNSIGNED NULL,
+    slot_start        INT NOT NULL,
+    slot_end          INT NOT NULL,
+    start_time        TIME NULL,
+    end_time          TIME NULL,
+    session_status    ENUM('scheduled', 'cancelled', 'makeup', 'rescheduled', 'completed') 
+                      NOT NULL DEFAULT 'scheduled',
+    note              VARCHAR(255) NULL,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_class_sessions_slot CHECK (slot_end >= slot_start),
+    CONSTRAINT chk_class_sessions_time CHECK (
+        start_time IS NULL OR end_time IS NULL OR end_time > start_time
+    ),
+
+    CONSTRAINT uq_class_sessions_section_exact
+        UNIQUE (section_id, session_date, slot_start, slot_end),
+    CONSTRAINT uq_class_sessions_room_exact
+        UNIQUE (room_id, session_date, slot_start, slot_end),
+    CONSTRAINT uq_class_sessions_lecturer_exact
+        UNIQUE (lecturer_id, session_date, slot_start, slot_end),
+
+    CONSTRAINT fk_class_sessions_schedule
+        FOREIGN KEY (schedule_id) REFERENCES schedules(schedule_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_class_sessions_section
+        FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_class_sessions_week
+        FOREIGN KEY (semester_week_id) REFERENCES semester_weeks(semester_week_id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_class_sessions_room
+        FOREIGN KEY (room_id) REFERENCES rooms(room_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_class_sessions_lecturer
+        FOREIGN KEY (lecturer_id) REFERENCES lecturers(lecturer_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+describe class_sessions;
+
+
+CREATE TABLE time_slots (
+    slot_no     INT PRIMARY KEY,
+    slot_label  VARCHAR(20) NOT NULL,
+    start_time  TIME NOT NULL,
+    end_time    TIME NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_time_slots_no CHECK (slot_no > 0),
+    CONSTRAINT chk_time_slots_time CHECK (end_time > start_time),
+    CONSTRAINT uq_time_slots_label UNIQUE (slot_label)
+) ENGINE=InnoDB;
+
+
+
+CREATE TABLE tuition_rates (
+    tuition_rate_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    enrollment_year YEAR NOT NULL,
+    price_per_credit DECIMAL(12,2) NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_tuition_rates_year UNIQUE (enrollment_year),
+    CONSTRAINT chk_tuition_rates_price CHECK (price_per_credit >= 0)
+) ENGINE=InnoDB;
+
+INSERT INTO tuition_rates (enrollment_year, price_per_credit)
+VALUES
+(2022, 450000),
+(2023, 500000),
+(2024, 650000),
+(2025, 750000);
+
+
+DROP TRIGGER IF EXISTS trg_course_prereq_no_self_insert;
+DELIMITER $$
+
+CREATE TRIGGER trg_course_prereq_no_self_insert
+BEFORE INSERT ON course_prerequisites
+FOR EACH ROW
+BEGIN
+    IF NEW.course_id = NEW.prerequisite_course_id THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A course cannot be its own prerequisite';
+    END IF;
+END$$
+
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS trg_course_prereq_no_self_update;
+DELIMITER $$
+
+CREATE TRIGGER trg_course_prereq_no_self_update
+BEFORE UPDATE ON course_prerequisites
+FOR EACH ROW
+BEGIN
+    IF NEW.course_id = NEW.prerequisite_course_id THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'A course cannot be its own prerequisite';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+CREATE INDEX idx_class_sessions_week_date
+    ON class_sessions (semester_week_id, session_date);
+
+CREATE INDEX idx_class_sessions_section_date
+    ON class_sessions (section_id, session_date);
+
+CREATE INDEX idx_class_sessions_lecturer_date
+    ON class_sessions (lecturer_id, session_date);
+
+CREATE INDEX idx_class_sessions_room_date
+    ON class_sessions (room_id, session_date);
+    
+    
+    DROP TRIGGER IF EXISTS trg_schedules_no_overlap_insert;
+DELIMITER $$
+
+CREATE TRIGGER trg_schedules_no_overlap_insert
+BEFORE INSERT ON schedules
+FOR EACH ROW
+BEGIN
+    -- Phòng bị trùng lịch theo ngày trong tuần
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.room_id = NEW.room_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in schedules';
+    END IF;
+
+    -- Lớp học phần bị trùng lịch theo ngày trong tuần
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.section_id = NEW.section_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in schedules';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+DROP TRIGGER IF EXISTS trg_schedules_no_overlap_update;
+DELIMITER $$
+
+CREATE TRIGGER trg_schedules_no_overlap_update
+BEFORE UPDATE ON schedules
+FOR EACH ROW
+BEGIN
+    -- Phòng bị trùng lịch theo ngày trong tuần
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.schedule_id <> OLD.schedule_id
+          AND s.room_id = NEW.room_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in schedules';
+    END IF;
+
+    -- Lớp học phần bị trùng lịch theo ngày trong tuần
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.schedule_id <> OLD.schedule_id
+          AND s.section_id = NEW.section_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in schedules';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+DROP TRIGGER IF EXISTS trg_class_sessions_no_overlap_insert;
+DELIMITER $$
+
+CREATE TRIGGER trg_class_sessions_no_overlap_insert
+BEFORE INSERT ON class_sessions
+FOR EACH ROW
+BEGIN
+    -- Trùng phòng trong cùng ngày
+    IF NEW.room_id IS NOT NULL AND EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_date = NEW.session_date
+          AND cs.room_id = NEW.room_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in class_sessions';
+    END IF;
+
+    -- Trùng giảng viên trong cùng ngày
+    IF NEW.lecturer_id IS NOT NULL AND EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_date = NEW.session_date
+          AND cs.lecturer_id = NEW.lecturer_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lecturer schedule overlap in class_sessions';
+    END IF;
+
+    -- Trùng lớp học phần trong cùng ngày
+    IF EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_date = NEW.session_date
+          AND cs.section_id = NEW.section_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in class_sessions';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+DROP TRIGGER IF EXISTS trg_class_sessions_no_overlap_update;
+DELIMITER $$
+
+CREATE TRIGGER trg_class_sessions_no_overlap_update
+BEFORE UPDATE ON class_sessions
+FOR EACH ROW
+BEGIN
+    -- Trùng phòng trong cùng ngày
+    IF NEW.room_id IS NOT NULL AND EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_id <> OLD.session_id
+          AND cs.session_date = NEW.session_date
+          AND cs.room_id = NEW.room_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in class_sessions';
+    END IF;
+
+    -- Trùng giảng viên trong cùng ngày
+    IF NEW.lecturer_id IS NOT NULL AND EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_id <> OLD.session_id
+          AND cs.session_date = NEW.session_date
+          AND cs.lecturer_id = NEW.lecturer_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lecturer schedule overlap in class_sessions';
+    END IF;
+
+    -- Trùng lớp học phần trong cùng ngày
+    IF EXISTS (
+        SELECT 1
+        FROM class_sessions cs
+        WHERE cs.session_id <> OLD.session_id
+          AND cs.session_date = NEW.session_date
+          AND cs.section_id = NEW.section_id
+          AND NOT (NEW.slot_end < cs.slot_start OR NEW.slot_start > cs.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in class_sessions';
+    END IF;
+END$$
+
+DELIMITER ;
+
+
+
+
+
+
+
+-- 12) Optional time slots (neu service cua ban co dung)
+INSERT INTO time_slots (slot_no, slot_label, start_time, end_time)
+VALUES
+(1, 'Tiết 1', '07:00:00', '07:50:00'),
+(2, 'Tiết 2', '07:50:00', '08:40:00'),
+(3, 'Tiết 3', '08:50:00', '09:40:00'),
+(4, 'Tiết 4', '09:40:00', '10:30:00'),
+(5, 'Tiết 5', '10:40:00', '11:30:00'),
+(6, 'Tiết 6', '13:00:00', '13:50:00'),
+(7, 'Tiết 7', '13:50:00', '14:40:00'),
+(8, 'Tiết 8', '14:50:00', '15:40:00'),
+(9, 'Tiết 9', '15:40:00', '16:30:00'),
+(10, 'Tiết 10', '16:40:00', '17:30:00'),
+(11, 'Tiết 11', '18:00:00', '18:50:00'),
+(12, 'Tiết 12', '18:50:00', '19:40:00')
+ON DUPLICATE KEY UPDATE
+  slot_label = VALUES(slot_label),
+  start_time = VALUES(start_time),
+  end_time = VALUES(end_time);
+
+
+CREATE TABLE academic_calendar_blocks (
+    calendar_block_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    semester_id BIGINT UNSIGNED NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    block_type ENUM('holiday', 'break', 'exam_week', '') NOT NULL DEFAULT 'holiday',
+    title VARCHAR(150) NOT NULL,
+    is_teaching_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_calendar_blocks_date CHECK (end_date >= start_date),
+    CONSTRAINT fk_calendar_blocks_semester
+        FOREIGN KEY (semester_id) REFERENCES semesters(semester_id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_calendar_blocks_range
+ON academic_calendar_blocks (semester_id, start_date, end_date);
+
+
+ALTER TABLE semester_weeks
+ADD COLUMN cohort_year YEAR NOT NULL AFTER semester_id;
+
+ALTER TABLE semester_weeks
+DROP INDEX uq_semester_week;
+
+ALTER TABLE semester_weeks
+ADD CONSTRAINT uq_semester_week UNIQUE (semester_id, cohort_year, week_no);
+
+
+
+
+
+
