@@ -33,7 +33,8 @@ public class LecturerSemesterController {
                                 ? s.getAcademicYear()
                                 : s.getSemesterYear(),
                         s.getStatus() != null ? s.getStatus().name() : null,
-                        s.getTimetableStatus() != null ? s.getTimetableStatus().name() : null
+                        s.getTimetableStatus() != null ? s.getTimetableStatus().name() : null,
+                        s.getPricePerCredit()
                 ))
                 .toList();
 

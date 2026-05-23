@@ -81,6 +81,9 @@ public class Semester {
 	@Column(name = "academic_year", length = 20)
 	private String academicYear;
 
+	@Column(name = "price_per_credit")
+	private java.math.BigDecimal pricePerCredit;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;

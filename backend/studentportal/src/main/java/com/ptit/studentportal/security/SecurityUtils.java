@@ -25,5 +25,9 @@ public class SecurityUtils {
         User user = getCurrentUser();
         return user != null ? user.getUserId() : null;
     }
-}
 
+    public String getCurrentUsername() {
+        User user = getCurrentUser();
+        return user != null ? user.getUsername() : null;
+    }
+}

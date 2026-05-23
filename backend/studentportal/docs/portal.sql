@@ -77,6 +77,7 @@ CREATE TABLE students (
     student_id       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id          BIGINT UNSIGNED NOT NULL UNIQUE,
     program_id       BIGINT UNSIGNED NOT NULL,
+    class_id 		 BIGINT UNSIGNED NULL,
     student_code     VARCHAR(20)  NOT NULL UNIQUE,
     full_name        VARCHAR(150) NOT NULL,
     date_of_birth    DATE NULL,
@@ -93,8 +94,13 @@ CREATE TABLE students (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_students_program
         FOREIGN KEY (program_id) REFERENCES programs(program_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT fk_students_class
+		FOREIGN KEY (class_id) REFERENCES student_classes(class_id)
+		ON UPDATE CASCADE
+		ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
 
 -- =====================================
 -- 6. LECTURERS
@@ -189,8 +195,10 @@ CREATE TABLE semesters (
     semester_id        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     semester_code      VARCHAR(50) NOT NULL,
     semester_year      VARCHAR(20) NOT NULL,
+    price_per_credit DECIMAL(12,2) NULL,
     start_date         DATE NOT NULL,
     end_date           DATE NOT NULL,
+    tuition_due_date DATE NULL,
     registration_open  DATETIME NULL,
     registration_close DATETIME NULL,
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -227,6 +235,7 @@ CREATE TABLE course_sections (
     section_id   BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     course_id    BIGINT UNSIGNED NOT NULL,
     semester_id  BIGINT UNSIGNED NOT NULL,
+    class_id BIGINT UNSIGNED NULL,
     lecturer_id  BIGINT UNSIGNED NOT NULL,
     section_code VARCHAR(20) NOT NULL,
     max_capacity INT NOT NULL DEFAULT 50,
@@ -243,8 +252,14 @@ CREATE TABLE course_sections (
         ON UPDATE CASCADE ON DELETE RESTRICT,
     CONSTRAINT fk_sections_lecturer
         FOREIGN KEY (lecturer_id) REFERENCES lecturers(lecturer_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+        ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT fk_course_sections_class
+		FOREIGN KEY (class_id) REFERENCES student_classes(class_id)
+		ON UPDATE CASCADE
+		ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+
 
 -- =====================================
 -- 13. SCHEDULES
@@ -261,6 +276,7 @@ CREATE TABLE schedules (
     slot_end     INT NOT NULL,      -- đổi từ period_end   -> slot_end
     start_time   TIME NOT NULL,
     end_time     TIME NOT NULL,
+    session_type ENUM('THEORY', 'PRACTICE') NOT NULL DEFAULT 'THEORY',
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_schedules_slot CHECK (slot_end >= slot_start),
@@ -276,10 +292,8 @@ CREATE TABLE schedules (
         FOREIGN KEY (room_id) REFERENCES rooms(room_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
-ALTER TABLE schedules
-ADD COLUMN session_type ENUM('THEORY', 'PRACTICE')
-NOT NULL DEFAULT 'THEORY'
-AFTER end_time;
+
+
 
 
 -- =====================================
@@ -320,33 +334,6 @@ CREATE TABLE exams (
 	CONSTRAINT fk_exams_semester
 		FOREIGN KEY (semester_id) REFERENCES semesters(semester_id)
 		ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
-
-
-CREATE TABLE student_classes (
-    class_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-
-    class_code VARCHAR(50) NOT NULL UNIQUE,
-
-    department_id BIGINT UNSIGNED NOT NULL,
-    program_id BIGINT UNSIGNED NOT NULL,
-    specialization_code VARCHAR(50) NULL,
-
-    cohort_year YEAR NOT NULL,
-
-    class_type VARCHAR(80) NULL,
-    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
-
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_student_classes_department
-        FOREIGN KEY (department_id) REFERENCES departments(department_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
-
-    CONSTRAINT fk_student_classes_program
-        FOREIGN KEY (program_id) REFERENCES programs(program_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE exam_invigilators (
@@ -409,6 +396,7 @@ CREATE TABLE enrollment_logs (
         FOREIGN KEY (section_id) REFERENCES course_sections(section_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
 -- =====================================
 -- 16. GRADES
 -- enrollments (1) -- (1) grades
@@ -571,11 +559,14 @@ CREATE TABLE notification_recipients (
 -- =====================================
 CREATE TABLE tuition_fees (
     tuition_fee_id  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    invoice_code VARCHAR(50) NULL UNIQUE,
     student_id      BIGINT UNSIGNED NOT NULL,
     semester_id     BIGINT UNSIGNED NOT NULL,
+    total_credits INT NOT NULL DEFAULT 0,
     total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
     discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     final_amount    DECIMAL(12,2) NOT NULL DEFAULT 0,
+    paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     status          ENUM('unpaid', 'partial', 'paid', 'overdue', 'waived') NOT NULL DEFAULT 'unpaid',
     due_date        DATE NULL,
     note            VARCHAR(255) NULL,
@@ -593,6 +584,7 @@ CREATE TABLE tuition_fees (
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+
 -- =====================================
 -- 24. PAYMENTS
 -- tuition_fees (1) -- (N) payments
@@ -600,18 +592,25 @@ CREATE TABLE tuition_fees (
 CREATE TABLE payments (
     payment_id       BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tuition_fee_id   BIGINT UNSIGNED NOT NULL,
+    order_code VARCHAR(80) NULL UNIQUE,
     payment_method   ENUM('qr', 'bank_transfer', 'cash') NOT NULL DEFAULT 'qr',
     amount           DECIMAL(12,2) NOT NULL,
     transaction_code VARCHAR(100) NULL UNIQUE,
+    qr_image_url TEXT NULL,
     payment_status   ENUM('pending', 'success', 'failed') NOT NULL DEFAULT 'pending',
+    note VARCHAR(255) NULL,
     paid_at          DATETIME NULL,
+    raw_webhook_payload JSON NULL,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expired_at DATETIME NULL,
     updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_payments_amount CHECK (amount > 0),
     CONSTRAINT fk_payments_tuition_fee
         FOREIGN KEY (tuition_fee_id) REFERENCES tuition_fees(tuition_fee_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
+
+describe payments;
 
 -- =====================================
 -- 25. E_INVOICES
@@ -803,9 +802,25 @@ CREATE TABLE time_slots (
     CONSTRAINT chk_time_slots_time CHECK (end_time > start_time),
     CONSTRAINT uq_time_slots_label UNIQUE (slot_label)
 ) ENGINE=InnoDB;
-ALTER TABLE time_slots
-MODIFY created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-MODIFY updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+
+
+CREATE TABLE student_classes (
+    class_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    
+    department_id VARCHAR(20) NOT NULL,
+    program_id VARCHAR(50) NOT NULL,
+    specialization_id VARCHAR(50) NULL,
+
+    cohort_year YEAR NOT NULL,
+
+    class_type VARCHAR(50) NOT NULL,
+    status ENUM('active', 'inactive', 'archived') NOT NULL DEFAULT 'active',
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 
 DROP TRIGGER IF EXISTS trg_course_prereq_no_self_insert;
 DELIMITER $$

@@ -6,6 +6,7 @@ public record SemesterOptionResponse(
         String semesterName,
         String academicYear,
         String status,
-        String timetableStatus
+        String timetableStatus,
+        java.math.BigDecimal price_per_credit
 ) {
 }

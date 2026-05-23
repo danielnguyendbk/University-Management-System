@@ -30,6 +30,8 @@ import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
 import { AdminTimetablePage } from "./pages/admin/AdminTimetablePage";
 import { AdminRegistrationPage } from "./pages/admin/AdminRegistrationPage";
 import { AdminExams } from "./pages/admin/AdminExams";
+import { AdminTuition } from "./pages/admin/AdminTuition";
+
 
 export const router = createBrowserRouter([
   {
@@ -57,7 +59,6 @@ export const router = createBrowserRouter([
       { path: "exams", Component: StudentExams },          // Map /portal/student/exams
       { path: "grades", Component: Grades },
       { path: "tuition", Component: Tuition },
-      { path: "e-invoice", Component: EInvoice },
       { path: "submit-request", Component: SubmitRequest },
       { path: "feedback", Component: Feedback },
     ],
@@ -89,6 +90,7 @@ export const router = createBrowserRouter([
       { path: "registration-sessions", Component: AdminRegistrationPage },
       { path: "timetable", Component: AdminTimetablePage },
       { path: "exams", Component: AdminExams },             // Map /portal/admin/exams
+      { path: "tuition", Component: AdminTuition },
     ],
   },
 ]);

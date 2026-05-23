@@ -310,10 +310,10 @@ export function AdminScheduleTemplatesTab({ refreshSignal = 0 }) {
       setSaving(true);
       if (editingId) {
         await updateSchedule(editingId, payload);
-        toast.success("Đã cập nhật lịch mẫu.");
+        toast.success("Đã cập nhật lịch thủ công.");
       } else {
         await createSchedule(payload);
-        toast.success("Đã tạo lịch mẫu.");
+        toast.success("Đã tạo lịch thủ công.");
       }
 
       const data = await getSchedules(selectedSemesterId);
@@ -331,8 +331,8 @@ export function AdminScheduleTemplatesTab({ refreshSignal = 0 }) {
       <section className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Danh sách lịch mẫu</h2>
-            <p className="text-sm text-gray-500">Theo dõi các lịch mẫu đang áp dụng cho học kỳ.</p>
+            <h2 className="text-lg font-semibold text-gray-900">Danh sách lịch thủ công</h2>
+            <p className="text-sm text-gray-500">Theo dõi các lịch thủ công đang áp dụng cho học kỳ.</p>
           </div>
           <div className="w-full lg:w-72">
             <select
@@ -422,7 +422,7 @@ export function AdminScheduleTemplatesTab({ refreshSignal = 0 }) {
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? "Cập nhật lịch mẫu" : "Tạo lịch mẫu"}
+                {editingId ? "Cập nhật lịch thủ công" : "Tạo lịch thủ công"}
               </h2>
               <p className="text-sm text-gray-500">Nhập đủ thông tin để tạo hoặc chỉnh sửa lịch mẫu.</p>
             </div>
@@ -655,7 +655,7 @@ export function AdminScheduleTemplatesTab({ refreshSignal = 0 }) {
           </form>
         </section>
       ) : (
-        <div className="text-sm text-gray-500">Vui lòng chọn học kỳ trước khi tạo lịch mẫu.</div>
+        <div className="text-sm text-gray-500">Vui lòng chọn học kỳ trước khi tạo lịch thủ công.</div>
       )}
     </div>
   );
