@@ -99,6 +99,35 @@ class GradeServiceTest {
         assertEquals("Tổng trọng số phải bằng 100", exception.getMessage());
     }
 
+        @Test
+        void batchUpdate_calculatesTotals_andReturnsAllUpdated() {
+        gradeRepositoryStub.gradeDetail = Optional.of(
+            new GradeDetailViewStub(0L, 1001L, 2001L, "SV001", "Nguyen Van A", "registered", 3001L,
+                "DB202", "CS101", "Cơ sở dữ liệu", "Học kỳ 2", "2025-2026", 10L,
+                null, null, null, null, null, null)
+        );
+        gradeRepositoryStub.gradeByEnrollmentId = Optional.empty();
+
+        var updates = new BatchGradeUpdateRequest(List.of(
+            new SingleGradeUpdate(1001L, new GradeUpdateRequest(
+                new BigDecimal("8"), null, null, new BigDecimal("7"), new BigDecimal("9"),
+                new BigDecimal("10"), new BigDecimal("0"), new BigDecimal("0"), new BigDecimal("30"), new BigDecimal("60")
+            )),
+            new SingleGradeUpdate(1002L, new GradeUpdateRequest(
+                new BigDecimal("7"), null, null, new BigDecimal("6"), new BigDecimal("8"),
+                new BigDecimal("10"), new BigDecimal("0"), new BigDecimal("0"), new BigDecimal("30"), new BigDecimal("60")
+            ))
+        ));
+
+        var results = gradeService.batchUpdateGrades(10L, updates);
+
+        assertEquals(2, results.size());
+        // First record total = (8*10 + 7*30 + 9*60)/100 = (80 + 210 + 540)/100 = 8.30
+        assertEquals(new BigDecimal("8.30"), results.get(0).totalScore());
+        // Second record total = (7*10 + 6*30 + 8*60)/100 = (70 + 180 + 480)/100 = 7.30
+        assertEquals(new BigDecimal("7.30"), results.get(1).totalScore());
+        }
+
     @Test
     void getLecturerSections_rejectsMissingLecturer() {
         lecturerRepositoryStub.existsById = false;
