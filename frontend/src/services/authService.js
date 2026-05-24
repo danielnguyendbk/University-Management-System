@@ -1,48 +1,42 @@
-import { API_BASE_URL, clearStoredToken, getStoredToken, setStoredToken, parseApiError } from "./app";
-
-async function request(path, options = {}) {
-  const token = getStoredToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
-
-  return response.json();
-}
+import { getStoredToken } from "./app";
+import { request } from "./apiClient";
 
 export async function login(credentials) {
-  const payload = await request("/auth/login", {
+  const response = await request("/auth/login", {
     method: "POST",
     body: JSON.stringify(credentials),
   });
 
-  const token = payload?.data?.token;
-  if (token) {
-    setStoredToken(token);
+  // response is the JSON body: { success, message, data: { token, username, role, fullName } }
+  const payload = response?.data;
+
+  if (payload && payload.token) {
+    sessionStorage.setItem("token", payload.token);
+    sessionStorage.setItem("user", JSON.stringify({
+      username: payload.username,
+      role: payload.role,
+      fullName: payload.fullName
+    }));
   }
 
-  return payload?.data;
+  return payload;
 }
 
 export async function getCurrentUser() {
-  const payload = await request("/auth/me", {
+  const userStr = sessionStorage.getItem("user");
+  if (userStr) {
+    try {
+      return JSON.parse(userStr);
+    } catch (e) {
+      console.error("Error parsing user from sessionStorage", e);
+    }
+  }
+
+  const response = await request("/auth/me", {
     method: "GET",
   });
 
-  return payload?.data;
+  return response?.data;
 }
 
 export async function changePassword(body) {
@@ -55,7 +49,8 @@ export async function changePassword(body) {
 }
 
 export function logout() {
-  clearStoredToken();
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
 }
 
 export { getStoredToken };

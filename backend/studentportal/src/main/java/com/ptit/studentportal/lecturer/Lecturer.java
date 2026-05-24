@@ -49,6 +49,9 @@ public class Lecturer {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
+    @Column(name = "work_email", nullable = false, unique = true, length = 100)
+    private String workEmail;
+
     @Column(length = 20)
     private String phone;
 

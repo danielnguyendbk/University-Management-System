@@ -4,6 +4,7 @@ import {
   Bell,
   BookOpen,
   Calendar,
+  CalendarDays,
   CalendarCheck,
   GraduationCap,
   DollarSign,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useIdleLogout } from "../hooks/useIdleLogout";
 
 const navigationByRole = {
   STUDENT: [
@@ -27,17 +29,17 @@ const navigationByRole = {
     { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", path: "curriculum", icon: BookOpen },
     { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", path: "course-registration", icon: ClipboardList },
     { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", path: "schedule", icon: Calendar },
-    { name: "Lịch thi", name_vi: "Kế hoạch thi cử", path: "exam-schedule", icon: CalendarCheck },
+    { name: "Lịch thi", name_vi: "Kế hoạch thi cử", path: "exams", icon: CalendarCheck },
     { name: "Điểm số", name_vi: "Kết quả học tập", path: "grades", icon: GraduationCap },
     { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", path: "tuition", icon: DollarSign },
-    { name: "Hóa đơn điện tử", name_vi: "Tra cứu và tải hóa đơn", path: "e-invoice", icon: FileText },
     { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", path: "submit-request", icon: Send },
     { name: "Phản hồi", name_vi: "Đóng góp ý kiến", path: "feedback", icon: MessageSquare },
   ],
   LECTURER: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
     { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
-    { name: "Lịch giảng dạy", name_vi: "Lịch dạy theo tuần", path: "teaching-schedule", icon: Calendar },
+    { name: "Lịch giảng dạy", name_vi: "Lịch dạy theo tuần", path: "schedule", icon: Calendar },
+    { name: "Lịch coi thi", name_vi: "Kế hoạch coi thi cử", path: "exams", icon: CalendarCheck },
     { name: "Lớp học phần", name_vi: "Danh sách lớp phụ trách", path: "sections", icon: BookOpen },
     { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
     { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
@@ -46,14 +48,17 @@ const navigationByRole = {
   ADMIN: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
     { name: "Thông báo", name_vi: "Thông báo toàn hệ thống", path: "announcements", icon: Bell },
-    { name: "Sinh viên", name_vi: "Quản lý sinh viên", path: "students", icon: User },
-    { name: "Giảng viên", name_vi: "Quản lý giảng viên", path: "lecturers", icon: User },
+    { name: "Tài khoản sinh viên", name_vi: "Quản lý tài khoản sinh viên", path: "student-accounts", icon: User },
+    { name: "Tài khoản giảng viên", name_vi: "Quản lý tài khoản giảng viên", path: "lecturer-accounts", icon: User },
     { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
+    { name: "Thời khóa biểu", name_vi: "Tạo và quản lý lịch học", path: "timetable", icon: CalendarDays },
+    { name: "Quản lý lịch thi", name_vi: "Xếp lịch & gán giám thị", path: "exams", icon: CalendarCheck },
   ],
 };
 
 export function Root() {
+  useIdleLogout();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,7 +67,7 @@ export function Root() {
   const roleBasePath = {
     STUDENT: "/portal/student",
     LECTURER: "/portal/lecturer",
-    ADMIN: "/admin",
+    ADMIN: "/portal/admin",
   };
 
   const basePath = roleBasePath[user?.role] || roleBasePath.STUDENT;
@@ -73,7 +78,8 @@ export function Root() {
 
   const handleLogout = () => {
     logout();
-    navigate("/", { replace: true });
+    sessionStorage.clear();
+    navigate("/login", { replace: true });
   };
 
   const portalTitleByRole = {
@@ -159,26 +165,24 @@ export function Root() {
       <div className="flex pt-[73px]">
         {/* Sidebar */}
         <aside
-          className={`fixed left-0 top-[73px] bottom-0 w-72 bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-300 z-20 ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          }`}
+          className={`fixed left-0 top-[73px] bottom-0 w-72 bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-300 z-20 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            }`}
         >
           <nav className="p-4 space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href ||
                 (item.href !== basePath && location.pathname.startsWith(item.href));
               const Icon = item.icon;
-              
+
               return (
                 <Link
                   key={item.name}
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
                       ? "bg-[#1E3A8A] text-white"
                       : "text-gray-700 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">

@@ -20,7 +20,7 @@ export function ChangePasswordPage() {
 
   useEffect(() => {
     if (!loading && user && !user.forcePasswordChange) {
-      const rolePath = user.role === "STUDENT" ? "/portal/student" : user.role === "LECTURER" ? "/portal/lecturer" : "/admin";
+      const rolePath = user.role === "STUDENT" ? "/portal/student" : user.role === "LECTURER" ? "/portal/lecturer" : "/portal/admin";
       navigate(rolePath, { replace: true });
     }
   }, [loading, user, navigate]);
@@ -39,7 +39,7 @@ export function ChangePasswordPage() {
     try {
       setSubmitting(true);
       const updatedUser = await changePassword({ currentPassword, newPassword });
-      const rolePath = updatedUser?.role === "STUDENT" ? "/portal/student" : updatedUser?.role === "LECTURER" ? "/portal/lecturer" : "/admin";
+      const rolePath = updatedUser?.role === "STUDENT" ? "/portal/student" : updatedUser?.role === "LECTURER" ? "/portal/lecturer" : "/portal/admin";
       toast.success("Đã đổi mật khẩu thành công");
       navigate(rolePath, { replace: true });
     } catch (error) {

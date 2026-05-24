@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { LoaderCircle, UserRound, LockKeyhole, GraduationCap } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { AlertCircle, LoaderCircle, UserRound, LockKeyhole, GraduationCap } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const message = location.state?.message;
   const { login, user, loading: authLoading } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("N23KHMT001");
+  const [password, setPassword] = useState("123456");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,7 +32,7 @@ export function LoginPage() {
     setError("");
 
     try {
-      const loggedInUser = await login({ username, password });
+      const loggedInUser = await login({ username: username.trim(), password });
       navigate(loggedInUser?.forcePasswordChange ? "/change-password" : getPortalPathByRole(loggedInUser?.role), { replace: true });
     } catch (err) {
       setError(err.message || "Đăng nhập thất bại");
@@ -78,6 +80,13 @@ export function LoginPage() {
                 <h2 className="text-2xl font-bold text-slate-900">Đăng nhập</h2>
                 <p className="mt-2 text-sm text-slate-500">Nhập tài khoản để truy cập hệ thống</p>
               </div>
+
+              {message ? (
+                <div className="mb-5 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: "#fde68a", background: "#fffbeb", color: "#92400e" }}>
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{message}</span>
+                </div>
+              ) : null}
 
               {/* Form */}
               <form onSubmit={handleLogin} className="space-y-5">
@@ -147,6 +156,10 @@ export function LoginPage() {
                   {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
                 </button>
               </form>
+
+              <div className="mt-6 rounded-xl border px-4 py-3 text-sm text-slate-600" style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}>
+                Tài khoản test: <strong>N23KHMT001 / 123456</strong>, <strong>GV001 / 123456</strong>, <strong>admin01 / 123456</strong>
+              </div>
             </div>
           </div>
 

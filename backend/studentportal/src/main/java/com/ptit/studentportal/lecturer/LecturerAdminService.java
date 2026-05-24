@@ -52,6 +52,7 @@ public class LecturerAdminService {
 	private static final List<String> TEMPLATE_HEADERS = List.of(
 			"lecturer_code",
 			"full_name",
+			"work_email",
 			"academic_title",
 			"department_code",
 			"phone"
@@ -95,7 +96,7 @@ public class LecturerAdminService {
 				predicates.add(cb.or(
 						cb.like(cb.lower(root.get("lecturerCode")), like),
 						cb.like(cb.lower(root.get("fullName")), like),
-						cb.like(cb.lower(root.join("user").get("email")), like)
+						cb.like(cb.lower(root.get("workEmail")), like)
 				));
 			}
 			return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
@@ -124,7 +125,7 @@ public class LecturerAdminService {
 				lecturer.getAcademicTitle(),
 				department == null ? null : department.getDepartmentCode(),
 				department == null ? null : department.getDepartmentName(),
-				lecturer.getUser().getEmail(),
+				lecturer.getWorkEmail(),
 				lecturer.getUser().getStatus() == null ? null : lecturer.getUser().getStatus().name().toLowerCase(Locale.ROOT)
 		);
 	}
@@ -137,10 +138,11 @@ public class LecturerAdminService {
 
 	@Transactional
 	public LecturerAdminDetailResponse createLecturer(LecturerCreateAdminRequest request) {
-		validateUniqueLecturer(request.lecturerCode());
+		String username = request.lecturerCode().trim();
+		String workEmail = resolveWorkEmail(request.workEmail(), username);
+		validateUniqueLecturer(request.lecturerCode(), workEmail);
 		Department department = departmentRepository.findById(request.departmentId())
 				.orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Department not found with id: " + request.departmentId()));
-		String username = request.lecturerCode().trim();
 		String email = buildManagedEmail(username);
 		String temporaryPassword = generateTemporaryPassword(username);
 		User user = userRepository.save(User.builder()
@@ -157,6 +159,7 @@ public class LecturerAdminService {
 				.departmentId(department.getDepartmentId())
 				.lecturerCode(request.lecturerCode())
 				.fullName(request.fullName())
+				.workEmail(workEmail)
 				.phone(request.phone())
 				.academicTitle(request.academicTitle())
 				.build());
@@ -169,7 +172,14 @@ public class LecturerAdminService {
 				.orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Lecturer not found with id: " + lecturerId));
 		Department department = departmentRepository.findById(request.departmentId())
 				.orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Department not found with id: " + request.departmentId()));
+		String workEmail = StringUtils.hasText(normalize(request.workEmail()))
+				? normalize(request.workEmail())
+				: lecturer.getWorkEmail();
+		if (!workEmail.equalsIgnoreCase(lecturer.getWorkEmail()) && lecturerRepository.existsByWorkEmail(workEmail)) {
+			throw new AppException(HttpStatus.BAD_REQUEST, "Work email already exists: " + workEmail);
+		}
 		lecturer.setFullName(request.fullName());
+		lecturer.setWorkEmail(workEmail);
 		lecturer.setAcademicTitle(request.academicTitle());
 		lecturer.setDepartmentId(department.getDepartmentId());
 		lecturer.setPhone(request.phone());
@@ -210,9 +220,10 @@ public class LecturerAdminService {
 			Row sample = sheet.createRow(1);
 			sample.createCell(0).setCellValue("GV001");
 			sample.createCell(1).setCellValue("Tran Thi B");
-			sample.createCell(2).setCellValue("TS");
-			sample.createCell(3).setCellValue("CNTT");
-			sample.createCell(4).setCellValue("0911111111");
+			sample.createCell(2).setCellValue("gv001@ptit.edu.vn");
+			sample.createCell(3).setCellValue("TS");
+			sample.createCell(4).setCellValue("CNTT");
+			sample.createCell(5).setCellValue("0911111111");
 			workbook.write(outputStream);
 		}
 	}
@@ -222,6 +233,7 @@ public class LecturerAdminService {
 		List<Map<String, String>> rows = readRows(file);
 		List<ImportErrorItem> errors = new ArrayList<>();
 		Set<String> seenCodes = new HashSet<>();
+		Set<String> seenWorkEmails = new HashSet<>();
 		List<Map<String, Object>> validated = new ArrayList<>();
 
 		for (int index = 0; index < rows.size(); index++) {
@@ -229,6 +241,7 @@ public class LecturerAdminService {
 			Map<String, String> row = rows.get(index);
 			String lecturerCode = normalize(row.get("lecturer_code"));
 			String fullName = normalize(row.get("full_name"));
+			String workEmail = resolveWorkEmail(row.get("work_email"), lecturerCode);
 			String academicTitle = normalize(row.get("academic_title"));
 			String departmentCode = normalize(row.get("department_code"));
 			String phone = normalize(row.get("phone"));
@@ -243,8 +256,16 @@ public class LecturerAdminService {
 				errors.add(new ImportErrorItem(rowNumber, "lecturer_code", "Duplicate lecturer code in file"));
 				continue;
 			}
+			if (!seenWorkEmails.add(workEmail.toLowerCase(Locale.ROOT))) {
+				errors.add(new ImportErrorItem(rowNumber, "work_email", "Duplicate work email in file"));
+				continue;
+			}
 			if (lecturerRepository.existsByLecturerCode(lecturerCode)) {
 				errors.add(new ImportErrorItem(rowNumber, "lecturer_code", "Lecturer code already exists"));
+				continue;
+			}
+			if (lecturerRepository.existsByWorkEmail(workEmail)) {
+				errors.add(new ImportErrorItem(rowNumber, "work_email", "Work email already exists"));
 				continue;
 			}
 			if (userRepository.existsByUsername(username)) {
@@ -265,6 +286,7 @@ public class LecturerAdminService {
 			Map<String, Object> entry = new HashMap<>();
 			entry.put("username", username);
 			entry.put("managedEmail", managedEmail);
+			entry.put("workEmail", workEmail);
 			entry.put("fullName", fullName);
 			entry.put("academicTitle", academicTitle);
 			entry.put("phone", phone);
@@ -282,6 +304,7 @@ public class LecturerAdminService {
 			executeWithRetry(() -> transactionTemplate.execute(status -> {
 				String username = (String) entry.get("username");
 				String managedEmail = (String) entry.get("managedEmail");
+				String workEmail = (String) entry.get("workEmail");
 				String fullName = (String) entry.get("fullName");
 				String academicTitle = (String) entry.get("academicTitle");
 				String phone = (String) entry.get("phone");
@@ -301,6 +324,7 @@ public class LecturerAdminService {
 						.departmentId(department.getDepartmentId())
 						.lecturerCode(lecturerCode)
 						.fullName(fullName)
+						.workEmail(workEmail)
 						.phone(phone)
 						.academicTitle(academicTitle)
 						.build());
@@ -349,16 +373,19 @@ public class LecturerAdminService {
 				lecturer.getAcademicTitle(),
 				department == null ? null : department.getDepartmentCode(),
 				department == null ? null : department.getDepartmentName(),
-				lecturer.getUser().getEmail(),
+				lecturer.getWorkEmail(),
 				lecturer.getPhone(),
 				lecturer.getUser().getStatus() == null ? null : lecturer.getUser().getStatus().name().toLowerCase(Locale.ROOT),
 				loadSections(lecturer.getLecturerId())
 		);
 	}
 
-	private void validateUniqueLecturer(String lecturerCode) {
+	private void validateUniqueLecturer(String lecturerCode, String workEmail) {
 		if (lecturerRepository.existsByLecturerCode(lecturerCode)) {
 			throw new AppException(HttpStatus.BAD_REQUEST, "Lecturer code already exists: " + lecturerCode);
+		}
+		if (lecturerRepository.existsByWorkEmail(workEmail)) {
+			throw new AppException(HttpStatus.BAD_REQUEST, "Work email already exists: " + workEmail);
 		}
 		if (userRepository.existsByUsername(lecturerCode)) {
 			throw new AppException(HttpStatus.BAD_REQUEST, "Username already exists: " + lecturerCode);
@@ -469,6 +496,22 @@ public class LecturerAdminService {
 
 	private String buildManagedEmail(String username) {
 		return "tcpeduvn+" + username + "@gmail.com";
+	}
+
+	private String buildWorkEmail(String lecturerCode) {
+		return lecturerCode.toLowerCase(Locale.ROOT) + "@ptit.edu.vn";
+	}
+
+	private String resolveWorkEmail(String workEmail, String lecturerCode) {
+		String normalizedWorkEmail = normalize(workEmail);
+		if (StringUtils.hasText(normalizedWorkEmail)) {
+			return normalizedWorkEmail;
+		}
+		String normalizedLecturerCode = normalize(lecturerCode);
+		if (!StringUtils.hasText(normalizedLecturerCode)) {
+			return null;
+		}
+		return buildWorkEmail(normalizedLecturerCode);
 	}
 
 	private String normalize(String value) {

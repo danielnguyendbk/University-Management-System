@@ -47,8 +47,8 @@ public class LecturerService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Lecturer code already exists: " + request.lecturerCode());
         }
 
-        if (userRepository.existsByEmail(request.email())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Email already exists: " + request.email());
+        if (lecturerRepository.existsByWorkEmail(request.email())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Work email already exists: " + request.email());
         }
 
         User user = userRepository.findById(request.userId())
@@ -68,6 +68,7 @@ public class LecturerService {
                 .departmentId(request.departmentId())
                 .lecturerCode(request.lecturerCode())
                 .fullName(request.fullName())
+                .workEmail(request.email())
                 .phone(request.phone())
                 .academicTitle(request.academicTitle())
                 .build();
@@ -81,7 +82,7 @@ public class LecturerService {
                 lecturer.getLecturerId(),
                 lecturer.getUser().getUserId(),
                 lecturer.getUser().getUsername(),
-                lecturer.getUser().getEmail(),
+                lecturer.getWorkEmail(),
                 lecturer.getUser().getRole(),
                 lecturer.getUser().getStatus(),
                 lecturer.getDepartmentId(),

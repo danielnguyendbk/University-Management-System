@@ -47,6 +47,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 			if (jwtService.isTokenValid(token, userDetails)) {
+				System.out.println("JWT username = " + username);
+				System.out.println("JWT authorities = " + userDetails.getAuthorities());
 				UsernamePasswordAuthenticationToken authenticationToken =
 						new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 				authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -55,5 +57,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 
 		filterChain.doFilter(request, response);
+	}
+
+
+	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+		String path = request.getRequestURI();
+		// Nếu request gọi vào đúng link webhook của SePay thì KHÔNG BẮT TOKEN
+		return "/api/payments/sepay/webhook".equals(path); 
 	}
 }

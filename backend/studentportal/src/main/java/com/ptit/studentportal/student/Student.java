@@ -95,6 +95,9 @@ public class Student {
 	@Column(name = "address", length = 255)
 	private String address;
 
+	@Column(name = "enrollment_year")
+	private Integer enrollmentYear;
+
 	@Builder.Default
 	@Convert(converter = AcademicStatusConverter.class)
 	@Column(name = "academic_status", nullable = false, length = 30)

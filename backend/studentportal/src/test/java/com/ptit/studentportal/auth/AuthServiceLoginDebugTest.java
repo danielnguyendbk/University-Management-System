@@ -1,9 +1,11 @@
 package com.ptit.studentportal.auth;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+@Disabled("Manual debug test depends on local seed credentials")
 @SpringBootTest
 class AuthServiceLoginDebugTest {
 
