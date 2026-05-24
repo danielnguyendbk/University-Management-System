@@ -8,7 +8,7 @@ public class AcademicStatusConverter implements AttributeConverter<Student.Acade
 
 	@Override
 	public String convertToDatabaseColumn(Student.AcademicStatus attribute) {
-		return attribute == null ? null : attribute.name().toLowerCase();
+		return attribute == null ? null : attribute.getDbValue();
 	}
 
 	@Override

@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -37,7 +38,7 @@ public class CourseSection {
 	@Column(name = "semester_id", nullable = false)
 	private Long semesterId;
 
-	@Column(name = "class_id")
+	@Transient
 	private Long classId;
 
 	@Column(name = "lecturer_id", nullable = false)

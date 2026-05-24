@@ -7,8 +7,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.Convert;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -46,12 +45,13 @@ public class User {
 	@Column(name = "force_password_change", nullable = false)
 	private boolean forcePasswordChange = false;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = UserRoleConverter.class)
 	@Column(nullable = false, length = 20)
 	private UserRole role;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = UserStatusConverter.class)
 	@Column(nullable = false, length = 20)
+	@Builder.Default
 	private UserStatus status = UserStatus.ACTIVE;
 
 	@CreationTimestamp

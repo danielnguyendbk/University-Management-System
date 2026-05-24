@@ -134,7 +134,7 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
                                     .endTime(sch.getEndTime())
                                     .slotStart(sch.getSlotStart())
                                     .slotEnd(sch.getSlotEnd())
-                                    .sessionStatus("SCHEDULED")
+                                    .sessionStatus("scheduled")
                                     .sessionType(sch.getSessionType())
                                     .practiceGroupNo(sch.getPracticeGroupNo())
                                     .note(sch.getNote())
@@ -258,7 +258,7 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
                                     .endTime(sch.getEndTime())
                                     .slotStart(sch.getSlotStart())
                                     .slotEnd(sch.getSlotEnd())
-                                    .sessionStatus("SCHEDULED")
+                                    .sessionStatus("scheduled")
                                     .sessionType(sch.getSessionType())
                                     .practiceGroupNo(sch.getPracticeGroupNo())
                                     .note(sch.getNote())
@@ -334,9 +334,9 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
                 schedule.getEndTime(),
                 schedule.getSlotStart(),
                 schedule.getSlotEnd(),
-                schedule.getStatus(),
-                schedule.getSessionType() != null ? schedule.getSessionType().name() : null,
-                schedule.getSessionType() != null && "PRACTICE".equals(schedule.getSessionType().name()),
+                null,
+                schedule.getSessionType() != null ? schedule.getSessionType().getDbValue() : null,
+                schedule.getSessionType() == com.ptit.studentportal.timetable.enums.SessionType.PRACTICE,
                 null,
                 schedule.getNote()
         );
@@ -435,7 +435,7 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
                                     .endTime(sch.getEndTime())
                                     .slotStart(sch.getSlotStart())
                                     .slotEnd(sch.getSlotEnd())
-                                    .sessionStatus("SCHEDULED")
+                                    .sessionStatus("scheduled")
                                     .sessionType(sch.getSessionType())
                                     .practiceGroupNo(sch.getPracticeGroupNo())
                                     .note(sch.getNote())

@@ -77,7 +77,7 @@ export function CourseRegistration() {
         const rows = body.data || [];
         setSemesters(rows);
 
-        const openSemester = rows.find(s => s.registrationStatus === 'OPEN');
+        const openSemester = rows.find(s => String(s.registrationStatus).toLowerCase() === 'open');
         const defaultSemester = openSemester || rows[0];
 
         setSelectedSemester(defaultSemester ? Number(defaultSemester.semesterId) : null);
@@ -327,7 +327,7 @@ export function CourseRegistration() {
             >
               {semesters.map(s => (
                 <MenuItem key={s.semesterId} value={s.semesterId}>
-                  {s.semesterName} {s.registrationStatus === 'OPEN' ? '(Đang mở)' : ''}
+                  {s.semesterName} {String(s.registrationStatus).toLowerCase() === 'open' ? '(Đang mở)' : ''}
                 </MenuItem>
               ))}
             </Select>
@@ -356,7 +356,7 @@ export function CourseRegistration() {
       </Box>
 
       {currentSemesterInfo && (
-        <Alert icon={<Info size={20} />} severity={currentSemesterInfo.registrationStatus === 'OPEN' ? "info" : "warning"} sx={{ mb: 3 }}>
+        <Alert icon={<Info size={20} />} severity={String(currentSemesterInfo.registrationStatus).toLowerCase() === 'open' ? "info" : "warning"} sx={{ mb: 3 }}>
           Học kỳ: <strong>{currentSemesterInfo.semesterName}</strong> —
           Trạng thái: <strong>{currentSemesterInfo.registrationStatus}</strong> |
           Thời gian: {currentSemesterInfo.registrationOpen ? new Date(currentSemesterInfo.registrationOpen).toLocaleString() : 'N/A'} - {currentSemesterInfo.registrationClose ? new Date(currentSemesterInfo.registrationClose).toLocaleString() : 'N/A'}

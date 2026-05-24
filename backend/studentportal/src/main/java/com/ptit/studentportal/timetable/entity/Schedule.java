@@ -7,15 +7,16 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.ptit.studentportal.timetable.enums.SessionType;
+import com.ptit.studentportal.timetable.enums.SessionTypeConverter;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,7 +42,7 @@ public class Schedule {
     @Column(name = "section_id", nullable = false)
     private Long sectionId;
 
-    @Column(name = "room_id")
+    @Column(name = "room_id", nullable = false)
     private Long roomId;
 
     @Column(name = "day_of_week", nullable = false, length = 10)
@@ -59,23 +60,25 @@ public class Schedule {
     @Column(name = "slot_end", nullable = false)
     private Integer slotEnd;
 
-    @Column(name = "start_time")
+    @Column(name = "start_time", nullable = false)
     private LocalTime startTime;
 
-    @Column(name = "end_time")
+    @Column(name = "end_time", nullable = false)
     private LocalTime endTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "session_type", length = 20)
-    private SessionType sessionType;
+    @Convert(converter = SessionTypeConverter.class)
+    @Column(name = "session_type", nullable = false, length = 20)
+    @Builder.Default
+    private SessionType sessionType = SessionType.THEORY;
 
-    @Column(name = "practice_group_no")
-    private Integer practiceGroupNo;
+    @Builder.Default
+    @Column(name = "practice_group_no", nullable = false)
+    private Integer practiceGroupNo = 0;
 
-    @Column(name = "note", length = 255)
+    @Transient
     private String note;
 
-    @Column(name = "status", length = 20)
+    @Transient
     private String status;
 
     @CreationTimestamp

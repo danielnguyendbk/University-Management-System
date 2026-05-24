@@ -8,7 +8,7 @@ public class GenderConverter implements AttributeConverter<Student.Gender, Strin
 
 	@Override
 	public String convertToDatabaseColumn(Student.Gender attribute) {
-		return attribute == null ? null : attribute.name().toLowerCase();
+		return attribute == null ? null : attribute.getDbValue();
 	}
 
 	@Override

@@ -13,6 +13,7 @@ import com.ptit.studentportal.timetable.dto.request.UpdateClassSessionRequest;
 import com.ptit.studentportal.timetable.entity.ClassSession;
 import com.ptit.studentportal.timetable.entity.Schedule;
 import com.ptit.studentportal.timetable.enums.SessionStatus;
+import com.ptit.studentportal.timetable.enums.SessionType;
 import com.ptit.studentportal.timetable.exception.TimetableNotFoundException;
 import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.repository.ScheduleRepository;
@@ -22,6 +23,7 @@ import com.ptit.studentportal.timetable.enums.TimetableStatus;
 import com.ptit.studentportal.timetable.entity.Semester;
 import com.ptit.studentportal.timetable.repository.SemesterWeekRepository;
 import com.ptit.studentportal.timetable.entity.SemesterWeek;
+import com.ptit.studentportal.timetable.repository.CourseSectionRepository;
 import com.ptit.studentportal.timetable.validator.TimetableValidator;
 
 @Service
@@ -33,19 +35,22 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 	private final TimetableValidator timetableValidator;
 	private final SemesterRepository semesterRepository;
 	private final SemesterWeekRepository semesterWeekRepository;
+	private final CourseSectionRepository courseSectionRepository;
 
 	public TimetableCommandServiceImpl(
 			ScheduleRepository scheduleRepository,
 			ClassSessionRepository classSessionRepository,
 			TimetableValidator timetableValidator,
 			SemesterRepository semesterRepository,
-			SemesterWeekRepository semesterWeekRepository
+			SemesterWeekRepository semesterWeekRepository,
+			CourseSectionRepository courseSectionRepository
 	) {
 		this.scheduleRepository = scheduleRepository;
 		this.classSessionRepository = classSessionRepository;
 		this.timetableValidator = timetableValidator;
 		this.semesterRepository = semesterRepository;
 		this.semesterWeekRepository = semesterWeekRepository;
+		this.courseSectionRepository = courseSectionRepository;
 	}
 
 	@Override
@@ -55,8 +60,14 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 				.sectionId(request.sectionId())
 				.roomId(request.roomId())
 				.dayOfWeek(request.dayOfWeek())
+				.fromWeekNo(request.fromWeekNo())
+				.toWeekNo(request.toWeekNo())
 				.slotStart(request.slotStart())
 				.slotEnd(request.slotEnd())
+				.startTime(request.startTime())
+				.endTime(request.endTime())
+				.sessionType(request.sessionType() == null ? SessionType.THEORY : request.sessionType())
+				.practiceGroupNo(request.practiceGroupNo() == null ? 0 : request.practiceGroupNo())
 				.status(request.status())
 				.build();
 		return scheduleRepository.save(schedule);
@@ -66,16 +77,29 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 	public List<ClassSession> generateClassSessions(GenerateClassSessionsRequest request) {
 		Schedule schedule = scheduleRepository.findById(request.scheduleId())
 				.orElseThrow(() -> new TimetableNotFoundException("Schedule not found: " + request.scheduleId()));
+		var section = courseSectionRepository.findById(schedule.getSectionId())
+				.orElseThrow(() -> new TimetableNotFoundException("Course section not found: " + schedule.getSectionId()));
 
 		List<ClassSession> generated = new ArrayList<>();
 		for (int week = request.fromWeek(); week <= request.toWeek(); week++) {
+			int weekNo = week;
+			SemesterWeek semesterWeek = semesterWeekRepository.findBySemesterIdAndWeekNo(request.semesterId(), weekNo)
+					.orElseThrow(() -> new TimetableNotFoundException("Semester week not found: " + weekNo));
+			LocalDate sessionDate = semesterWeek.getStartDate().plusDays(mapDayOffset(schedule.getDayOfWeek()));
 			ClassSession session = ClassSession.builder()
 					.scheduleId(schedule.getScheduleId())
 					.sectionId(schedule.getSectionId())
+					.semesterWeekId(semesterWeek.getSemesterWeekId())
+					.roomId(schedule.getRoomId())
+					.lecturerId(section.getLecturerId())
 					.slotStart(schedule.getSlotStart())
 					.slotEnd(schedule.getSlotEnd())
+					.startTime(schedule.getStartTime())
+					.endTime(schedule.getEndTime())
+					.sessionType(schedule.getSessionType())
+					.practiceGroupNo(schedule.getPracticeGroupNo() == null ? 0 : schedule.getPracticeGroupNo())
 					.sessionStatus(SessionStatus.SCHEDULED)
-					.sessionDate(LocalDate.now())
+					.sessionDate(sessionDate)
 					.build();
 			generated.add(classSessionRepository.save(session));
 		}
@@ -179,6 +203,7 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 			} else {
 				week = SemesterWeek.builder()
 						.semesterId(semesterId)
+						.cohortYear(parseCohortYear(semesterYear))
 						.weekNo(weekNo)
 						.startDate(startDate)
 						.endDate(endDate)
@@ -187,6 +212,29 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 			}
 			semesterWeekRepository.save(week);
 		}
+	}
+
+	private int mapDayOffset(String dayOfWeek) {
+		if (dayOfWeek == null) {
+			return 0;
+		}
+		return switch (dayOfWeek) {
+			case "Mon" -> 0;
+			case "Tue" -> 1;
+			case "Wed" -> 2;
+			case "Thu" -> 3;
+			case "Fri" -> 4;
+			case "Sat" -> 5;
+			case "Sun" -> 6;
+			default -> 0;
+		};
+	}
+
+	private int parseCohortYear(String semesterYear) {
+		if (semesterYear == null || semesterYear.isBlank()) {
+			return LocalDate.now().getYear();
+		}
+		return Integer.parseInt(semesterYear.split("-")[0].trim());
 	}
 }
 

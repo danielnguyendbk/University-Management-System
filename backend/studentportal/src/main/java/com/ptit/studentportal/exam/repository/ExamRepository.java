@@ -24,7 +24,7 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
         @Param("excludeExamId") Long excludeExamId
     );
 
-    @Query("SELECT COUNT(e) FROM Exam e WHERE e.sectionId = :sectionId AND e.status <> 'CANCELLED' AND (:excludeExamId IS NULL OR e.examId <> :excludeExamId)")
+    @Query("SELECT COUNT(e) FROM Exam e WHERE e.sectionId = :sectionId AND e.status <> 'cancel' AND (:excludeExamId IS NULL OR e.examId <> :excludeExamId)")
     long countActiveExamsForSection(@Param("sectionId") Long sectionId, @Param("excludeExamId") Long excludeExamId);
 
     // Get exams for logged in student
@@ -34,7 +34,7 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
            "WHERE en.studentId = :studentId " +
            "AND e.semesterId = :semesterId " +
            "AND en.enrollmentStatus IN ('registered', 'completed') " +
-           "AND e.status = 'SCHEDULED' " +
+           "AND e.status = 'scheduled' " +
            "ORDER BY e.examDate, e.startTime")
     List<Exam> findStudentExams(
         @Param("studentId") Long studentId,
@@ -47,6 +47,6 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
            "JOIN com.ptit.studentportal.registration.entity.Enrollment en ON en.sectionId = cs.sectionId " +
            "WHERE en.studentId = :studentId " +
            "AND en.enrollmentStatus IN ('registered', 'completed') " +
-           "AND e.status <> 'CANCELLED'")
+           "AND e.status <> 'cancel'")
     List<Exam> findActiveExamsForStudent(@Param("studentId") Long studentId);
 }

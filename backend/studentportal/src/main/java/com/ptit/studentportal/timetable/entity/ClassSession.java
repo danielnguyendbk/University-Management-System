@@ -8,16 +8,17 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.ptit.studentportal.timetable.enums.SessionStatus;
+import com.ptit.studentportal.timetable.enums.SessionStatusConverter;
 import com.ptit.studentportal.timetable.enums.SessionType;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -68,21 +69,23 @@ public class ClassSession {
 	@Column(name = "end_time")
 	private LocalTime endTime;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "session_type", nullable = false, length = 20)
+	@Transient
+	@Builder.Default
 	private SessionType sessionType = SessionType.THEORY;
 
 	@Column(name = "practice_group_no", nullable = false)
+	@Builder.Default
 	private Integer practiceGroupNo = 0;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = SessionStatusConverter.class)
 	@Column(name = "session_status", nullable = false, length = 20)
+	@Builder.Default
 	private SessionStatus sessionStatus = SessionStatus.SCHEDULED;
 
 	@Column(name = "note", length = 255)
 	private String note;
 
-	@Column(name = "cancellation_reason", length = 255)
+	@Transient
 	private String cancellationReason;
 
 	@CreationTimestamp

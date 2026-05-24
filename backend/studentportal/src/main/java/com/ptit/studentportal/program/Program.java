@@ -44,7 +44,8 @@ public class Program {
 	private Integer totalCredits;
 
 	@Column(name = "status", nullable = false, length = 20)
-	private String status;
+	@Builder.Default
+	private String status = "active";
 
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)

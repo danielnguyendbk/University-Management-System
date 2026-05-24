@@ -27,6 +27,10 @@ public class Enrollment {
     @Column(name = "section_id", nullable = false)
     private Long sectionId;
 
+    @Builder.Default
+    @Column(name = "practice_group_no", nullable = false)
+    private Integer practiceGroupNo = 0;
+
     /** 'registered' | 'dropped' | 'cancelled' | 'completed' */
     @Column(name = "enrollment_status", nullable = false, length = 20)
     private String enrollmentStatus;

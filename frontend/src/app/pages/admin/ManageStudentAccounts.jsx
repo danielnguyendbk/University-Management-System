@@ -44,10 +44,10 @@ import {
 
 const academicStatusOptions = [
   { value: "", label: "Tất cả" },
-  { value: "STUDYING", label: "Đang học" },
-  { value: "PAUSED", label: "Bảo lưu" },
-  { value: "DROPPED_OUT", label: "Bỏ học" },
-  { value: "GRADUATED", label: "Đã tốt nghiệp" },
+  { value: "studying", label: "Đang học" },
+  { value: "paused", label: "Bảo lưu" },
+  { value: "drop_out", label: "Bỏ học" },
+  { value: "graduated", label: "Đã tốt nghiệp" },
 ];
 
 const statusLabelMap = {
@@ -365,7 +365,7 @@ export function ManageStudentAccounts() {
       </Paper>
 
       {selectedIds.length > 0 ? (
-        <Alert severity="info" action={<Button color="inherit" onClick={() => openStatusDialog(selectedIds, "STUDYING")}>Đổi trạng thái hàng loạt</Button>}>
+        <Alert severity="info" action={<Button color="inherit" onClick={() => openStatusDialog(selectedIds, "studying")}>Đổi trạng thái hàng loạt</Button>}>
           Đã chọn {selectedIds.length} sinh viên.
         </Alert>
       ) : null}
@@ -404,7 +404,7 @@ export function ManageStudentAccounts() {
                 <TableCell align="right">
                   <Stack direction="row" justifyContent="flex-end" spacing={1}>
                     <Tooltip title="Xem chi tiết"><IconButton onClick={() => navigate(`/admin/students/${student.studentId}`)}><Eye size={16} /></IconButton></Tooltip>
-                    <Tooltip title="Đổi trạng thái"><IconButton onClick={() => openStatusDialog([student.studentId], student.academicStatus === "studying" ? "PAUSED" : "STUDYING")}>{student.accountStatus === "active" ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}</IconButton></Tooltip>
+                    <Tooltip title="Đổi trạng thái"><IconButton onClick={() => openStatusDialog([student.studentId], student.academicStatus === "studying" ? "paused" : "studying")}>{student.accountStatus === "active" ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}</IconButton></Tooltip>
                   </Stack>
                 </TableCell>
               </TableRow>

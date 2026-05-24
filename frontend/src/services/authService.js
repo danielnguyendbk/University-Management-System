@@ -1,6 +1,15 @@
 import { getStoredToken } from "./app";
 import { request } from "./apiClient";
 
+function normalizeUser(payload) {
+  if (!payload) return payload;
+  return {
+    ...payload,
+    role: payload.role ? String(payload.role).toUpperCase() : payload.role,
+    status: payload.status ? String(payload.status).toLowerCase() : payload.status,
+  };
+}
+
 export async function login(credentials) {
   const response = await request("/auth/login", {
     method: "POST",
@@ -8,14 +17,16 @@ export async function login(credentials) {
   });
 
   // response is the JSON body: { success, message, data: { token, username, role, fullName } }
-  const payload = response?.data;
+  const payload = normalizeUser(response?.data);
 
   if (payload && payload.token) {
     sessionStorage.setItem("token", payload.token);
     sessionStorage.setItem("user", JSON.stringify({
       username: payload.username,
       role: payload.role,
-      fullName: payload.fullName
+      fullName: payload.fullName,
+      forcePasswordChange: payload.forcePasswordChange,
+      status: payload.status
     }));
   }
 
@@ -26,7 +37,7 @@ export async function getCurrentUser() {
   const userStr = sessionStorage.getItem("user");
   if (userStr) {
     try {
-      return JSON.parse(userStr);
+      return normalizeUser(JSON.parse(userStr));
     } catch (e) {
       console.error("Error parsing user from sessionStorage", e);
     }
@@ -36,7 +47,7 @@ export async function getCurrentUser() {
     method: "GET",
   });
 
-  return response?.data;
+  return normalizeUser(response?.data);
 }
 
 export async function changePassword(body) {
@@ -45,7 +56,7 @@ export async function changePassword(body) {
     body: JSON.stringify(body),
   });
 
-  return payload?.data;
+  return normalizeUser(payload?.data);
 }
 
 export function logout() {

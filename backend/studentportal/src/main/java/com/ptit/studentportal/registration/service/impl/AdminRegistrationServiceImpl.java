@@ -4,7 +4,6 @@ import com.ptit.studentportal.commom.exception.BusinessException;
 import com.ptit.studentportal.lecturer.LecturerRepository;
 import com.ptit.studentportal.registration.dto.request.*;
 import com.ptit.studentportal.registration.dto.response.*;
-import com.ptit.studentportal.registration.enums.RegistrationStatus;
 import com.ptit.studentportal.registration.repository.*;
 import com.ptit.studentportal.registration.service.AdminRegistrationService;
 import com.ptit.studentportal.timetable.entity.CourseSection;
@@ -14,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,8 +39,8 @@ public class AdminRegistrationServiceImpl implements AdminRegistrationService {
                         s.getAcademicYear(),
                         s.getRegistrationOpen(),
                         s.getRegistrationClose(),
-                        s.getRegistrationStatus() != null ? s.getRegistrationStatus().name() : "CLOSED",
-                        s.getStatus() != null ? s.getStatus().name() : null
+                        s.getRegistrationStatus() != null ? s.getRegistrationStatus().name().toLowerCase() : "closed",
+                        s.getStatus() != null ? s.getStatus().name().toLowerCase() : null
                 ))
                 .collect(Collectors.toList());
     }
@@ -52,7 +52,6 @@ public class AdminRegistrationServiceImpl implements AdminRegistrationService {
         
         semester.setRegistrationOpen(request.registrationOpen());
         semester.setRegistrationClose(request.registrationClose());
-        semester.setRegistrationStatus(RegistrationStatus.OPEN);
         semesterRepository.save(semester);
 
         if (request.sendNotification()) {
@@ -64,7 +63,7 @@ public class AdminRegistrationServiceImpl implements AdminRegistrationService {
     public void closeRegistration(Long semesterId) {
         Semester semester = semesterRepository.findById(semesterId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy học kỳ"));
-        semester.setRegistrationStatus(RegistrationStatus.CLOSED);
+        semester.setRegistrationClose(LocalDateTime.now());
         semesterRepository.save(semester);
     }
 
@@ -72,7 +71,7 @@ public class AdminRegistrationServiceImpl implements AdminRegistrationService {
     public void lockRegistration(Long semesterId) {
         Semester semester = semesterRepository.findById(semesterId)
                 .orElseThrow(() -> new BusinessException("Không tìm thấy học kỳ"));
-        semester.setRegistrationStatus(RegistrationStatus.LOCKED);
+        semester.setRegistrationClose(LocalDateTime.now());
         semesterRepository.save(semester);
     }
 

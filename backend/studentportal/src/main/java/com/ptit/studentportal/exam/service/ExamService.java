@@ -96,7 +96,7 @@ public class ExamService {
             JOIN enrollments e ON e.section_id = cs.section_id
                AND e.enrollment_status IN ('registered', 'completed')
             LEFT JOIN exams ex ON ex.section_id = cs.section_id
-               AND ex.status <> 'CANCELLED'
+               AND ex.status <> 'cancel'
             WHERE cs.semester_id = :semesterId
               AND cs.status <> 'cancelled'
               AND ex.exam_id IS NULL
@@ -200,14 +200,14 @@ public class ExamService {
             .sectionId(request.getSectionId())
             .roomId(request.getRoomId())
             .proctorLecturerId(mainLecturerId)
-            .examType(request.getExamType())
-            .examMethod(request.getExamMethod())
+            .examType(normalizeExamType(request.getExamType()))
+            .examMethod(normalizeExamMethod(request.getExamMethod()))
             .examDate(request.getExamDate())
             .startTime(start)
             .endTime(end)
             .seatRange(request.getSeatRange())
             .studentCount(request.getStudentCount())
-            .status(request.getStatus() != null ? request.getStatus() : "SCHEDULED")
+            .status(normalizeExamStatus(request.getStatus(), "scheduled"))
             .note(request.getNote())
             .build();
 
@@ -219,7 +219,7 @@ public class ExamService {
                 ExamInvigilator eInv = ExamInvigilator.builder()
                     .examId(saved.getExamId())
                     .lecturerId(inv.getLecturerId())
-                    .role(inv.getRole() != null ? inv.getRole() : "ASSISTANT")
+                    .role(normalizeInvigilatorRole(inv.getRole()))
                     .note(inv.getNote())
                     .build();
                 examInvigilatorRepository.save(eInv);
@@ -262,14 +262,14 @@ public class ExamService {
 
         existing.setRoomId(request.getRoomId());
         existing.setProctorLecturerId(mainLecturerId);
-        existing.setExamType(request.getExamType());
-        existing.setExamMethod(request.getExamMethod());
+        existing.setExamType(normalizeExamType(request.getExamType()));
+        existing.setExamMethod(normalizeExamMethod(request.getExamMethod()));
         existing.setExamDate(request.getExamDate());
         existing.setStartTime(start);
         existing.setEndTime(end);
         existing.setSeatRange(request.getSeatRange());
         existing.setStudentCount(request.getStudentCount());
-        existing.setStatus(request.getStatus());
+        existing.setStatus(normalizeExamStatus(request.getStatus(), "scheduled"));
         existing.setNote(request.getNote());
 
         Exam saved = examRepository.save(existing);
@@ -282,7 +282,7 @@ public class ExamService {
                 ExamInvigilator eInv = ExamInvigilator.builder()
                     .examId(examId)
                     .lecturerId(inv.getLecturerId())
-                    .role(inv.getRole() != null ? inv.getRole() : "ASSISTANT")
+                    .role(normalizeInvigilatorRole(inv.getRole()))
                     .note(inv.getNote())
                     .build();
                 examInvigilatorRepository.save(eInv);
@@ -298,7 +298,7 @@ public class ExamService {
     public ExamResponse cancelExam(Long examId) {
         Exam existing = examRepository.findById(examId)
             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy lịch thi."));
-        existing.setStatus("CANCELLED");
+        existing.setStatus("cancel");
         return mapToResponse(examRepository.save(existing));
     }
 
@@ -335,7 +335,7 @@ public class ExamService {
         ExamInvigilator inv = ExamInvigilator.builder()
             .examId(examId)
             .lecturerId(request.getLecturerId())
-            .role(request.getRole() != null ? request.getRole() : "ASSISTANT")
+            .role(normalizeInvigilatorRole(request.getRole()))
             .note(request.getNote())
             .build();
 
@@ -540,7 +540,7 @@ public class ExamService {
         for (ExamInvigilator duty : duties) {
             if (excludeExamId != null && duty.getExamId().equals(excludeExamId)) continue;
             Exam ex = examRepository.findById(duty.getExamId()).orElse(null);
-            if (ex != null && !"CANCELLED".equalsIgnoreCase(ex.getStatus())) {
+            if (ex != null && !"cancel".equalsIgnoreCase(ex.getStatus())) {
                 if (isTimeOverlap(date, start, end, ex.getExamDate(), ex.getStartTime(), ex.getEndTime())) {
                     throw new AppException(HttpStatus.BAD_REQUEST, "Giảng viên coi thi bị trùng lịch coi thi với ca thi khác.");
                 }
@@ -583,14 +583,14 @@ public class ExamService {
                 .lecturerId(inv.getLecturerId())
                 .lecturerCode(l != null ? l.getLecturerCode() : "")
                 .lecturerName(l != null ? l.getFullName() : "")
-                .role(inv.getRole())
+                .role(toUiInvigilatorRole(inv.getRole()))
                 .note(inv.getNote())
                 .build();
         }).collect(Collectors.toList());
 
         // Perform dynamic auditing to flag warnings/errors
         List<ExamResponse.ConstraintResponse> constraints = new ArrayList<>();
-        if (invs.isEmpty() && !"DRAFT".equalsIgnoreCase(exam.getStatus())) {
+        if (invs.isEmpty() && !"draft".equalsIgnoreCase(exam.getStatus())) {
             constraints.add(ExamResponse.ConstraintResponse.builder()
                 .type("missing_data")
                 .severity("WARNING")
@@ -616,16 +616,65 @@ public class ExamService {
             .roomCode(room != null ? room.getRoomCode() : "Chưa xếp")
             .building(bCode)
             .examType(exam.getExamType())
-            .examMethod(exam.getExamMethod())
+            .examMethod(toUiExamMethod(exam.getExamMethod()))
             .examDate(exam.getExamDate())
             .startTime(exam.getStartTime().format(timeFormatter))
             .endTime(exam.getEndTime().format(timeFormatter))
             .seatRange(exam.getSeatRange())
             .studentCount(exam.getStudentCount())
-            .status(exam.getStatus())
+            .status(toUiExamStatus(exam.getStatus()))
             .note(exam.getNote())
             .invigilators(invs)
             .constraints(constraints)
             .build();
+    }
+
+    private String normalizeExamStatus(String status, String defaultValue) {
+        if (status == null || status.isBlank()) {
+            return defaultValue;
+        }
+        String normalized = status.trim().toLowerCase();
+        return switch (normalized) {
+            case "cancelled", "canceled", "cancel" -> "cancel";
+            case "draft", "scheduled", "completed" -> normalized;
+            default -> normalized;
+        };
+    }
+
+    private String normalizeExamMethod(String method) {
+        return method == null || method.isBlank() ? null : method.trim().toLowerCase();
+    }
+
+    private String normalizeExamType(String type) {
+        return type == null || type.isBlank() ? null : type.trim().toLowerCase();
+    }
+
+    private String normalizeInvigilatorRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "assistant";
+        }
+        String normalized = role.trim().toLowerCase();
+        return (normalized.contains("main") || normalized.contains("chinh") || normalized.contains("chÃ­nh")) ? "main" : "assistant";
+    }
+
+    private String toUiExamStatus(String status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status.trim().toLowerCase()) {
+            case "draft" -> "DRAFT";
+            case "scheduled" -> "SCHEDULED";
+            case "cancel", "cancelled", "canceled" -> "CANCELLED";
+            case "completed" -> "COMPLETED";
+            default -> status;
+        };
+    }
+
+    private String toUiExamMethod(String method) {
+        return method == null ? null : method.trim().toUpperCase();
+    }
+
+    private String toUiInvigilatorRole(String role) {
+        return "main".equalsIgnoreCase(role) ? "MAIN" : "ASSISTANT";
     }
 }

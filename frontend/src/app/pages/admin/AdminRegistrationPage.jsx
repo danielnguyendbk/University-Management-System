@@ -107,10 +107,10 @@ export function AdminRegistrationPage() {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'OPEN': return 'success';
-      case 'CLOSED': return 'default';
-      case 'LOCKED': return 'error';
+    switch (String(status).toLowerCase()) {
+      case 'open': return 'success';
+      case 'closed': return 'default';
+      case 'locked': return 'error';
       default: return 'primary';
     }
   };
@@ -191,7 +191,7 @@ export function AdminRegistrationPage() {
                       size="small" 
                       color="warning"
                       startIcon={<Square size={16} />}
-                      disabled={s.registrationStatus === 'CLOSED'}
+                      disabled={String(s.registrationStatus).toLowerCase() === 'closed'}
                       onClick={() => handleAction(s.semesterId, 'close')}
                     >
                       Đóng
@@ -201,7 +201,7 @@ export function AdminRegistrationPage() {
                       size="small" 
                       color="error"
                       startIcon={<Lock size={16} />}
-                      disabled={s.registrationStatus === 'LOCKED'}
+                      disabled={String(s.registrationStatus).toLowerCase() === 'locked'}
                       onClick={() => handleAction(s.semesterId, 'lock')}
                     >
                       Khóa

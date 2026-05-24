@@ -82,7 +82,7 @@ public class ExamImportService {
                 "- section_code, room_code, lecturer_code phải lấy chính xác từ sheet LOOKUPS.",
                 "- exam_date nhập dạng yyyy-MM-dd (vd: 2026-06-01).",
                 "- start_time và end_time nhập dạng HH:mm (vd: 08:00, 09:30).",
-                "- Nếu status = SCHEDULED thì cần có ít nhất 1 giám thị MAIN trong INVIGILATORS_IMPORT.",
+                "- Nếu status = scheduled thì cần có ít nhất 1 giám thị main trong INVIGILATORS_IMPORT.",
                 "- Giảng viên không được coi thi lớp mình dạy."
             };
             for(int i = 0; i < instructions.length; i++) {
@@ -121,7 +121,7 @@ public class ExamImportService {
                 sampleExamHeader.getCell(i).setCellStyle(headerStyle);
             }
             Row sampleExamRow = sampleSheet.createRow(2);
-            String[] examSampleData = {"CREATE", "4", "CN205.01", "A101", "midterm", "WRITTEN", "2026-06-01", "08:00", "09:30", "DRAFT", "Thi giữa kỳ"};
+            String[] examSampleData = {"CREATE", "4", "CN205.01", "A101", "midterm", "written", "2026-06-01", "08:00", "09:30", "draft", "Thi giữa kỳ"};
             for (int i = 0; i < examSampleData.length; i++) sampleExamRow.createCell(i).setCellValue(examSampleData[i]);
             
             sampleSheet.createRow(4).createCell(0).setCellValue("MẪU GIÁM THỊ (Dữ liệu tham khảo, copy qua sheet chính)");
@@ -131,7 +131,7 @@ public class ExamImportService {
                 sampleInvHeader.getCell(i).setCellStyle(headerStyle);
             }
             Row sampleInvRow = sampleSheet.createRow(6);
-            String[] invSampleData = {"4", "CN205.01", "2026-06-01", "08:00", "A101", "GV002", "MAIN", "Giám thị chính"};
+            String[] invSampleData = {"4", "CN205.01", "2026-06-01", "08:00", "A101", "GV002", "main", "Giám thị chính"};
             for (int i = 0; i < invSampleData.length; i++) sampleInvRow.createCell(i).setCellValue(invSampleData[i]);
             
             for(int i = 0; i < 11; i++) sampleSheet.autoSizeColumn(i);
@@ -440,7 +440,7 @@ public class ExamImportService {
                         .startTime(payload.startTime)
                         .endTime(payload.endTime)
                         .studentCount(payload.studentCount)
-                        .status(payload.status != null && !payload.status.isEmpty() ? payload.status : "DRAFT")
+                        .status(payload.status != null && !payload.status.isEmpty() ? payload.status : "draft")
                         .build();
                     response.getPreviewItems().add(previewItem);
                     
@@ -476,14 +476,14 @@ public class ExamImportService {
                         .sectionId(ep.sectionId)
                         .roomId(ep.roomId)
                         .proctorLecturerId(mainLecturerId)
-                        .examType(ep.examType != null && !ep.examType.isEmpty() ? ep.examType : "midterm")
-                        .examMethod(ep.examMethod != null && !ep.examMethod.isEmpty() ? ep.examMethod : "WRITTEN")
+                        .examType(normalizeExamType(ep.examType != null && !ep.examType.isEmpty() ? ep.examType : "midterm"))
+                        .examMethod(normalizeExamMethod(ep.examMethod != null && !ep.examMethod.isEmpty() ? ep.examMethod : "written"))
                         .examDate(ep.examDate)
                         .startTime(ep.startTime)
                         .endTime(ep.endTime)
                         .studentCount(ep.studentCount)
                         .seatRange(null)
-                        .status(ep.status != null && !ep.status.isEmpty() ? ep.status : "DRAFT")
+                        .status(normalizeExamStatus(ep.status, "draft"))
                         .note(ep.note)
                         .build();
                         
@@ -493,7 +493,7 @@ public class ExamImportService {
                         ExamInvigilator eInv = ExamInvigilator.builder()
                             .examId(saved.getExamId())
                             .lecturerId(ip.lecturerId)
-                            .role(ip.role != null && !ip.role.isEmpty() ? ip.role : "ASSISTANT")
+                            .role(normalizeInvigilatorRole(ip.role))
                             .note(ip.note)
                             .build();
                         examInvigilatorRepository.save(eInv);
@@ -627,6 +627,34 @@ public class ExamImportService {
             addError(res, sheet, rowNum, field, "ERROR", "Không thể đọc giá trị giờ");
         }
         return null;
+    }
+
+    private String normalizeExamStatus(String status, String defaultValue) {
+        if (status == null || status.isBlank()) {
+            return defaultValue;
+        }
+        String normalized = status.trim().toLowerCase();
+        return switch (normalized) {
+            case "cancelled", "canceled", "cancel" -> "cancel";
+            case "draft", "scheduled", "completed" -> normalized;
+            default -> normalized;
+        };
+    }
+
+    private String normalizeExamMethod(String method) {
+        return method == null || method.isBlank() ? null : method.trim().toLowerCase();
+    }
+
+    private String normalizeExamType(String type) {
+        return type == null || type.isBlank() ? null : type.trim().toLowerCase();
+    }
+
+    private String normalizeInvigilatorRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "assistant";
+        }
+        String normalized = role.trim().toLowerCase();
+        return (normalized.contains("main") || normalized.contains("chinh") || normalized.contains("chính")) ? "main" : "assistant";
     }
 
     private static class ExamPayload {

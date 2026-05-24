@@ -125,6 +125,7 @@ public class SepayWebhookService {
         payment.setPaymentStatus("success");
         payment.setPaidAt(LocalDateTime.now());
         payment.setTransactionCode(transactionId);
+        payment.setRawWebhookPayload(rawJson);
         paymentRepository.save(payment);
 
         // Update TuitionFee
@@ -142,7 +143,7 @@ public class SepayWebhookService {
         if (newPaid.compareTo(tuitionFee.getFinalAmount()) >= 0) {
              tuitionFee.setStatus("paid");
         } else if (newPaid.compareTo(BigDecimal.ZERO) > 0) {
-             tuitionFee.setStatus("partial");
+             tuitionFee.setStatus("partical");
         } else {
              tuitionFee.setStatus("unpaid");
         }

@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
 				.body(ApiResponse.error(exception.getMessage()));
 	}
 
+	@ExceptionHandler(StructuredApiException.class)
+	public ResponseEntity<java.util.Map<String, Object>> handleStructuredApiException(StructuredApiException exception) {
+		return ResponseEntity.status(exception.getStatus())
+				.body(exception.getBody());
+	}
+
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException exception) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)

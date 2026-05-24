@@ -18,7 +18,6 @@ import com.ptit.studentportal.timetable.entity.Room;
 import com.ptit.studentportal.timetable.entity.Schedule;
 import com.ptit.studentportal.timetable.entity.Semester;
 import com.ptit.studentportal.timetable.enums.SessionType;
-import com.ptit.studentportal.timetable.enums.TimetableStatus;
 import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.repository.CourseRepository;
 import com.ptit.studentportal.timetable.repository.CourseSectionRepository;
@@ -119,7 +118,6 @@ public class ScheduleServiceImpl implements ScheduleService {
 				.sessionType(sessionType)
 				.practiceGroupNo(practiceGroupNo)
 				.note(request.note())
-				.status("ACTIVE")
 				.build();
 
 		schedule = scheduleRepository.save(schedule);
@@ -145,11 +143,8 @@ public class ScheduleServiceImpl implements ScheduleService {
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc phan hien tai."));
 		Long currentSemesterId = currentSection.getSemesterId();
 
-		Semester semester = semesterRepository.findById(currentSemesterId)
+		semesterRepository.findById(currentSemesterId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
-		if (semester.getTimetableStatus() == TimetableStatus.LOCKED) {
-			throw new IllegalArgumentException("Hoc ky da bi khoa, khong the cap nhat lich mau.");
-		}
 
 		Long semesterId = request.semesterId() != null ? request.semesterId() : currentSemesterId;
 		Long sectionId = request.sectionId() != null ? request.sectionId() : schedule.getSectionId();
@@ -210,9 +205,6 @@ public class ScheduleServiceImpl implements ScheduleService {
 		if (request.note() != null) {
 			schedule.setNote(request.note());
 		}
-		if (request.status() != null) {
-			schedule.setStatus(request.status());
-		}
 
 		schedule = scheduleRepository.save(schedule);
 		return mapToScheduleResponse(schedule);
@@ -222,11 +214,6 @@ public class ScheduleServiceImpl implements ScheduleService {
 	public void deleteSchedule(Long scheduleId) {
 		Schedule schedule = scheduleRepository.findById(scheduleId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay lich mau."));
-		if (classSessionRepository.existsByScheduleId(scheduleId)) {
-			schedule.setStatus("INACTIVE");
-			scheduleRepository.save(schedule);
-			return;
-		}
 		scheduleRepository.delete(schedule);
 	}
 
@@ -268,9 +255,9 @@ public class ScheduleServiceImpl implements ScheduleService {
 				.slotEnd(schedule.getSlotEnd())
 				.startTime(schedule.getStartTime())
 				.endTime(schedule.getEndTime())
-				.sessionType(schedule.getSessionType() != null ? schedule.getSessionType().name() : null)
+				.sessionType(schedule.getSessionType() != null ? schedule.getSessionType().getDbValue() : null)
 				.practiceGroupNo(schedule.getPracticeGroupNo())
-				.status(schedule.getStatus())
+				.status(null)
 				.note(schedule.getNote())
 				.build();
 	}

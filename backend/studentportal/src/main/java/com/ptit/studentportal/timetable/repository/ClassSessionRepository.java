@@ -31,7 +31,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			FROM class_sessions cs
 			WHERE cs.lecturer_id = :lecturerId
 			  AND cs.session_date = :sessionDate
-			  AND cs.session_status <> 'CANCELLED'
+			  AND LOWER(cs.session_status) <> 'cancelled'
 			  AND NOT (:newSlotEnd < cs.slot_start OR :newSlotStart > cs.slot_end)
 			  AND (:excludeSessionId IS NULL OR cs.session_id <> :excludeSessionId)
 			""", nativeQuery = true)
@@ -47,10 +47,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			SELECT cs.*
 			FROM class_sessions cs
 			JOIN course_sections sec ON sec.section_id = cs.section_id
-			JOIN semesters sem ON sem.semester_id = sec.semester_id
 			WHERE cs.lecturer_id = :lecturerId
 			  AND cs.session_date BETWEEN :fromDate AND :toDate
-			  AND sem.timetable_status IN ('PUBLISHED', 'LOCKED')
 			""", nativeQuery = true)
 	List<ClassSession> findLecturerSessionsPublished(
 			@Param("lecturerId") Long lecturerId,
@@ -95,8 +93,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			  cs.slot_end as slotEnd, 
 			  cs.start_time as startTime, 
 			  cs.end_time as endTime,
-			  COALESCE(s.session_type, 'THEORY') as sessionType, 
-			  COALESCE(s.practice_group_no, 0) as practiceGroupNo, 
+			  CASE WHEN COALESCE(cs.practice_group_no, s.practice_group_no, 0) > 0 THEN 'practice' ELSE COALESCE(s.session_type, 'theory') END as sessionType,
+			  COALESCE(cs.practice_group_no, s.practice_group_no, 0) as practiceGroupNo,
 			  cs.session_status as sessionStatus, 
 			  cs.note as note
 			FROM class_sessions cs
@@ -112,7 +110,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			  AND sw.week_no = :weekNo
 			  AND (:buildingId IS NULL OR b.building_id = :buildingId)
 			  AND (:roomId IS NULL OR r.room_id = :roomId)
-			  AND (:sessionType IS NULL OR COALESCE(s.session_type, 'THEORY') = :sessionType)
+			  AND (:sessionType IS NULL OR LOWER(CASE WHEN COALESCE(cs.practice_group_no, s.practice_group_no, 0) > 0 THEN 'practice' ELSE COALESCE(s.session_type, 'theory') END) = LOWER(:sessionType))
 			  AND (:lecturerId IS NULL OR cs.lecturer_id = :lecturerId)
 			  AND (:sectionId IS NULL OR cs.section_id = :sectionId)
 			  ORDER BY cs.session_date ASC, cs.slot_start ASC
@@ -149,8 +147,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			    cs.slot_end AS slotEnd,
 			    cs.start_time AS startTime,
 			    cs.end_time AS endTime,
-			    COALESCE(s.session_type, 'THEORY') AS sessionType,
-			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    CASE WHEN COALESCE(cs.practice_group_no, s.practice_group_no, 0) > 0 THEN 'practice' ELSE COALESCE(s.session_type, 'theory') END AS sessionType,
+			    COALESCE(cs.practice_group_no, s.practice_group_no, 0) AS practiceGroupNo,
 			    cs.session_status AS sessionStatus,
 			    cs.note AS note
 			FROM class_sessions cs
@@ -195,8 +193,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			    cs.slot_end AS slotEnd,
 			    cs.start_time AS startTime,
 			    cs.end_time AS endTime,
-			    COALESCE(s.session_type, 'THEORY') AS sessionType,
-			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    CASE WHEN COALESCE(cs.practice_group_no, s.practice_group_no, 0) > 0 THEN 'practice' ELSE COALESCE(s.session_type, 'theory') END AS sessionType,
+			    COALESCE(cs.practice_group_no, s.practice_group_no, 0) AS practiceGroupNo,
 			    cs.session_status AS sessionStatus,
 			    cs.note AS note
 			FROM class_sessions cs
@@ -238,8 +236,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 			    cs.slot_end AS slotEnd,
 			    cs.start_time AS startTime,
 			    cs.end_time AS endTime,
-			    COALESCE(s.session_type, 'THEORY') AS sessionType,
-			    COALESCE(s.practice_group_no, 0) AS practiceGroupNo,
+			    CASE WHEN COALESCE(cs.practice_group_no, s.practice_group_no, 0) > 0 THEN 'practice' ELSE COALESCE(s.session_type, 'theory') END AS sessionType,
+			    COALESCE(cs.practice_group_no, s.practice_group_no, 0) AS practiceGroupNo,
 			    cs.session_status AS sessionStatus,
 			    cs.note AS note
 			FROM class_sessions cs

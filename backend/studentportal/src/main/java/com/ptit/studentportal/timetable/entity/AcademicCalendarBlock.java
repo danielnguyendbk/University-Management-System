@@ -7,13 +7,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.ptit.studentportal.timetable.enums.CalendarBlockType;
+import com.ptit.studentportal.timetable.enums.CalendarBlockTypeConverter;
 
 import jakarta.persistence.Access;
 import jakarta.persistence.AccessType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,7 +48,7 @@ public class AcademicCalendarBlock {
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
-	@Enumerated(EnumType.STRING)
+	@Convert(converter = CalendarBlockTypeConverter.class)
 	@Column(name = "block_type", nullable = false, length = 20)
 	private CalendarBlockType blockType;
 
@@ -56,6 +56,7 @@ public class AcademicCalendarBlock {
 	private String title;
 
 	@Column(name = "is_teaching_allowed", nullable = false)
+	@Builder.Default
 	private Boolean teachingAllowed = Boolean.TRUE;
 
 	@Column(name = "note", length = 255)

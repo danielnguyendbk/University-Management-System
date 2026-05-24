@@ -54,9 +54,7 @@ public class TimetableGenerationServiceImpl implements TimetableGenerationServic
 		semesterRepository.findById(semesterId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay hoc ky."));
 
-		List<Schedule> schedules = scheduleRepository.findActiveSchedulesBySemesterId(semesterId).stream()
-				.filter(this::isActiveSchedule)
-				.toList();
+		List<Schedule> schedules = scheduleRepository.findActiveSchedulesBySemesterId(semesterId);
 
 		List<AcademicCalendarBlock> blocks = calendarBlockRepository.findBySemesterId(semesterId);
 		List<String> warnings = new ArrayList<>();
@@ -167,10 +165,6 @@ public class TimetableGenerationServiceImpl implements TimetableGenerationServic
 				.skippedCount(skipped)
 				.warnings(warnings)
 				.build();
-	}
-
-	private boolean isActiveSchedule(Schedule schedule) {
-		return schedule.getStatus() == null || !"INACTIVE".equalsIgnoreCase(schedule.getStatus());
 	}
 
 	private int mapDayOffset(String dayOfWeek) {

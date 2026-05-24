@@ -24,7 +24,8 @@ public class ExamInvigilator {
     private Long lecturerId;
 
     @Column(name = "role", nullable = false)
-    private String role = "ASSISTANT";
+    @Builder.Default
+    private String role = "assistant";
 
     @Column(name = "note", length = 255)
     private String note;

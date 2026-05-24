@@ -52,7 +52,7 @@ public class LecturerAdminService {
 	private static final List<String> TEMPLATE_HEADERS = List.of(
 			"lecturer_code",
 			"full_name",
-			"work_email",
+			"email",
 			"academic_title",
 			"department_code",
 			"phone"
@@ -241,7 +241,7 @@ public class LecturerAdminService {
 			Map<String, String> row = rows.get(index);
 			String lecturerCode = normalize(row.get("lecturer_code"));
 			String fullName = normalize(row.get("full_name"));
-			String workEmail = resolveWorkEmail(row.get("work_email"), lecturerCode);
+			String workEmail = resolveWorkEmail(row.getOrDefault("email", row.get("work_email")), lecturerCode);
 			String academicTitle = normalize(row.get("academic_title"));
 			String departmentCode = normalize(row.get("department_code"));
 			String phone = normalize(row.get("phone"));
@@ -257,7 +257,7 @@ public class LecturerAdminService {
 				continue;
 			}
 			if (!seenWorkEmails.add(workEmail.toLowerCase(Locale.ROOT))) {
-				errors.add(new ImportErrorItem(rowNumber, "work_email", "Duplicate work email in file"));
+				errors.add(new ImportErrorItem(rowNumber, "email", "Duplicate email in file"));
 				continue;
 			}
 			if (lecturerRepository.existsByLecturerCode(lecturerCode)) {
@@ -265,7 +265,7 @@ public class LecturerAdminService {
 				continue;
 			}
 			if (lecturerRepository.existsByWorkEmail(workEmail)) {
-				errors.add(new ImportErrorItem(rowNumber, "work_email", "Work email already exists"));
+				errors.add(new ImportErrorItem(rowNumber, "email", "Email already exists"));
 				continue;
 			}
 			if (userRepository.existsByUsername(username)) {
@@ -338,7 +338,7 @@ public class LecturerAdminService {
 
 	public List<LecturerSectionResponse> loadSections(Long lecturerId) {
 		List<?> rows = entityManager.createNativeQuery("""
-			select cs.section_id, cs.section_code, c.course_code, c.course_name, s.semester_name, s.academic_year, cs.status
+			select cs.section_id, cs.section_code, c.course_code, c.course_name, s.semester_code, s.semester_year, cs.status
 			from course_sections cs
 			join courses c on cs.course_id = c.course_id
 			join semesters s on cs.semester_id = s.semester_id

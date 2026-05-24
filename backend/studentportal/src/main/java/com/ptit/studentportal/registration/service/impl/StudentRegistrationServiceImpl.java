@@ -54,8 +54,8 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
                         resolveAcademicYear(s),
                         s.getRegistrationOpen(),
                         s.getRegistrationClose(),
-                        s.getRegistrationStatus() == null ? "CLOSED" : s.getRegistrationStatus().name(),
-                        s.getStatus() == null ? null : s.getStatus().name()
+                        s.getRegistrationStatus() == null ? "closed" : s.getRegistrationStatus().name().toLowerCase(),
+                        s.getStatus() == null ? null : s.getStatus().name().toLowerCase()
                 ))
                 .toList();
     }
@@ -318,7 +318,7 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         }
 
         // 10. Update enrollment
-        enrollment.setEnrollmentStatus("Đã hủy");
+        enrollment.setEnrollmentStatus("dropped");
         enrollment.setDroppedAt(now);
         enrollment.setNote("Dropped by student");
 

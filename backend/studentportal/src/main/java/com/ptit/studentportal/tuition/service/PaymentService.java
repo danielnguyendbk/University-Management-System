@@ -111,7 +111,7 @@ public class PaymentService {
         if (newPaid.compareTo(tuitionFee.getFinalAmount()) >= 0) {
             tuitionFee.setStatus("paid");
         } else {
-            tuitionFee.setStatus("partial");
+            tuitionFee.setStatus("partical");
         }
         tuitionFeeRepository.save(tuitionFee);
 

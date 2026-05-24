@@ -68,8 +68,8 @@ public class AdminLookupController {
                         (s.getAcademicYear() != null && !s.getAcademicYear().trim().isEmpty())
                                 ? s.getAcademicYear()
                                 : s.getSemesterYear(),
-                        s.getStatus() != null ? s.getStatus().name() : null,
-                        s.getTimetableStatus() != null ? s.getTimetableStatus().name() : null,
+                        s.getStatus() != null ? s.getStatus().name().toLowerCase() : null,
+                        s.getTimetableStatus() != null ? s.getTimetableStatus().name().toLowerCase() : null,
                         s.getPricePerCredit()
                 ))
                 .toList();

@@ -543,7 +543,7 @@ public class StudentAdminService {
 	}
 
 	private boolean isInactiveStatus(Student.AcademicStatus status) {
-		return status == Student.AcademicStatus.DROPPED_OUT || status == Student.AcademicStatus.GRADUATED;
+		return status == Student.AcademicStatus.DROP_OUT || status == Student.AcademicStatus.GRADUATED;
 	}
 
 	private String generateTemporaryPassword(String username) {

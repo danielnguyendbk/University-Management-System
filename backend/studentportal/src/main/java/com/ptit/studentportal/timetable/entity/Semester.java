@@ -6,17 +6,17 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.ptit.studentportal.registration.enums.RegistrationStatus;
 import com.ptit.studentportal.timetable.enums.SemesterStatus;
 import com.ptit.studentportal.timetable.enums.TimetableStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,11 +43,8 @@ public class Semester {
 	@Column(name = "semester_year", nullable = false, length = 20)
 	private String semesterYear;
 
-	@Column(name = "semester_short_name", length = 20)
-	private String semesterShortName;
-
-	@Column(name = "semester_name", length = 150)
-	private String semesterName;
+	@Column(name = "price_per_credit")
+	private java.math.BigDecimal pricePerCredit;
 
 	@Column(name = "start_date", nullable = false)
 	private LocalDate startDate;
@@ -55,34 +52,21 @@ public class Semester {
 	@Column(name = "end_date", nullable = false)
 	private LocalDate endDate;
 
+	@Column(name = "tuition_due_date")
+	private LocalDate tuitionDueDate;
+
 	@Column(name = "registration_open")
 	private LocalDateTime registrationOpen;
 
 	@Column(name = "registration_close")
 	private LocalDateTime registrationClose;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "registration_status", nullable = false, length = 20)
-	@Builder.Default
-	private com.ptit.studentportal.registration.enums.RegistrationStatus registrationStatus = com.ptit.studentportal.registration.enums.RegistrationStatus.CLOSED;
-
-	@Enumerated(EnumType.STRING)
-	@Column(name = "status", length = 20)
+	@Transient
 	private SemesterStatus status;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "timetable_status", nullable = false, length = 20)
+	@Transient
 	@Builder.Default
 	private TimetableStatus timetableStatus = TimetableStatus.DRAFT;
-
-	@Column(name = "academic_code", length = 50)
-	private String academicCode;
-
-	@Column(name = "academic_year", length = 20)
-	private String academicYear;
-
-	@Column(name = "price_per_credit")
-	private java.math.BigDecimal pricePerCredit;
 
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
@@ -91,4 +75,26 @@ public class Semester {
 	@UpdateTimestamp
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
+
+	public String getSemesterName() {
+		return semesterCode;
+	}
+
+	public String getAcademicYear() {
+		return semesterYear;
+	}
+
+	public RegistrationStatus getRegistrationStatus() {
+		LocalDateTime now = LocalDateTime.now();
+		if (registrationOpen != null && now.isBefore(registrationOpen)) {
+			return RegistrationStatus.CLOSED;
+		}
+		if (registrationClose != null && now.isAfter(registrationClose)) {
+			return RegistrationStatus.CLOSED;
+		}
+		if (registrationOpen == null && registrationClose == null) {
+			return RegistrationStatus.CLOSED;
+		}
+		return RegistrationStatus.OPEN;
+	}
 }

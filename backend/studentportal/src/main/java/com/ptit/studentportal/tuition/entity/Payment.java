@@ -36,10 +36,10 @@ public class Payment {
     @Column(name = "transaction_code", length = 100, unique = true)
     private String transactionCode;
 
-    @Column(name = "order_code", length = 50, unique = true)
+    @Column(name = "order_code", length = 80, unique = true)
     private String orderCode;
 
-    @Column(name = "qr_image_url", length = 500)
+    @Column(name = "qr_image_url", columnDefinition = "TEXT")
     private String qrImageUrl;
 
     @Builder.Default
@@ -51,13 +51,16 @@ public class Payment {
 
     @Builder.Default
     @Column(name = "processed_by", nullable = false, length = 100)
-    private String processedBy = "SYSTEM";
+    private String processedBy = "system";
 
     @Column(name = "note", length = 255)
     private String note;
 
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
+
+    @Column(name = "raw_webhook_payload", columnDefinition = "JSON")
+    private String rawWebhookPayload;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

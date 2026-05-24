@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { PageHeader } from "../../components/common/PageHeader";
 import { getStudent, listDepartments, listPrograms, updateStudent, updateStudentStatus } from "../../../services/adminApi";
 
-const academicStatusOptions = ["STUDYING", "PAUSED", "DROPPED_OUT", "GRADUATED"];
+const academicStatusOptions = ["studying", "paused", "drop_out", "graduated"];
 
 export function StudentDetailPage() {
   const { id } = useParams();
@@ -119,7 +119,7 @@ export function StudentDetailPage() {
           </Stack>
           <Alert severity="info">Địa chỉ {student.address || "-"} · Ngành {student.programName || "-"} · Khoa {student.departmentName || "-"}</Alert>
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            {academicStatusOptions.map((item) => <Button key={item} variant={item === student.academicStatus?.toUpperCase() ? "contained" : "outlined"} onClick={() => handleStatusChange(item)}>{item}</Button>)}
+            {academicStatusOptions.map((item) => <Button key={item} variant={item === String(student.academicStatus || "").toLowerCase() ? "contained" : "outlined"} onClick={() => handleStatusChange(item)}>{item}</Button>)}
           </Stack>
         </Stack>
       </Paper>

@@ -13,7 +13,6 @@ const blockTypeOptions = [
   { value: "HOLIDAY", label: "Ngày nghỉ" },
   { value: "BREAK", label: "Nghỉ giữa kỳ" },
   { value: "EXAM_WEEK", label: "Tuần thi" },
-  { value: "EVENT", label: "Sự kiện" },
 ];
 
 const defaultForm = {

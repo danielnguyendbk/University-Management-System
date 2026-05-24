@@ -73,6 +73,7 @@ public class TuitionCalculationService {
                 BigDecimal finalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
                 BigDecimal paidAmount = existing.getPaidAmount() != null ? existing.getPaidAmount() : BigDecimal.ZERO;
 
+                existing.setTotalCredits(totalCredits);
                 existing.setTotalAmount(totalAmount);
                 existing.setFinalAmount(finalAmount);
 
@@ -80,7 +81,7 @@ public class TuitionCalculationService {
                 if (paidAmount.compareTo(finalAmount) >= 0) {
                     existing.setStatus("paid");
                 } else if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
-                    existing.setStatus("partial");
+                    existing.setStatus("partical");
                 } else {
                     existing.setStatus("unpaid");
                 }
@@ -89,6 +90,7 @@ public class TuitionCalculationService {
                 TuitionFee tuitionFee = TuitionFee.builder()
                         .studentId(studentId)
                         .semesterId(semesterId)
+                        .totalCredits(totalCredits)
                         .totalAmount(totalAmount)
                         .discountAmount(BigDecimal.ZERO)
                         .finalAmount(totalAmount)

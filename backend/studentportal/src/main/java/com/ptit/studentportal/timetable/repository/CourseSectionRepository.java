@@ -39,8 +39,8 @@ public interface CourseSectionRepository extends JpaRepository<CourseSection, Lo
 			    c.course_id AS courseId,
 			    c.course_code AS courseCode,
 			    c.course_name AS courseName,
-			    sc.class_id AS classId,
-			    sc.class_code AS classCode,
+			    NULL AS classId,
+			    NULL AS classCode,
 			    sec.lecturer_id AS lecturerId,
 			    l.lecturer_code AS lecturerCode,
 			    l.full_name AS lecturerName,
@@ -50,7 +50,6 @@ public interface CourseSectionRepository extends JpaRepository<CourseSection, Lo
 			    EXISTS(SELECT 1 FROM class_sessions WHERE section_id = sec.section_id) AS hasGeneratedSessions
 			FROM course_sections sec
 			JOIN courses c ON c.course_id = sec.course_id
-			LEFT JOIN student_classes sc ON sc.class_id = sec.class_id
 			LEFT JOIN lecturers l ON l.lecturer_id = sec.lecturer_id
 			WHERE sec.semester_id = :semesterId
 			ORDER BY c.course_code, sec.section_code
@@ -114,10 +113,10 @@ public interface CourseSectionRepository extends JpaRepository<CourseSection, Lo
 			
 			    sem.semester_id AS semesterId,
 			    sem.semester_code AS semesterCode,
-			    sem.semester_name AS semesterName,
+			    sem.semester_code AS semesterName,
 			
-			    sc.class_id AS classId,
-			    sc.class_code AS classCode,
+			    NULL AS classId,
+			    NULL AS classCode,
 			
 			    sec.max_capacity AS maxCapacity,
 			    sec.status AS status,
@@ -140,7 +139,6 @@ public interface CourseSectionRepository extends JpaRepository<CourseSection, Lo
 			FROM course_sections sec
 			JOIN courses c ON c.course_id = sec.course_id
 			JOIN semesters sem ON sem.semester_id = sec.semester_id
-			LEFT JOIN student_classes sc ON sc.class_id = sec.class_id
 			LEFT JOIN vw_section_capacity v ON v.section_id = sec.section_id
 			WHERE sec.lecturer_id = :lecturerId
 			  AND (:semesterId IS NULL OR sec.semester_id = :semesterId)

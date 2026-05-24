@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/course-section-assignments")
+@RequestMapping("/api/admin/section-assignments")
 @RequiredArgsConstructor
 public class AdminCourseSectionAssignmentController {
 

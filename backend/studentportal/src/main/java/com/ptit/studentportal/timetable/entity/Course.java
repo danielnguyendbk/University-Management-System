@@ -17,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
+@Entity(name = "TimetableCourse")
 @Table(name = "courses")
 @Getter
 @Setter
@@ -30,9 +30,6 @@ public class Course {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "course_id")
 	private Long courseId;
-
-	@Column(name = "department_id", nullable = false)
-	private Long departmentId;
 
 	@Column(name = "course_code", nullable = false, unique = true, length = 20)
 	private String courseCode;
@@ -47,6 +44,7 @@ public class Course {
 	private String courseType;
 
 	@Column(name = "is_active")
+	@Builder.Default
 	private Boolean isActive = true;
 
 	@Column(name = "description", columnDefinition = "TEXT")

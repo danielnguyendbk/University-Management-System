@@ -1,6 +1,7 @@
 package com.ptit.studentportal.registration.entity;
 
 import com.ptit.studentportal.registration.enums.EnrollmentLogAction;
+import com.ptit.studentportal.registration.enums.EnrollmentLogActionConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,7 +28,7 @@ public class EnrollmentLog {
     @Column(name = "section_id", nullable = false)
     private Long sectionId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = EnrollmentLogActionConverter.class)
     @Column(name = "action", nullable = false)
     private EnrollmentLogAction action;
 

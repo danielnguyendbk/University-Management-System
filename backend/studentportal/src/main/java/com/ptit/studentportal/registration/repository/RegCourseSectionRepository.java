@@ -30,8 +30,8 @@ public interface RegCourseSectionRepository extends JpaRepository<CourseSection,
             SELECT 
                 cs.section_id AS sectionId,
                 cs.section_code AS sectionCode,
-                cs.class_id AS classId,
-                sc.class_code AS classCode,
+                NULL AS classId,
+                NULL AS classCode,
                 c.course_id AS courseId,
                 c.course_code AS courseCode,
                 c.course_name AS courseName,
@@ -45,7 +45,6 @@ public interface RegCourseSectionRepository extends JpaRepository<CourseSection,
             JOIN courses c ON cs.course_id = c.course_id
             JOIN program_courses pc ON c.course_id = pc.course_id
             LEFT JOIN lecturers l ON cs.lecturer_id = l.lecturer_id
-            LEFT JOIN student_classes sc ON cs.class_id = sc.class_id
             LEFT JOIN vw_section_capacity vsc ON cs.section_id = vsc.section_id
             WHERE pc.program_id = :programId
               AND cs.semester_id = :semesterId
@@ -58,6 +57,7 @@ public interface RegCourseSectionRepository extends JpaRepository<CourseSection,
             @Param("semesterId") Long semesterId
     );
 
-    @Query(value = "SELECT class_code FROM student_classes WHERE class_id = :classId", nativeQuery = true)
-    String findClassCodeById(@Param("classId") Long classId);
+    default String findClassCodeById(Long classId) {
+        return null;
+    }
 }

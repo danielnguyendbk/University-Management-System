@@ -21,11 +21,12 @@ import {
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useIdleLogout } from "../hooks/useIdleLogout";
+import { NotificationBell } from "./NotificationBell";
 
 const navigationByRole = {
   STUDENT: [
     { name: "Trang chủ", name_vi: "Tổng quan cá nhân", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
+    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "/notifications", icon: Bell },
     { name: "Chương trình đào tạo", name_vi: "Lộ trình học tập", path: "curriculum", icon: BookOpen },
     { name: "Đăng ký môn học", name_vi: "Chọn lớp học phần", path: "course-registration", icon: ClipboardList },
     { name: "Thời khóa biểu tuần", name_vi: "Lịch học theo tuần", path: "schedule", icon: Calendar },
@@ -37,7 +38,7 @@ const navigationByRole = {
   ],
   LECTURER: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "announcements", icon: Bell },
+    { name: "Thông báo", name_vi: "Tin tức và nhắc nhở", path: "/notifications", icon: Bell },
     { name: "Lịch giảng dạy", name_vi: "Lịch dạy theo tuần", path: "schedule", icon: Calendar },
     { name: "Lịch coi thi", name_vi: "Kế hoạch coi thi cử", path: "exams", icon: CalendarCheck },
     { name: "Lớp học phần", name_vi: "Danh sách lớp phụ trách", path: "sections", icon: BookOpen },
@@ -47,9 +48,10 @@ const navigationByRole = {
   ],
   ADMIN: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
-    { name: "Thông báo", name_vi: "Thông báo toàn hệ thống", path: "announcements", icon: Bell },
-    { name: "Tài khoản sinh viên", name_vi: "Quản lý tài khoản sinh viên", path: "student-accounts", icon: User },
-    { name: "Tài khoản giảng viên", name_vi: "Quản lý tài khoản giảng viên", path: "lecturer-accounts", icon: User },
+    { name: "Thông báo", name_vi: "Thông báo toàn hệ thống", path: "/notifications", icon: Bell },
+    { name: "Sinh viên", name_vi: "Quản lý sinh viên", path: "students", icon: User },
+    { name: "Giảng viên", name_vi: "Quản lý giảng viên", path: "lecturers", icon: User },
+    { name: "Môn học", name_vi: "Quản lý danh mục môn học", path: "courses", icon: BookOpen },
     { name: "Phân công lớp học phần", name_vi: "Gán giảng viên cho lớp", path: "section-assignment", icon: BookOpen },
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
     { name: "Thời khóa biểu", name_vi: "Tạo và quản lý lịch học", path: "timetable", icon: CalendarDays },
@@ -73,7 +75,7 @@ export function Root() {
   const basePath = roleBasePath[user?.role] || roleBasePath.STUDENT;
   const navigation = (navigationByRole[user?.role] || navigationByRole.STUDENT).map((item) => ({
     ...item,
-    href: item.path ? `${basePath}/${item.path}` : basePath,
+    href: item.path ? (item.path.startsWith("/") ? item.path : `${basePath}/${item.path}`) : basePath,
   }));
 
   const handleLogout = () => {
@@ -135,10 +137,7 @@ export function Root() {
 
           {/* Right Side */}
           <div className="flex items-center gap-4">
-            <button className="relative p-2 hover:bg-gray-100 rounded-lg">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <NotificationBell />
             <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-gray-900">

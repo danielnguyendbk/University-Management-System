@@ -107,7 +107,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 			    s.end_time AS endTime,
 			    s.session_type AS sessionType,
 			    s.practice_group_no AS practiceGroupNo,
-			    s.note AS note
+			    NULL AS note
 			FROM schedules s
 			JOIN course_sections sec ON sec.section_id = s.section_id
 			JOIN courses c ON c.course_id = sec.course_id
@@ -117,7 +117,6 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 			LEFT JOIN lecturers l ON l.lecturer_id = sec.lecturer_id
 			WHERE st.student_id = :studentId
 			  AND LOWER(e.enrollment_status) IN ('registered', 'completed')
-			  AND (s.status IS NULL OR LOWER(s.status) IN ('active', 'scheduled', 'published'))
 			ORDER BY s.day_of_week, s.start_time
 			""", nativeQuery = true)
 	List<com.ptit.studentportal.timetable.dto.response.ScheduleViewProjection> findStudentSchedules(@Param("studentId") Long studentId);
@@ -141,14 +140,13 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 			    s.end_time AS endTime,
 			    s.session_type AS sessionType,
 			    s.practice_group_no AS practiceGroupNo,
-			    s.note AS note
+			    NULL AS note
 			FROM schedules s
 			JOIN course_sections sec ON sec.section_id = s.section_id
 			JOIN courses c ON c.course_id = sec.course_id
 			LEFT JOIN rooms r ON r.room_id = s.room_id
 			LEFT JOIN lecturers l ON l.lecturer_id = sec.lecturer_id
 			WHERE s.section_id = :sectionId
-			  AND (s.status IS NULL OR LOWER(s.status) IN ('active', 'scheduled', 'published'))
 			ORDER BY s.day_of_week, s.start_time
 			""", nativeQuery = true)
 	List<com.ptit.studentportal.timetable.dto.response.ScheduleViewProjection> findSectionSchedules(@Param("sectionId") Long sectionId);
@@ -172,14 +170,13 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 			    s.end_time AS endTime,
 			    s.session_type AS sessionType,
 			    s.practice_group_no AS practiceGroupNo,
-			    s.note AS note
+			    NULL AS note
 			FROM schedules s
 			JOIN course_sections sec ON sec.section_id = s.section_id
 			JOIN courses c ON c.course_id = sec.course_id
 			LEFT JOIN rooms r ON r.room_id = s.room_id
 			LEFT JOIN lecturers l ON l.lecturer_id = sec.lecturer_id
 			WHERE sec.lecturer_id = :lecturerId
-			  AND (s.status IS NULL OR LOWER(s.status) IN ('active', 'scheduled', 'published'))
 			ORDER BY s.day_of_week, s.start_time
 			""", nativeQuery = true)
 	List<com.ptit.studentportal.timetable.dto.response.ScheduleViewProjection> findLecturerSchedules(@Param("lecturerId") Long lecturerId);

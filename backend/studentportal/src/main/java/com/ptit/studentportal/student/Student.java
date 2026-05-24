@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.ptit.studentportal.user.User;
 
 import jakarta.persistence.Column;
@@ -47,20 +48,34 @@ public class Student {
 			}
 			return Gender.valueOf(value.trim().toUpperCase(Locale.ROOT));
 		}
+
+		@JsonValue
+		public String getDbValue() {
+			return name().toLowerCase(Locale.ROOT);
+		}
 	}
 
 	public enum AcademicStatus {
 		STUDYING,
 		PAUSED,
 		GRADUATED,
-		DROPPED_OUT;
+		DROP_OUT;
 
 		@JsonCreator
 		public static AcademicStatus fromValue(String value) {
 			if (value == null) {
 				return null;
 			}
-			return AcademicStatus.valueOf(value.trim().toUpperCase(Locale.ROOT));
+			String normalized = value.trim().toUpperCase(Locale.ROOT);
+			if ("DROPPED_OUT".equals(normalized)) {
+				normalized = "DROP_OUT";
+			}
+			return AcademicStatus.valueOf(normalized);
+		}
+
+		@JsonValue
+		public String getDbValue() {
+			return name().toLowerCase(Locale.ROOT);
 		}
 	}
 

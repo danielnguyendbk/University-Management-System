@@ -56,7 +56,8 @@ public class Exam {
     private Integer studentCount;
 
     @Column(name = "status", nullable = false)
-    private String status = "SCHEDULED";
+    @Builder.Default
+    private String status = "scheduled";
 
     @Column(name = "note", length = 255)
     private String note;

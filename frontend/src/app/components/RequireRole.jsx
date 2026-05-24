@@ -14,8 +14,10 @@ export function RequireRole({ role, children }) {
     return <Navigate to="/" replace />;
   }
 
-  if (user.role !== role) {
-    return <Navigate to={rolePath[user.role] || "/"} replace />;
+  const userRole = user.role ? String(user.role).toUpperCase() : "";
+
+  if (userRole !== role) {
+    return <Navigate to={rolePath[userRole] || "/"} replace />;
   }
 
   return children;

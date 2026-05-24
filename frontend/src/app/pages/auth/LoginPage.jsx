@@ -8,8 +8,8 @@ export function LoginPage() {
   const location = useLocation();
   const message = location.state?.message;
   const { login, user, loading: authLoading } = useAuth();
-  const [username, setUsername] = useState("N23KHMT001");
-  const [password, setPassword] = useState("123456");
+  const [username, setUsername] = useState("D22KH002");
+  const [password, setPassword] = useState("Thai06112005");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -158,7 +158,7 @@ export function LoginPage() {
               </form>
 
               <div className="mt-6 rounded-xl border px-4 py-3 text-sm text-slate-600" style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}>
-                Tài khoản test: <strong>N23KHMT001 / 123456</strong>, <strong>GV001 / 123456</strong>, <strong>admin01 / 123456</strong>
+                Tài khoản test: <strong>D22KH002 / Thai06112005</strong>, <strong>GV001 / Thai06112005</strong>, <strong>admin01 / 123456</strong>
               </div>
             </div>
           </div>

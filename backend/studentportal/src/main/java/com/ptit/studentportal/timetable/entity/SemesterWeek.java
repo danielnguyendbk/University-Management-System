@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,6 +36,9 @@ public class SemesterWeek {
     @Column(name = "semester_id", nullable = false)
     private Long semesterId;
 
+    @Column(name = "cohort_year", nullable = false)
+    private Integer cohortYear;
+
     @Column(name = "week_no", nullable = false)
     private Integer weekNo;
 
@@ -44,16 +48,17 @@ public class SemesterWeek {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "is_break", nullable = false)
+    @Transient
+    @Builder.Default
     private Boolean breakWeek = Boolean.FALSE;
 
-    @Column(name = "week_type", length = 20)
+    @Transient
     private String weekType;
 
-    @Column(name = "note", length = 255)
+    @Transient
     private String note;
 
-    @Column(name = "status", length = 20)
+    @Transient
     private String status;
 
     @CreationTimestamp
