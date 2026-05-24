@@ -17,6 +17,7 @@ import { Feedback } from "./pages/student/Feedback";
 import { PortalHome } from "./components/PortalHome";
 import { PortalRedirect } from "./components/PortalRedirect";
 import { StudentPortalRoute, LecturerPortalRoute, AdminPortalRoute } from "./components/RolePortalRoute";
+import { PortalRoute } from "./components/PortalRoute";
 import { LecturerDashboard } from "./pages/lecturer/LecturerDashboard";
 import { LecturerTeachingSchedule } from "./pages/lecturer/LecturerTeachingSchedule";
 import { LecturerClassSections } from "./pages/lecturer/LecturerClassSections";
@@ -28,6 +29,8 @@ import { StudentDetailPage } from "./pages/admin/StudentDetailPage";
 import { LecturerDetailPage } from "./pages/admin/LecturerDetailPage";
 import { SectionAssignment } from "./pages/admin/SectionAssignment";
 import { RegistrationSessions } from "./pages/admin/RegistrationSessions";
+import { ManageCourses } from "./pages/admin/ManageCourses";
+import { NotificationsPage } from "./pages/notification/NotificationsPage";
 import { Navigate } from "react-router-dom";
 import { createElement } from "react";
 
@@ -49,10 +52,16 @@ export const router = createBrowserRouter([
     Component: PortalRedirect,
   },
   {
+    path: "/notifications",
+    Component: PortalRoute,
+    children: [{ index: true, Component: NotificationsPage }],
+  },
+  {
     path: "/portal/student",
     Component: StudentPortalRoute,
     children: [
       { index: true, Component: PortalHome },
+      { path: "notifications", Component: NotificationsPage },
       { path: "announcements", Component: Announcements },
       { path: "curriculum", Component: Curriculum },
       { path: "course-registration", Component: CourseRegistration },
@@ -70,6 +79,7 @@ export const router = createBrowserRouter([
     Component: LecturerPortalRoute,
     children: [
       { index: true, Component: LecturerDashboard },
+      { path: "notifications", Component: NotificationsPage },
       { path: "announcements", Component: Announcements },
       { path: "teaching-schedule", Component: LecturerTeachingSchedule },
       { path: "sections", Component: LecturerClassSections },
@@ -87,6 +97,7 @@ export const router = createBrowserRouter([
     Component: AdminPortalRoute,
     children: [
       { index: true, Component: AdminDashboard },
+      { path: "notifications", Component: NotificationsPage },
       { path: "announcements", Component: Announcements },
       { path: "students", Component: ManageStudentAccounts },
       { path: "students/:id", Component: StudentDetailPage },
@@ -96,6 +107,7 @@ export const router = createBrowserRouter([
       { path: "lecturer-accounts", Component: ManageLecturerAccounts },
       { path: "section-assignment", Component: SectionAssignment },
       { path: "registration-sessions", Component: RegistrationSessions },
+      { path: "courses", Component: ManageCourses },
     ],
   },
 ]);

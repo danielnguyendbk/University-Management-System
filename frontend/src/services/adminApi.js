@@ -1,4 +1,4 @@
-import { API_BASE_URL, getStoredToken, parseApiError } from "./app";
+import { API_BASE_URL, getStoredToken } from "./app";
 
 async function request(path, options = {}) {
   const token = getStoredToken();
@@ -17,7 +17,17 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
-    throw new Error(await parseApiError(response));
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    const message = payload?.message || (payload ? JSON.stringify(payload) : "Request failed");
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
   }
 
   const contentType = response.headers.get("content-type") || "";
@@ -180,4 +190,96 @@ export async function downloadBlob(blob, filename) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+// ─── Course Management ───
+
+export async function listCourses(params) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      searchParams.set(key, value);
+    }
+  });
+  const payload = await request(`/admin/courses?${searchParams.toString()}`);
+  return payload?.data;
+}
+
+export async function getCourse(courseId) {
+  const payload = await request(`/admin/courses/${courseId}`);
+  return payload?.data;
+}
+
+export async function createCourse(body) {
+  const payload = await request("/admin/courses", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function updateCourse(courseId, body) {
+  const payload = await request(`/admin/courses/${courseId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function deleteCourse(courseId) {
+  await request(`/admin/courses/${courseId}`, { method: "DELETE" });
+}
+
+export async function importCourses(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const payload = await request("/admin/courses/import", {
+    method: "POST",
+    body: formData,
+  });
+  return payload?.data;
+}
+
+// ─── Program Courses ───
+
+export async function listProgramCourses(programId) {
+  const payload = await request(`/admin/programs/${programId}/courses`);
+  return payload?.data || [];
+}
+
+export async function listAvailableCourses(programId) {
+  const payload = await request(`/admin/programs/${programId}/courses/available`);
+  return payload?.data || [];
+}
+
+export async function assignCourseToProgram(programId, body) {
+  const payload = await request(`/admin/programs/${programId}/courses`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function updateProgramCourse(programId, programCourseId, body) {
+  const payload = await request(`/admin/programs/${programId}/courses/${programCourseId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function removeProgramCourse(programId, courseId) {
+  await request(`/admin/programs/${programId}/courses/${courseId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function importProgramCourses(programId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const payload = await request(`/admin/programs/${programId}/courses/import`, {
+    method: "POST",
+    body: formData,
+  });
+  return payload?.data;
 }

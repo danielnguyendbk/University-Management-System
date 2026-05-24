@@ -20,7 +20,6 @@ CREATE TABLE users (
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
-
 -- =====================================
 -- 2. REFRESH_TOKENS
 -- Blacklist JWT refresh tokens khi logout
@@ -123,19 +122,22 @@ CREATE TABLE lecturers (
 -- =====================================
 CREATE TABLE courses (
     course_id     BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    department_id BIGINT UNSIGNED NOT NULL,
     course_code   VARCHAR(20)  NOT NULL UNIQUE,
     course_name   VARCHAR(150) NOT NULL,
     credits       INT NOT NULL,
-    course_type   ENUM('required', 'elective') NOT NULL DEFAULT 'required',
+    course_type   ENUM(
+        'bắt buộc chung',
+        'bắt buộc chung nhóm ngành',
+        'cơ sở ngành',
+        'chuyên ngành',
+        'thực tập',
+        'luận văn tốt nghiệp'
+    ) NOT NULL DEFAULT 'bắt buộc chung',
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     description   TEXT NULL,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT chk_courses_credits CHECK (credits > 0),
-    CONSTRAINT fk_courses_department
-        FOREIGN KEY (department_id) REFERENCES departments(department_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
+    CONSTRAINT chk_courses_credits CHECK (credits > 0)
 ) ENGINE=InnoDB;
 
 -- =====================================
@@ -152,7 +154,7 @@ CREATE TABLE program_courses (
     updated_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_program_courses UNIQUE (program_id, course_id),
     CONSTRAINT chk_program_courses_semester CHECK (
-        recommended_semester IS NULL OR recommended_semester > 0
+        recommended_semester IS NULL OR (recommended_semester >= 1 AND recommended_semester <= 10)
     ),
     CONSTRAINT fk_program_courses_program
         FOREIGN KEY (program_id) REFERENCES programs(program_id)
@@ -161,49 +163,6 @@ CREATE TABLE program_courses (
         FOREIGN KEY (course_id) REFERENCES courses(course_id)
         ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
-
--- =====================================
--- 9. COURSE_PREREQUISITES
--- courses (N) -- (M) courses (self-join)
--- =====================================
-CREATE TABLE course_prerequisites (
-    course_id            BIGINT UNSIGNED NOT NULL,
-    prerequisite_course_id BIGINT UNSIGNED NOT NULL,
-    created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (course_id, prerequisite_course_id),
-    
-    CONSTRAINT fk_course_prereq_course
-        FOREIGN KEY (course_id) REFERENCES courses(course_id)
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    CONSTRAINT fk_course_prereq_prerequisite
-        FOREIGN KEY (prerequisite_course_id) REFERENCES courses(course_id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
--- Thay thế CHECK bằng trigger
-DELIMITER $$
-
-CREATE TRIGGER trg_course_prereq_no_self_insert
-BEFORE INSERT ON course_prerequisites
-FOR EACH ROW
-BEGIN
-    IF NEW.course_id = NEW.prerequisite_course_id THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Một môn học không thể là tiên quyết của chính nó';
-    END IF;
-END$$
-
-CREATE TRIGGER trg_course_prereq_no_self_update
-BEFORE UPDATE ON course_prerequisites
-FOR EACH ROW
-BEGIN
-    IF NEW.course_id = NEW.prerequisite_course_id THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Một môn học không thể là tiên quyết của chính nó';
-    END IF;
-END$$
-
-DELIMITER ;
-
 
 CREATE TABLE semesters (
     semester_id        BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -609,8 +568,6 @@ CREATE INDEX idx_students_program          ON students (program_id);
 CREATE INDEX idx_lecturers_department      ON lecturers (department_id);
 
 CREATE INDEX idx_courses_is_active         ON courses (is_active);
-CREATE INDEX idx_courses_department        ON courses (department_id);
-
 CREATE INDEX idx_course_sections_status    ON course_sections (status);
 CREATE INDEX idx_course_sections_semester  ON course_sections (semester_id, course_id);
 
@@ -652,4 +609,3 @@ LEFT JOIN enrollments e
 GROUP BY
     cs.section_id, cs.section_code, cs.course_id,
     cs.semester_id, cs.lecturer_id, cs.max_capacity;
-    
