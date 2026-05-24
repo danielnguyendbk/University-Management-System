@@ -84,6 +84,7 @@ export function Dashboard() {
   );
 
   const chartRows = currentSemester?.courses ?? [];
+  const currentSemesterCredits = currentSemester?.totalCredits ?? 0;
 
   const summaryRows = [
     { label: "Họ và tên", value: user?.fullName || gradeData?.fullName || "Chưa có dữ liệu" },
@@ -180,7 +181,7 @@ export function Dashboard() {
           <>
             <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
               <p>
-                {currentSemester.semesterName} - {currentSemester.academicYear}
+                    {currentSemester ? `${currentSemester.semesterName} - ${currentSemester.academicYear}` : "Theo học kỳ đang chọn"}
               </p>
               <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-blue-700">
                 <Award className="w-4 h-4" />

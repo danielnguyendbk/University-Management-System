@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TrendingUp, Award, BookOpen, RefreshCw, AlertCircle } from "lucide-react";
+import { TrendingUp, Award, BookOpen, RefreshCw, AlertCircle, Eye, X } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { getStudentGrades } from "../../../services/gradeService";
 
@@ -22,6 +22,7 @@ export function Grades() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(null);
 
   const studentId = user?.studentId;
 
@@ -185,6 +186,9 @@ export function Grades() {
                           <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                             Điểm hệ 4
                           </th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Hành động
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -207,6 +211,16 @@ export function Grades() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="font-medium text-gray-900">{Number(course.points).toFixed(1)}</span>
                             </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCourse({ ...course, semesterName: semester.semesterName, academicYear: semester.academicYear })}
+                                className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Chi tiết
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -223,6 +237,58 @@ export function Grades() {
               ))}
             </div>
           )}
+
+          {selectedCourse ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+              <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between border-b border-gray-200 p-6">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">Chi tiết điểm thành phần</h3>
+                    <p className="text-sm text-gray-500">
+                      {selectedCourse.courseCode} • {selectedCourse.courseName}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourse(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+                  {[
+                    ["Học kỳ", `${selectedCourse.semesterName} - ${selectedCourse.academicYear}`],
+                    ["Tín chỉ", selectedCourse.credits],
+                    ["Chuyên cần", selectedCourse.attendanceScore ?? "-"],
+                    ["Bài tập", selectedCourse.exerciseScore ?? "-"],
+                    ["Thực hành", selectedCourse.practiceScore ?? "-"],
+                    ["Giữa kỳ", selectedCourse.midtermScore ?? "-"],
+                    ["Cuối kỳ", selectedCourse.finalScore ?? "-"],
+                    ["Điểm tổng kết", selectedCourse.totalScore !== null && selectedCourse.totalScore !== undefined ? Number(selectedCourse.totalScore).toFixed(2) : "-"],
+                    ["Điểm chữ", selectedCourse.letterGrade ?? "-"],
+                    ["Điểm hệ 4", selectedCourse.points !== null && selectedCourse.points !== undefined ? Number(selectedCourse.points).toFixed(1) : "-"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+                      <p className="mt-1 text-base font-semibold text-gray-900">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-gray-200 p-6 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourse(null)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Grade Scale */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

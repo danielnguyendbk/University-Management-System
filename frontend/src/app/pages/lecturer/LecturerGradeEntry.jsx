@@ -57,6 +57,33 @@ function toNumberOrNull(value) {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
+function isValidScoreValue(value) {
+  if (value === "" || value === null || value === undefined) return true;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return false;
+  return parsed >= 0 && parsed <= 10;
+}
+
+function hasInvalidScores(obj) {
+  return ["attendanceScore", "exerciseScore", "practiceScore", "midtermScore", "finalScore"].some(
+    (k) => !isValidScoreValue(obj?.[k])
+  );
+}
+
+function getInvalidScoreLabels(obj) {
+  const labelMap = {
+    attendanceScore: "Chuyên cần",
+    exerciseScore: "Bài tập",
+    practiceScore: "Thực hành",
+    midtermScore: "Giữa kỳ",
+    finalScore: "Cuối kỳ",
+  };
+
+  return Object.entries(labelMap)
+    .filter(([key]) => !isValidScoreValue(obj?.[key]))
+    .map(([, label]) => label);
+}
+
 function calculateTotalScore(form, weights) {
   const attendanceScore = toNumberOrNull(form.attendanceScore) ?? 0;
   const exerciseScore = toNumberOrNull(form.exerciseScore) ?? 0;
@@ -226,6 +253,7 @@ export function LecturerGradeEntry() {
   const totalWeight = Object.values(weightForm).reduce((sum, weight) => sum + Number(weight || 0), 0);
   const totalWeightValid = totalWeight === 100;
   const pendingDraftCount = Object.keys(rowDrafts).length;
+  const anyDraftInvalid = Object.values(rowDrafts || {}).some((d) => hasInvalidScores(d));
 
   const displayRows = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -476,6 +504,11 @@ export function LecturerGradeEntry() {
           return;
         }
 
+        // Ignore any totalScore column from imported file to avoid trusting client-sent totals
+        if (row.totalScore !== undefined) {
+          delete row.totalScore;
+        }
+
         nextDrafts[matchedRow.enrollmentId] = {
           attendanceScore: getCellValue(row, ["attendanceScore", "AttendanceScore"]),
           exerciseScore: getCellValue(row, ["exerciseScore", "ExerciseScore"]),
@@ -678,12 +711,15 @@ export function LecturerGradeEntry() {
                   <button
                     type="button"
                     onClick={handleSaveAllDrafts}
-                    disabled={savingAll || pendingDraftCount === 0 || !totalWeightValid}
+                    disabled={savingAll || pendingDraftCount === 0 || !totalWeightValid || anyDraftInvalid}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#1E3A8A] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
                     {savingAll ? "Đang lưu..." : `Lưu tất cả (${pendingDraftCount})`}
                   </button>
+                  {anyDraftInvalid && (
+                    <p className="text-xs text-red-600 mt-1">Một hoặc nhiều bản nháp có giá trị điểm không hợp lệ.</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -713,6 +749,9 @@ export function LecturerGradeEntry() {
                     </tr>
                   ) : (
                     displayRows.map((row) => {
+                      const draftForRow = rowDrafts[row.enrollmentId] || {};
+                      const rowHasInvalid = hasInvalidScores(draftForRow) || hasInvalidScores(row);
+                      const invalidScoreLabels = getInvalidScoreLabels({ ...row, ...draftForRow });
                       const total = calculateTotalScore(
                         {
                           attendanceScore: row.attendanceScore,
@@ -737,7 +776,11 @@ export function LecturerGradeEntry() {
                           : "bg-slate-100 text-slate-700";
 
                       return (
-                        <tr key={row.enrollmentId}>
+                        <tr
+                          key={row.enrollmentId}
+                          className={rowHasInvalid ? "bg-red-50 ring-1 ring-inset ring-red-200" : ""}
+                          title={rowHasInvalid ? `Giá trị không hợp lệ: ${invalidScoreLabels.join(", ")}` : undefined}
+                        >
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">{row.studentName}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{row.studentCode}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{row.attendanceScore ?? "-"}</td>
@@ -747,9 +790,20 @@ export function LecturerGradeEntry() {
                           <td className="px-6 py-4 text-sm text-gray-600">{row.finalScore ?? "-"}</td>
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">{Number(total).toFixed(2)}</td>
                           <td className="px-6 py-4 text-sm">
-                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
-                              {statusLabel}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
+                                {statusLabel}
+                              </span>
+                              {rowHasInvalid ? (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700"
+                                  title={`Trường lỗi: ${invalidScoreLabels.join(", ")}`}
+                                >
+                                  <AlertCircle className="w-3.5 h-3.5" />
+                                  Lỗi
+                                </span>
+                              ) : null}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
@@ -764,8 +818,11 @@ export function LecturerGradeEntry() {
                               <button
                                 type="button"
                                 onClick={() => handleSaveRow(row, rowDrafts[row.enrollmentId] || row)}
-                                disabled={savingEnrollmentId === row.enrollmentId || !totalWeightValid}
+                                disabled={
+                                  savingEnrollmentId === row.enrollmentId || !totalWeightValid || rowHasInvalid
+                                }
                                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                                title={rowHasInvalid ? `Sửa trước khi lưu: ${invalidScoreLabels.join(", ")}` : undefined}
                               >
                                 <Save className="w-4 h-4" />
                                 Lưu
@@ -813,14 +870,12 @@ export function LecturerGradeEntry() {
                         }}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
                       />
+                      {!isValidScoreValue(scoreForm[key]) && (
+                        <p className="text-xs text-red-600">Giá trị không hợp lệ — phải là số từ 0 đến 10.</p>
+                      )}
                     </label>
                   ))}
                 </div>
-
-                <div className="border-t border-gray-100 px-6 pb-2 text-sm text-gray-600">
-                  <p>Trọng số hiện tại phải bằng 100. Bạn có thể đổi trọng số ở phần trên trước khi lưu.</p>
-                </div>
-
                 <div className="flex items-center justify-between border-t border-gray-200 p-6">
                   <p className={`text-sm font-medium ${totalWeightValid ? "text-green-700" : "text-red-600"}`}>
                     Tổng trọng số hiện tại: {totalWeight}%
@@ -836,7 +891,9 @@ export function LecturerGradeEntry() {
                     <button
                       type="button"
                       onClick={() => handleSaveRow(editingRow, scoreForm)}
-                      disabled={savingEnrollmentId === editingRow.enrollmentId || !totalWeightValid}
+                      disabled={
+                        savingEnrollmentId === editingRow.enrollmentId || !totalWeightValid || hasInvalidScores(scoreForm)
+                      }
                       className="inline-flex items-center gap-2 rounded-lg bg-[#1E3A8A] px-4 py-2 text-sm font-medium text-white hover:bg-[#1d4ed8] disabled:opacity-50"
                     >
                       <Save className="w-4 h-4" />
