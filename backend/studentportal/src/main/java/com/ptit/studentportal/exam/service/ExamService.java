@@ -241,8 +241,10 @@ public class ExamService {
         LocalTime end = LocalTime.parse(request.getEndTime());
         validateInvigilators(request.getInvigilators(), request.getSectionId(), request.getExamDate(), start, end, request.getStatus(), examId);
 
-        Long mainLecturerId = null;
+        boolean replaceInvigilators = request.getInvigilators() != null;
+        Long mainLecturerId = existing.getProctorLecturerId();
         if (request.getInvigilators() != null) {
+            mainLecturerId = null;
             for (ExamCreateRequest.InvigilatorRequest inv : request.getInvigilators()) {
                 if (inv.getRole() != null) {
                     String r = inv.getRole().trim().toUpperCase();
@@ -261,7 +263,9 @@ public class ExamService {
         }
 
         existing.setRoomId(request.getRoomId());
-        existing.setProctorLecturerId(mainLecturerId);
+        if (replaceInvigilators) {
+            existing.setProctorLecturerId(mainLecturerId);
+        }
         existing.setExamType(normalizeExamType(request.getExamType()));
         existing.setExamMethod(normalizeExamMethod(request.getExamMethod()));
         existing.setExamDate(request.getExamDate());
@@ -274,9 +278,8 @@ public class ExamService {
 
         Exam saved = examRepository.save(existing);
 
-        examInvigilatorRepository.deleteByExamId(examId);
-
-        if (request.getInvigilators() != null) {
+        if (replaceInvigilators) {
+            examInvigilatorRepository.deleteByExamId(examId);
             for (ExamCreateRequest.InvigilatorRequest inv : request.getInvigilators()) {
                 if (inv.getLecturerId() == null) continue;
                 ExamInvigilator eInv = ExamInvigilator.builder()
@@ -332,17 +335,18 @@ public class ExamService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Giảng viên không được coi thi lớp học phần do chính mình phụ trách.");
         }
 
+        String normalizedRole = normalizeInvigilatorRole(request.getRole());
         ExamInvigilator inv = ExamInvigilator.builder()
             .examId(examId)
             .lecturerId(request.getLecturerId())
-            .role(normalizeInvigilatorRole(request.getRole()))
+            .role(normalizedRole)
             .note(request.getNote())
             .build();
 
         examInvigilatorRepository.save(inv);
 
         // Update proctorLecturerId if role is MAIN
-        if ("MAIN".equalsIgnoreCase(request.getRole())) {
+        if ("main".equals(normalizedRole)) {
             exam.setProctorLecturerId(request.getLecturerId());
             examRepository.save(exam);
         }
@@ -351,7 +355,7 @@ public class ExamService {
     }
 
     private void validateInvigilators(List<ExamCreateRequest.InvigilatorRequest> invs, Long sectionId, LocalDate date, LocalTime start, LocalTime end, String status, Long excludeExamId) {
-        if (invs == null || invs.isEmpty()) {
+        if (invs == null) {
             if ("SCHEDULED".equalsIgnoreCase(status)) {
                 if (excludeExamId != null) {
                     long mainCount = examInvigilatorRepository.countMainInvigilatorsByExamId(excludeExamId);
@@ -361,6 +365,12 @@ public class ExamService {
                 } else {
                     throw new AppException(HttpStatus.BAD_REQUEST, "Lịch thi đã lên lịch cần có giám thị chính.");
                 }
+            }
+            return;
+        }
+        if (invs.isEmpty()) {
+            if ("SCHEDULED".equalsIgnoreCase(status)) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Lá»‹ch thi Ä‘Ã£ lÃªn lá»‹ch cáº§n cÃ³ giÃ¡m thá»‹ chÃ­nh.");
             }
             return;
         }
@@ -406,6 +416,15 @@ public class ExamService {
             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Không tìm thấy lịch thi."));
 
         examInvigilatorRepository.deleteByExamIdAndLecturerId(examId, lecturerId);
+        if (lecturerId.equals(exam.getProctorLecturerId())) {
+            Long nextMainLecturerId = examInvigilatorRepository.findByExamId(examId).stream()
+                .filter(inv -> "main".equalsIgnoreCase(inv.getRole()))
+                .map(ExamInvigilator::getLecturerId)
+                .findFirst()
+                .orElse(null);
+            exam.setProctorLecturerId(nextMainLecturerId);
+            examRepository.save(exam);
+        }
         return mapToResponse(exam);
     }
 
@@ -440,16 +459,19 @@ public class ExamService {
         java.util.Map<Long, ExamInvigilator> invMap = new java.util.HashMap<>();
         for (ExamInvigilator inv : invs) {
             Optional<Exam> opt = examRepository.findById(inv.getExamId());
-            if (opt.isPresent() && semesterId.equals(opt.get().getSemesterId())) {
-                exams.add(opt.get());
-                invMap.put(inv.getExamId(), inv);
+            if (opt.isPresent()) {
+                Exam exam = opt.get();
+                if (semesterId.equals(exam.getSemesterId()) && "scheduled".equalsIgnoreCase(exam.getStatus())) {
+                    exams.add(exam);
+                    invMap.put(inv.getExamId(), inv);
+                }
             }
         }
         return exams.stream().map(e -> {
             ExamResponse res = this.mapToResponse(e);
             ExamInvigilator myInv = invMap.get(e.getExamId());
             if (myInv != null) {
-                res.setInvigilatorRole(myInv.getRole());
+                res.setInvigilatorRole(toUiInvigilatorRole(myInv.getRole()));
                 res.setInvigilatorNote(myInv.getNote());
             }
             return res;

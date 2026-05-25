@@ -106,87 +106,120 @@ function TabCreditConfig({ showToast }) {
   const [semesters, setSemesters] = useState([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState("");
   const [selectedSemester, setSelectedSemester] = useState(null);
-  const [pricePerCredit, setPricePerCredit] = useState("");
+  const [rates, setRates] = useState([]); // List of tuition rates: [{ enrollmentYear: 2022, pricePerCredit: 450000 }, ...]
+  const [tempPrices, setTempPrices] = useState({}); // Map of enrollmentYear -> string value of price input
+  
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [priceError, setPriceError] = useState("");
+  const [savingRates, setSavingRates] = useState(false);
+  const [generatingFees, setGeneratingFees] = useState(false);
+  
+  const [showConfirmGenerate, setShowConfirmGenerate] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Fetch semesters
+      const semestersRes = await apiClient.get("/admin/timetable/semesters");
+      if (semestersRes.data && semestersRes.data.success) {
+        setSemesters(semestersRes.data.data || []);
+      }
+      
+      // Fetch cohort rates
+      const ratesRes = await apiClient.get("/admin/tuition/rates");
+      if (ratesRes.data && ratesRes.data.success) {
+        const fetchedRates = ratesRes.data.data || [];
+        setRates(fetchedRates);
+        
+        // Initialize tempPrices input values
+        const initialPrices = {};
+        fetchedRates.forEach(r => {
+          initialPrices[r.enrollmentYear] = r.pricePerCredit.toString();
+        });
+        setTempPrices(initialPrices);
+      }
+    } catch (err) {
+      showToast("Không thể tải cấu hình dữ liệu đơn giá.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchSemesters() {
-      try {
-        setLoading(true);
-        const res = await apiClient.get("/admin/timetable/semesters");
-        if (res.data && res.data.success) {
-          setSemesters(res.data.data || []);
-        }
-      } catch (err) {
-        showToast("Không thể tải danh sách học kỳ.", "error");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchSemesters();
+    fetchData();
   }, []);
 
-  const validatePrice = (value) => {
+  const validateCohortPrice = (year, value) => {
     const num = Number(value);
-    if (!value || isNaN(num) || num <= 0) {
-      setPriceError("Đơn giá phải là số dương.");
-      return false;
+    if (!value || isNaN(num) || num < 0) {
+      return "Đơn giá phải là số không âm.";
     }
     if (num % 1000 !== 0) {
-      setPriceError("Đơn giá phải là bội số của 1.000đ (VD: 450.000).");
-      return false;
+      return "Đơn giá phải là bội số của 1.000đ (VD: 450.000).";
     }
-    setPriceError("");
-    return true;
+    return "";
   };
 
-  const handleSubmitClick = () => {
-    if (!selectedSemesterId) {
-      showToast("Vui lòng chọn một học kỳ.", "error");
+  const handlePriceChange = (year, value) => {
+    setTempPrices(prev => ({ ...prev, [year]: value }));
+    const error = validateCohortPrice(year, value);
+    setValidationErrors(prev => ({ ...prev, [year]: error }));
+  };
+
+  const handleSaveRates = async () => {
+    // Validate all fields first
+    const errors = {};
+    let hasError = false;
+    rates.forEach(r => {
+      const err = validateCohortPrice(r.enrollmentYear, tempPrices[r.enrollmentYear]);
+      if (err) {
+        errors[r.enrollmentYear] = err;
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      setValidationErrors(errors);
+      showToast("Vui lòng sửa các lỗi đơn giá trước khi lưu.", "error");
       return;
     }
-    if (!validatePrice(pricePerCredit)) return;
-    setShowConfirm(true);
+
+    try {
+      setSavingRates(true);
+      const payload = rates.map(r => ({
+        enrollmentYear: r.enrollmentYear,
+        pricePerCredit: Number(tempPrices[r.enrollmentYear])
+      }));
+
+      await apiClient.put("/admin/tuition/rates", payload);
+      showToast("Đã lưu cấu hình đơn giá theo khóa thành công!");
+      
+      // Reload rates
+      const ratesRes = await apiClient.get("/admin/tuition/rates");
+      if (ratesRes.data && ratesRes.data.success) {
+        setRates(ratesRes.data.data || []);
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || "Lỗi khi lưu đơn giá tín chỉ.", "error");
+    } finally {
+      setSavingRates(false);
+    }
   };
 
-  const handleConfirmSubmit = async () => {
-    setShowConfirm(false);
+  const handleGenerateFees = async () => {
+    if (!selectedSemesterId) {
+      showToast("Vui lòng chọn học kỳ cần tính học phí.", "error");
+      return;
+    }
+    setShowConfirmGenerate(false);
     try {
-      setSubmitting(true);
-      const newPrice = Number(pricePerCredit);
-      await apiClient.put(
-        `/admin/tuition/semesters/${selectedSemesterId}/price`,
-        { pricePerCredit: newPrice }
-      );
-      showToast(
-        `Đã cập nhật đơn giá tín chỉ thành ${formatCurrency(
-          newPrice
-        )} thành công!`
-      );
-      
-      // Update local state to show updated price immediately
-      setSemesters((prev) =>
-        prev.map((s) =>
-          String(s.semesterId) === String(selectedSemesterId)
-            ? { ...s, price_per_credit: newPrice }
-            : s
-        )
-      );
-      setSelectedSemester((prev) =>
-        prev ? { ...prev, price_per_credit: newPrice } : null
-      );
-
-      setPricePerCredit("");
+      setGeneratingFees(true);
+      await apiClient.post(`/admin/tuition/generate?semesterId=${selectedSemesterId}`);
+      showToast(`Đã tính/phát sinh học phí thành công cho học kỳ ${selectedSemester?.semesterName}!`);
     } catch (err) {
-      showToast(
-        err.response?.data?.message || "Lỗi khi cập nhật đơn giá tín chỉ.",
-        "error"
-      );
+      showToast(err.response?.data?.message || "Lỗi khi tính học phí.", "error");
     } finally {
-      setSubmitting(false);
+      setGeneratingFees(false);
     }
   };
 
@@ -201,111 +234,152 @@ function TabCreditConfig({ showToast }) {
   }
 
   return (
-    <>
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
-          <Settings className="w-5 h-5 text-[#1E3A8A]" />
-          Thiết lập đơn giá tín chỉ theo học kỳ
-        </h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Chọn học kỳ và nhập đơn giá/tín chỉ mới. Thay đổi này sẽ ảnh hưởng
-          tới tính toán học phí phát sinh cho tất cả sinh viên trong học kỳ đó.
-        </p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Cấu hình đơn giá theo khóa */}
+      <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-8 flex flex-col justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-[#1E3A8A]" />
+            Cấu hình đơn giá tín chỉ theo khóa học (Cohort)
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Thiết lập đơn giá học phí trên mỗi tín chỉ cho từng khóa sinh viên (D22, D23, D24, D25,...). Đơn giá này sẽ được áp dụng xuyên suốt các học kỳ.
+          </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Semester selector */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Học kỳ áp dụng <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={selectedSemesterId}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedSemesterId(val);
-                const found = semesters.find((s) => String(s.semesterId) === String(val));
-                setSelectedSemester(found || null);
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A]/30 focus:border-[#1E3A8A] bg-white text-gray-900 font-medium"
-            >
-              <option value="">-- Chọn học kỳ --</option>
-              {semesters.map((s) => (
-                <option key={s.semesterId} value={s.semesterId}>
-                  {s.semesterName} — {s.academicYear || s.semesterYear}
-                </option>
-              ))}
-            </select>
-            {selectedSemester && (
-              <p
-                className={`text-xs mt-2 font-semibold ${
-                  selectedSemester.price_per_credit !== null &&
-                  selectedSemester.price_per_credit !== undefined
-                    ? "text-gray-500"
-                    : "text-amber-600"
-                }`}
-              >
-                {selectedSemester.price_per_credit !== null &&
-                selectedSemester.price_per_credit !== undefined
-                  ? `Đơn giá hiện tại của học kỳ này: ${selectedSemester.price_per_credit.toLocaleString(
-                      "vi-VN"
-                    )} đ/tín chỉ`
-                  : "Học kỳ này chưa được cấu hình đơn giá tín chỉ."}
-              </p>
-            )}
-          </div>
+          <div className="space-y-5">
+            {rates.map((rate) => {
+              const year = rate.enrollmentYear;
+              const cohortLabel = `Khóa D${String(year).slice(-2)}`;
+              const inputValue = tempPrices[year] || "";
+              const error = validationErrors[year];
 
-          {/* Price input */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Đơn giá mỗi tín chỉ (VND){" "}
-              <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="number"
-                value={pricePerCredit}
-                onChange={(e) => {
-                  setPricePerCredit(e.target.value);
-                  if (priceError) validatePrice(e.target.value);
-                }}
-                placeholder="Ví dụ: 450000"
-                min={0}
-                step={1000}
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1E3A8A]/30 focus:border-[#1E3A8A] text-gray-900 font-medium ${
-                  priceError
-                    ? "border-rose-400 bg-rose-50/50"
-                    : "border-gray-300"
-                }`}
-              />
-            </div>
-            {priceError && (
-              <p className="text-xs text-rose-600 mt-1.5 font-medium">
-                {priceError}
-              </p>
-            )}
-            {pricePerCredit && !priceError && Number(pricePerCredit) > 0 && (
-              <p className="text-xs text-emerald-600 mt-1.5 font-medium">
-                Đơn giá: {formatCurrency(Number(pricePerCredit))} / tín chỉ
-              </p>
-            )}
+              return (
+                <div key={year} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-gray-50 border border-gray-100 hover:border-gray-200 transition-all gap-4">
+                  <div>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-[#1E3A8A]/10 text-[#1E3A8A] mb-1">
+                      {cohortLabel}
+                    </span>
+                    <h3 className="text-sm font-bold text-gray-800">
+                      Năm nhập học: {year}
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Áp dụng cho sinh viên có mã bắt đầu bằng D{String(year).slice(-2)}
+                    </p>
+                  </div>
+
+                  <div className="sm:w-64">
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="number"
+                        value={inputValue}
+                        onChange={(e) => handlePriceChange(year, e.target.value)}
+                        placeholder="Ví dụ: 450000"
+                        min={0}
+                        step={1000}
+                        className={`w-full pl-9 pr-4 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-[#1E3A8A]/30 focus:border-[#1E3A8A] text-gray-900 font-semibold ${
+                          error ? "border-rose-400 bg-rose-50/50" : "border-gray-300 bg-white"
+                        }`}
+                      />
+                    </div>
+                    {error && (
+                      <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                        {error}
+                      </p>
+                    )}
+                    {inputValue && !error && (
+                      <p className="text-[11px] text-emerald-600 mt-1 font-medium">
+                        {formatCurrency(Number(inputValue))} / tín chỉ
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-8 flex justify-end">
           <button
-            onClick={handleSubmitClick}
-            disabled={submitting || !selectedSemesterId || !pricePerCredit}
-            className="px-6 py-3 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors font-semibold text-sm shadow-md disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+            onClick={handleSaveRates}
+            disabled={savingRates}
+            className="px-6 py-3 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors font-semibold text-sm shadow-md disabled:opacity-50 flex items-center gap-2"
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-            Cập nhật đơn giá tín chỉ
+            {savingRates && <Loader2 className="w-4 h-4 animate-spin" />}
+            Lưu cấu hình đơn giá
           </button>
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
-      {showConfirm && (
+      {/* Phát sinh / Tính toán học phí */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 flex flex-col justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-emerald-600" />
+            Tính & Phát sinh Học phí
+          </h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Chọn học kỳ để chạy tiến trình tính toán học phí cho toàn bộ sinh viên đã đăng ký học phần.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Học kỳ tính học phí <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={selectedSemesterId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedSemesterId(val);
+                  const found = semesters.find((s) => String(s.semesterId) === String(val));
+                  setSelectedSemester(found || null);
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 bg-white text-gray-900 font-semibold text-sm"
+              >
+                <option value="">-- Chọn học kỳ --</option>
+                {semesters.map((s) => (
+                  <option key={s.semesterId} value={s.semesterId}>
+                    {s.semesterName} — {s.academicYear || s.semesterYear}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedSemester && (
+              <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/80 text-xs text-emerald-800 space-y-2">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Sẵn sàng phát sinh học phí
+                </p>
+                <p>
+                  Hệ thống sẽ quét toàn bộ đăng ký học phần trong học kỳ <strong className="text-emerald-900">{selectedSemester.semesterName}</strong>, tính tổng số tín chỉ đăng ký của từng sinh viên, nhân với đơn giá tín chỉ tương ứng của khóa (hoặc đơn giá mặc định của học kỳ: <strong className="text-emerald-900">{formatCurrency(selectedSemester.pricePerCredit)}</strong> nếu khóa chưa có cấu hình).
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <button
+            onClick={() => {
+              if (!selectedSemesterId) {
+                showToast("Vui lòng chọn học kỳ.", "error");
+                return;
+              }
+              setShowConfirmGenerate(true);
+            }}
+            disabled={generatingFees || !selectedSemesterId}
+            className="w-full px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold text-sm shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {generatingFees && <Loader2 className="w-4 h-4 animate-spin" />}
+            Tính toán & Phát sinh Học phí
+          </button>
+        </div>
+      </div>
+
+      {/* Dialog xác nhận phát sinh học phí */}
+      {showConfirmGenerate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full space-y-5 border border-gray-100">
             <div className="text-center space-y-2">
@@ -313,26 +387,23 @@ function TabCreditConfig({ showToast }) {
                 <AlertCircle className="w-6 h-6 text-amber-600" />
               </div>
               <h3 className="text-lg font-bold text-gray-900">
-                Xác nhận thay đổi đơn giá
+                Xác nhận tính học phí
               </h3>
               <p className="text-sm text-gray-600">
-                Bạn có chắc chắn muốn cập nhật đơn giá tín chỉ cho học kỳ đã
-                chọn thành{" "}
-                <strong className="text-[#1E3A8A]">
-                  {formatCurrency(Number(pricePerCredit))}
-                </strong>{" "}
-                / tín chỉ?
+                Hành động này sẽ tính toán lại học phí dựa trên số tín chỉ đã đăng ký của toàn bộ sinh viên trong học kỳ{" "}
+                <strong className="text-[#1E3A8A]">{selectedSemester?.semesterName}</strong>. 
+                Các hóa đơn học phí đã có sẵn sẽ được cập nhật số tiền mới. Bạn có chắc chắn muốn tiếp tục?
               </p>
             </div>
             <div className="flex gap-3">
               <button
-                onClick={handleConfirmSubmit}
-                className="flex-1 px-4 py-3 bg-[#1E3A8A] text-white rounded-xl hover:bg-[#1E3A8A]/90 font-semibold text-sm"
+                onClick={handleGenerateFees}
+                className="flex-1 px-4 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 font-semibold text-sm"
               >
-                Xác nhận cập nhật
+                Xác nhận & Tính học phí
               </button>
               <button
-                onClick={() => setShowConfirm(false)}
+                onClick={() => setShowConfirmGenerate(false)}
                 className="px-4 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 font-semibold text-sm text-gray-700"
               >
                 Hủy bỏ
@@ -341,7 +412,7 @@ function TabCreditConfig({ showToast }) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -365,7 +436,7 @@ function TabCashCounter({ showToast }) {
 
   const handleSearchStudent = async () => {
     if (!studentCode.trim()) {
-      showToast("Vui lòng nhập mã sinh viên.", "error");
+      showToast("Vui lòng nhập mã sinh viên hoặc họ tên.", "error");
       return;
     }
     try {
@@ -470,7 +541,7 @@ function TabCashCounter({ showToast }) {
           Quầy xác nhận thu tiền mặt
         </h2>
         <p className="text-sm text-gray-500 mb-6">
-          Nhập mã sinh viên để tra cứu công nợ, sau đó nhập số tiền thu thực tế
+          Nhập mã sinh viên hoặc họ tên để tra cứu công nợ, sau đó nhập số tiền thu thực tế
           và ghi chú để hoàn tất xác nhận.
         </p>
 
@@ -481,9 +552,9 @@ function TabCashCounter({ showToast }) {
             <input
               type="text"
               value={studentCode}
-              onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
+              onChange={(e) => setStudentCode(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Nhập mã sinh viên (VD: B21DCCN001)..."
+              placeholder="Nhập mã sinh viên hoặc họ tên sinh viên..."
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1E3A8A]/30 focus:border-[#1E3A8A] text-gray-900 font-medium"
             />
           </div>

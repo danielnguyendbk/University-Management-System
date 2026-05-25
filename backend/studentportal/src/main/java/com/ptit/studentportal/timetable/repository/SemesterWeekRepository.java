@@ -14,5 +14,9 @@ public interface SemesterWeekRepository extends JpaRepository<SemesterWeek, Long
 	List<SemesterWeek> findBySemesterIdOrderByWeekNo(Long semesterId);
 
 	List<SemesterWeek> findBySemesterIdAndWeekNoBetweenOrderByWeekNo(Long semesterId, Integer fromWeekNo, Integer toWeekNo);
+
+	void deleteBySemesterIdAndWeekNoLessThan(Long semesterId, Integer weekNo);
+
+	void deleteBySemesterIdAndWeekNoGreaterThan(Long semesterId, Integer weekNo);
 }
 

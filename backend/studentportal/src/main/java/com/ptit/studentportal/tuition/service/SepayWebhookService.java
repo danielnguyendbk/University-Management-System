@@ -1,5 +1,7 @@
 package com.ptit.studentportal.tuition.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ptit.studentportal.tuition.config.PaymentProperties;
 import com.ptit.studentportal.tuition.dto.SepayWebhookPayload;
 import com.ptit.studentportal.tuition.entity.Payment;
 import com.ptit.studentportal.tuition.entity.TuitionFee;
@@ -22,13 +24,16 @@ import java.util.regex.Pattern;
 public class SepayWebhookService {
 
     private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("HP\\d+[A-Z0-9]+", Pattern.CASE_INSENSITIVE);
+    private static final String RAW_WEBHOOK_FALLBACK_JSON = "{\"error\":\"failed_to_serialize_webhook_payload\"}";
 
     private final PaymentRepository paymentRepository;
     private final TuitionFeeRepository tuitionFeeRepository;
     private final SepayProperties sepayProperties;
+    private final PaymentProperties paymentProperties;
+    private final ObjectMapper objectMapper;
 
     @Transactional
-    public boolean handleWebhook(SepayWebhookPayload payload, String rawJson, String authorizationHeader) {
+    public boolean handleWebhook(SepayWebhookPayload payload, String authorizationHeader) {
         
         // 2. BƯỚC BẢO MẬT: Kiểm tra API Key từ Header SePay bắn sang
         String apiKey = sepayProperties.getWebhookApiKey();
@@ -67,15 +72,18 @@ public class SepayWebhookService {
             return true;
         }
 
-        // Extract order_code from content or code
+        // Extract order_code from content/description first; keep code as a final fallback.
         String orderCode = extractOrderCode(payload.getContent());
+        if (orderCode == null) {
+            orderCode = extractOrderCode(payload.getDescription());
+        }
         if (orderCode == null) {
             orderCode = extractOrderCode(payload.getCode());
         }
 
         if (orderCode == null) {
-            log.warn("[SePay] Could not extract order code from transfer content='{}' or code='{}'",
-                    payload.getContent(), payload.getCode());
+            log.warn("[SePay] Could not extract order code from content='{}', description='{}' or code='{}'",
+                    payload.getContent(), payload.getDescription(), payload.getCode());
             return false;
         }
 
@@ -101,31 +109,47 @@ public class SepayWebhookService {
 
         if (payload.getTransferAmount() == null) {
             log.warn("[SePay] Missing transferAmount in payload for orderCode={}", orderCode);
-            return false;
+            throw new SepayWebhookValidationException(
+                    "missing_transfer_amount",
+                    "Webhook transferAmount is required.",
+                    null,
+                    payment.getAmount());
         }
 
         BigDecimal transferAmount = BigDecimal.valueOf(payload.getTransferAmount());
-        
-        // ==========================================
-        // KHU VỰC BÙA ĐỂ DEMO: CHẤP NHẬN 2.000 VNĐ
-        // ==========================================
-        boolean isDemoAmount = (transferAmount.compareTo(new BigDecimal("2000")) == 0);
+
+        // ============================================================
+        // DEMO / DEV ONLY — controlled by application.properties:
+        //   payment.demo-amount-enabled=true
+        //   payment.demo-amount=2000
+        //
+        // When enabled, a transfer of exactly demoAmount VND is treated
+        // as full payment for committee demos / local testing.
+        // MUST be false in production.
+        // ============================================================
+        boolean isDemoAmount = paymentProperties.isDemoAmountEnabled()
+                && paymentProperties.getDemoAmount() != null
+                && transferAmount.compareTo(paymentProperties.getDemoAmount()) == 0;
 
         if (isDemoAmount) {
-            log.info("[SePay DEMO] Phát hiện số tiền chuyển khoản đúng 2,000đ. Kích hoạt cơ chế gạch nợ tự động đặc biệt cho Hội đồng xem!");
-        } else if (transferAmount.compareTo(payment.getAmount()) < 0) {
-            // Nếu không phải tiền demo (2000đ) mà chuyển thiếu tiền thật thì mới báo lỗi
-            log.warn("[SePay] Insufficient amount received for orderCode={}: transferred={}, expected={}",
+            log.info("[SePay DEMO] Demo-amount match ({} VND). Treating as full payment (DEMO MODE ONLY).",
+                    paymentProperties.getDemoAmount());
+        } else if (transferAmount.compareTo(payment.getAmount()) != 0) {
+            // Normal mode: transferred amount must exactly match the expected order amount.
+            log.warn("[SePay] Amount mismatch for orderCode={}: transferred={}, expected={}",
                     orderCode, transferAmount, payment.getAmount());
-            return false;
+            throw new SepayWebhookValidationException(
+                    "amount_mismatch",
+                    "Transfer amount does not match the expected payment amount.",
+                    transferAmount,
+                    payment.getAmount());
         }
-        // ==========================================
 
         // Update Payment status (using string statuses)
         payment.setPaymentStatus("success");
         payment.setPaidAt(LocalDateTime.now());
         payment.setTransactionCode(transactionId);
-        payment.setRawWebhookPayload(rawJson);
+        payment.setRawWebhookPayload(serializeWebhookPayload(payload));
         paymentRepository.save(payment);
 
         // Update TuitionFee
@@ -153,6 +177,15 @@ public class SepayWebhookService {
         return true;
     }
 
+    private String serializeWebhookPayload(SepayWebhookPayload payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            log.warn("[SePay] Could not serialize webhook payload to JSON, using fallback JSON object.", e);
+            return RAW_WEBHOOK_FALLBACK_JSON;
+        }
+    }
+
     private String extractOrderCode(String text) {
         if (text == null || text.trim().isEmpty()) {
             return null;
@@ -162,5 +195,35 @@ public class SepayWebhookService {
             return parts[parts.length - 1].toUpperCase();
         }
         return null;
+    }
+
+    public static class SepayWebhookValidationException extends RuntimeException {
+        private final String errorCode;
+        private final BigDecimal transferredAmount;
+        private final BigDecimal expectedAmount;
+
+        public SepayWebhookValidationException(
+                String errorCode,
+                String message,
+                BigDecimal transferredAmount,
+                BigDecimal expectedAmount
+        ) {
+            super(message);
+            this.errorCode = errorCode;
+            this.transferredAmount = transferredAmount;
+            this.expectedAmount = expectedAmount;
+        }
+
+        public String getErrorCode() {
+            return errorCode;
+        }
+
+        public BigDecimal getTransferredAmount() {
+            return transferredAmount;
+        }
+
+        public BigDecimal getExpectedAmount() {
+            return expectedAmount;
+        }
     }
 }

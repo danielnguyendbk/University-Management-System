@@ -905,6 +905,119 @@ BEGIN
     END IF;
 END$$
 
+DROP TRIGGER IF EXISTS trg_schedules_no_overlap_insert;
+CREATE TRIGGER trg_schedules_no_overlap_insert
+BEFORE INSERT ON schedules
+FOR EACH ROW
+BEGIN
+    DECLARE new_semester_id BIGINT UNSIGNED;
+    DECLARE new_lecturer_id BIGINT UNSIGNED;
+
+    -- Lấy thông tin kì học và giảng viên của lớp học phần mới
+    SELECT semester_id, lecturer_id
+    INTO new_semester_id, new_lecturer_id
+    FROM course_sections
+    WHERE section_id = NEW.section_id;
+
+    -- 1. Chống trùng phòng trong cùng học kỳ
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        JOIN course_sections cs ON s.section_id = cs.section_id
+        WHERE cs.semester_id = new_semester_id
+          AND s.room_id = NEW.room_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in schedules';
+    END IF;
+
+    -- 2. Chống trùng giảng viên trong cùng học kỳ
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        JOIN course_sections cs ON s.section_id = cs.section_id
+        WHERE cs.semester_id = new_semester_id
+          AND cs.lecturer_id = new_lecturer_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lecturer schedule overlap in schedules';
+    END IF;
+
+    -- 3. Chống trùng lớp học phần (section)
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.section_id = NEW.section_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in schedules';
+    END IF;
+END$$
+
+DROP TRIGGER IF EXISTS trg_schedules_no_overlap_update;
+CREATE TRIGGER trg_schedules_no_overlap_update
+BEFORE UPDATE ON schedules
+FOR EACH ROW
+BEGIN
+    DECLARE new_semester_id BIGINT UNSIGNED;
+    DECLARE new_lecturer_id BIGINT UNSIGNED;
+
+    -- Lấy thông tin kì học và giảng viên của lớp học phần mới
+    SELECT semester_id, lecturer_id
+    INTO new_semester_id, new_lecturer_id
+    FROM course_sections
+    WHERE section_id = NEW.section_id;
+
+    -- 1. Chống trùng phòng trong cùng học kỳ
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        JOIN course_sections cs ON s.section_id = cs.section_id
+        WHERE s.schedule_id <> OLD.schedule_id
+          AND cs.semester_id = new_semester_id
+          AND s.room_id = NEW.room_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Room schedule overlap in schedules';
+    END IF;
+
+    -- 2. Chống trùng giảng viên trong cùng học kỳ
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        JOIN course_sections cs ON s.section_id = cs.section_id
+        WHERE s.schedule_id <> OLD.schedule_id
+          AND cs.semester_id = new_semester_id
+          AND cs.lecturer_id = new_lecturer_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Lecturer schedule overlap in schedules';
+    END IF;
+
+    -- 3. Chống trùng lớp học phần (section)
+    IF EXISTS (
+        SELECT 1
+        FROM schedules s
+        WHERE s.schedule_id <> OLD.schedule_id
+          AND s.section_id = NEW.section_id
+          AND s.day_of_week = NEW.day_of_week
+          AND NOT (NEW.slot_end < s.slot_start OR NEW.slot_start > s.slot_end)
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Section schedule overlap in schedules';
+    END IF;
+END$$
+
 DELIMITER ;
 
 

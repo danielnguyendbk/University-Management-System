@@ -1,5 +1,54 @@
 import apiClient from "./client";
 
+const parseDateOnly = (dateStr) => {
+  if (!dateStr) return null;
+  const [year, month, day] = String(dateStr).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const getDaysRemaining = (dateStr) => {
+  const examDate = parseDateOnly(dateStr);
+  if (!examDate) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  examDate.setHours(0, 0, 0, 0);
+  const diffTime = examDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays >= 0 ? diffDays : 0;
+};
+
+const getDurationLabel = (startTime, endTime) => {
+  if (!startTime || !endTime) return "";
+  const [startHour, startMinute] = String(startTime).split(":").map(Number);
+  const [endHour, endMinute] = String(endTime).split(":").map(Number);
+  if ([startHour, startMinute, endHour, endMinute].some(Number.isNaN)) return "";
+  const minutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
+  return minutes > 0 ? `${minutes} phút` : "";
+};
+
+const normalizeStatus = (status) => {
+  const value = String(status || "").trim().toUpperCase();
+  if (value === "CANCEL" || value === "CANCELED") return "CANCELLED";
+  return value;
+};
+
+const normalizeMethod = (method) => method ? String(method).trim().toUpperCase() : method;
+const normalizeRole = (role) => String(role || "ASSISTANT").trim().toUpperCase() === "MAIN" ? "MAIN" : "ASSISTANT";
+
+const mapExam = (exam) => ({
+  ...exam,
+  id: exam.examId,
+  status: normalizeStatus(exam.status),
+  examMethod: normalizeMethod(exam.examMethod),
+  duration: exam.duration || getDurationLabel(exam.startTime, exam.endTime),
+  daysRemaining: getDaysRemaining(exam.examDate),
+  invigilators: (exam.invigilators || []).map(inv => ({
+    ...inv,
+    role: normalizeRole(inv.role)
+  }))
+});
+
 export const adminExamApi = {
   /**
    * Fetch all semesters
@@ -28,7 +77,10 @@ export const adminExamApi = {
    */
   async getLecturers() {
     const res = await apiClient.get("/admin/exams/lecturers");
-    return res.data.data;
+    return res.data.data.map(lecturer => ({
+      ...lecturer,
+      fullName: lecturer.fullName || lecturer.lecturerName
+    }));
   },
 
   /**
@@ -39,22 +91,7 @@ export const adminExamApi = {
     const res = await apiClient.get("/admin/exams", {
       params: { semesterId: filters.semesterId }
     });
-    let result = res.data.data;
-
-    // Map daysRemaining dynamically
-    return result.map(exam => ({
-      ...exam,
-      id: exam.examId, // Ensure compatibility with original "id" field in frontend components
-      daysRemaining: (() => {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const examDateObj = new Date(exam.examDate);
-        examDateObj.setHours(0,0,0,0);
-        const diffTime = examDateObj - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 ? diffDays : 0;
-      })()
-    }));
+    return res.data.data.map(mapExam);
   },
 
   /**
@@ -91,10 +128,7 @@ export const adminExamApi = {
 
     const res = await apiClient.post("/admin/exams", payload);
     const exam = res.data.data;
-    return {
-      ...exam,
-      id: exam.examId
-    };
+    return mapExam(exam);
   },
 
   /**
@@ -121,10 +155,7 @@ export const adminExamApi = {
 
     const res = await apiClient.put(`/admin/exams/${examId}`, payload);
     const exam = res.data.data;
-    return {
-      ...exam,
-      id: exam.examId
-    };
+    return mapExam(exam);
   },
 
   /**
@@ -134,10 +165,7 @@ export const adminExamApi = {
   async cancelExam(examId) {
     const res = await apiClient.patch(`/admin/exams/${examId}/cancel`);
     const exam = res.data.data;
-    return {
-      ...exam,
-      id: exam.examId
-    };
+    return mapExam(exam);
   },
 
   /**
@@ -156,7 +184,7 @@ export const adminExamApi = {
     const res = await apiClient.get("/admin/exams", {
       params: { semesterId }
     });
-    const drafts = res.data.data.filter(e => e.status === "DRAFT");
+    const drafts = res.data.data.filter(e => normalizeStatus(e.status) === "DRAFT");
     await Promise.all(drafts.map(e => {
       return apiClient.put(`/admin/exams/${e.examId}`, {
         semesterId: e.semesterId,
@@ -170,7 +198,12 @@ export const adminExamApi = {
         seatRange: e.seatRange,
         studentCount: e.studentCount,
         status: "SCHEDULED",
-        note: e.note
+        note: e.note,
+        invigilators: (e.invigilators || []).map(inv => ({
+          lecturerId: inv.lecturerId,
+          role: normalizeRole(inv.role),
+          note: inv.note || ""
+        }))
       });
     }));
     return true;
@@ -188,10 +221,7 @@ export const adminExamApi = {
       note: invData.note || ""
     });
     const exam = res.data.data;
-    return {
-      ...exam,
-      id: exam.examId
-    };
+    return mapExam(exam);
   },
 
   /**
@@ -202,10 +232,7 @@ export const adminExamApi = {
   async removeInvigilator(examId, lecturerId) {
     const res = await apiClient.delete(`/admin/exams/${examId}/invigilators/${lecturerId}`);
     const exam = res.data.data;
-    return {
-      ...exam,
-      id: exam.examId
-    };
+    return mapExam(exam);
   },
 
   /**
@@ -249,11 +276,12 @@ export const adminExamApi = {
   },
 
   /**
-   * Download a dummy Excel import template
+   * Download the Excel import template
    */
-  async downloadTemplate() {
+  async downloadTemplate(semesterId) {
     const res = await apiClient.get("/admin/exams/import-template", {
-      responseType: "blob"
+      responseType: "blob",
+      params: semesterId ? { semesterId } : undefined
     });
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement("a");

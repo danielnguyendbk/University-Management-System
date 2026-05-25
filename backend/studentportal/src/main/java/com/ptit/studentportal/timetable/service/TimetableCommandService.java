@@ -1,6 +1,7 @@
 package com.ptit.studentportal.timetable.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.GenerateClassSessionsRequest;
@@ -23,5 +24,7 @@ public interface TimetableCommandService {
 	void unlockSemester(Long semesterId);
 
 	void generateSemesterWeeks(Long semesterId);
+
+	Map<String, Integer> clearSemesterTimetable(Long semesterId);
 }
 

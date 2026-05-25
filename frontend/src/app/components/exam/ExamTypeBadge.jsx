@@ -1,6 +1,8 @@
 import React from "react";
 
 export function ExamTypeBadge({ type, className = "" }) {
+  const normalizedType = type ? String(type).trim().toLowerCase() : type;
+
   const typeConfig = {
     midterm: {
       text: "Giữa kỳ",
@@ -20,7 +22,7 @@ export function ExamTypeBadge({ type, className = "" }) {
     }
   };
 
-  const current = typeConfig[type] || {
+  const current = typeConfig[normalizedType] || {
     text: type || "Không rõ",
     classes: "bg-slate-100 text-slate-700 border-slate-200"
   };

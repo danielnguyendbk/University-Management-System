@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -25,6 +26,25 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 	Optional<ClassSession> findByScheduleIdAndSemesterWeekId(Long scheduleId, Long semesterWeekId);
 
 	boolean existsByScheduleId(Long scheduleId);
+
+	@Modifying
+	@Query(value = """
+			DELETE cs
+			FROM class_sessions cs
+			JOIN course_sections sec ON sec.section_id = cs.section_id
+			WHERE sec.semester_id = :semesterId
+			""", nativeQuery = true)
+	int deleteBySemesterId(@Param("semesterId") Long semesterId);
+
+	@Modifying
+	@Query(value = """
+			DELETE cs
+			FROM class_sessions cs
+			JOIN semester_weeks sw ON sw.semester_week_id = cs.semester_week_id
+			JOIN semesters sem ON sem.semester_id = sw.semester_id
+			WHERE sem.semester_code = :semesterCode
+			""", nativeQuery = true)
+	int deleteBySemesterCode(@Param("semesterCode") String semesterCode);
 
 	@Query(value = """
 			SELECT cs.*

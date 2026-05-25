@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ptit.studentportal.lecturer.Lecturer;
 import com.ptit.studentportal.lecturer.LecturerRepository;
@@ -211,6 +212,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 	}
 
 	@Override
+	@Transactional
 	public void deleteSchedule(Long scheduleId) {
 		Schedule schedule = scheduleRepository.findById(scheduleId)
 				.orElseThrow(() -> new IllegalArgumentException("Khong tim thay lich mau."));

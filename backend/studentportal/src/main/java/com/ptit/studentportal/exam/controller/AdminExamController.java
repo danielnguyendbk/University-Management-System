@@ -96,8 +96,10 @@ public class AdminExamController {
     }
 
     @GetMapping(value = "/import-template", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    public ResponseEntity<byte[]> downloadTemplate() {
-        byte[] data = examImportService.generateImportTemplate();
+    public ResponseEntity<byte[]> downloadTemplate(
+            @RequestParam(value = "semesterId", required = false) Long semesterId
+    ) {
+        byte[] data = examImportService.generateImportTemplate(semesterId);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"exam_import_template.xlsx\"")
                 .body(data);

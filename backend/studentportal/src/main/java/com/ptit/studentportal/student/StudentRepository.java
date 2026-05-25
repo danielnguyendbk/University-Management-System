@@ -13,6 +13,9 @@ public interface StudentRepository extends JpaRepository<Student, Long>, JpaSpec
 
 	Optional<Student> findByStudentCode(String studentCode);
 
+	@org.springframework.data.jpa.repository.Query("SELECT s FROM Student s WHERE LOWER(s.studentCode) = LOWER(:search) OR LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%'))")
+	List<Student> searchByCodeOrName(@org.springframework.data.repository.query.Param("search") String search);
+
 	Optional<Student> findByUser_UserId(Long userId);
 
 	boolean existsByStudentCode(String studentCode);

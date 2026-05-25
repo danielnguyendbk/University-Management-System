@@ -1,18 +1,45 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { downloadScheduleImportTemplate, importTimetable } from "../../../api/adminTimetableApi";
+import {
+  deleteSemesterTimetable,
+  downloadScheduleImportTemplate,
+  getSemesters,
+  importTimetable,
+} from "../../../api/adminTimetableApi";
+import { getLatestSemester } from "../../../utils/semesterUtils";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
-import { CheckCircle2, Download, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Trash2, Upload, XCircle } from "lucide-react";
 
 export function AdminScheduleImportTab({ onImportSuccess }) {
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [semesters, setSemesters] = useState([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState("");
   const [importResult, setImportResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const errors = Array.isArray(importResult?.errors) ? importResult.errors : [];
+
+  useEffect(() => {
+    async function fetchSemesters() {
+      try {
+        const data = await getSemesters();
+        setSemesters(data || []);
+        if (data?.length && !selectedSemesterId) {
+          const latestSemester = getLatestSemester(data);
+          const latestId = latestSemester?.id ?? latestSemester?.semesterId;
+          setSelectedSemesterId(latestId ? String(latestId) : "");
+        }
+      } catch (error) {
+        toast.error("Không thể tải danh sách học kỳ.");
+      }
+    }
+
+    fetchSemesters();
+  }, []);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -131,6 +158,40 @@ export function AdminScheduleImportTab({ onImportSuccess }) {
     }
   };
 
+  const handleDeleteExistingTimetable = async () => {
+    if (!selectedSemesterId) {
+      toast.error("Vui lòng chọn học kỳ cần xóa lịch.");
+      return;
+    }
+
+    const semester = semesters.find((item) => String(item.id ?? item.semesterId) === String(selectedSemesterId));
+    const semesterName = semester?.name || semester?.semesterName || semester?.code || `học kỳ ${selectedSemesterId}`;
+    const confirmed = window.confirm(
+      `Xóa toàn bộ lịch mẫu và các buổi học đã sinh của ${semesterName}? Hành động này không xóa lớp học phần, đăng ký, phòng, giảng viên hoặc ngày nghỉ.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      const result = await deleteSemesterTimetable(Number(selectedSemesterId));
+      const deletedSchedules = Number(result?.deletedSchedules ?? 0);
+      const deletedClassSessions = Number(result?.deletedClassSessions ?? 0);
+      setImportResult(null);
+      toast.success(`Đã xóa ${deletedSchedules} lịch mẫu và ${deletedClassSessions} buổi học.`);
+      if (onImportSuccess) {
+        onImportSuccess();
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Không thể xóa thời khóa biểu hiện có.";
+      toast.error(message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Upload Section */}
@@ -138,6 +199,35 @@ export function AdminScheduleImportTab({ onImportSuccess }) {
         <h3 className="text-lg font-semibold mb-4">Nhập thời khóa biểu từ Excel</h3>
 
         <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div className="w-full sm:max-w-sm">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Học kỳ cần thao tác</label>
+              <select
+                value={selectedSemesterId}
+                onChange={(event) => setSelectedSemesterId(event.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
+                disabled={loading || deleting}
+              >
+                <option value="">Chọn học kỳ</option>
+                {semesters.map((semester) => (
+                  <option key={semester.id ?? semester.semesterId} value={semester.id ?? semester.semesterId}>
+                    {semester.name || semester.semesterName || semester.code || `Học kỳ ${semester.id ?? semester.semesterId}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              onClick={handleDeleteExistingTimetable}
+              disabled={!selectedSemesterId || loading || deleting}
+              variant="outline"
+              className="border-red-200 text-red-700 hover:bg-red-50 flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? "Đang xóa..." : "Xóa lịch hiện có"}
+            </Button>
+          </div>
+
           {/* File Upload */}
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
             <input
@@ -161,6 +251,7 @@ export function AdminScheduleImportTab({ onImportSuccess }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={loading || deleting}
                 className="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm font-medium"
               >
                 Chọn file
@@ -172,7 +263,7 @@ export function AdminScheduleImportTab({ onImportSuccess }) {
           <div className="flex flex-wrap gap-3">
             <Button
               onClick={handleImport}
-              disabled={!selectedFile || loading}
+              disabled={!selectedFile || loading || deleting}
               className="bg-blue-500 hover:bg-blue-600"
             >
               {loading ? "Đang xử lý..." : "Import"}
@@ -181,14 +272,14 @@ export function AdminScheduleImportTab({ onImportSuccess }) {
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
-              disabled={loading}
+              disabled={loading || deleting}
             >
               Chọn file khác
             </Button>
 
             <Button
               onClick={handleDownloadTemplate}
-              disabled={loading}
+              disabled={loading || deleting}
               variant="outline"
               className="flex items-center gap-2"
             >

@@ -56,6 +56,7 @@ const navigationByRole = {
     { name: "Phiên đăng ký môn", name_vi: "Mở/đóng đăng ký học phần", path: "registration-sessions", icon: CalendarCheck },
     { name: "Thời khóa biểu", name_vi: "Tạo và quản lý lịch học", path: "timetable", icon: CalendarDays },
     { name: "Quản lý lịch thi", name_vi: "Xếp lịch & gán giám thị", path: "exams", icon: CalendarCheck },
+    { name: "Quản lý học phí", name_vi: "Học phí & Thanh toán", path: "tuition", icon: DollarSign },
   ],
 };
 

@@ -1,10 +1,13 @@
 package com.ptit.studentportal.timetable.service.impl;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
@@ -170,25 +173,15 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 		Semester semester = semesterRepository.findById(semesterId)
 				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
 
-		String semesterCode = semester.getSemesterCode();
-		String semesterYear = semester.getSemesterYear(); // e.g. "2025-2026"
-
-		int fromWeek, toWeek;
-		if (semesterCode.contains("HK1")) {
-			fromWeek = 1;
-			toWeek = 22;
-		} else if (semesterCode.contains("HK2")) {
-			fromWeek = 23;
-			toWeek = 46;
-		} else {
-			// Fallback or other semesters
-			fromWeek = 1;
-			toWeek = 10;
+		LocalDate semesterStartDate = semester.getStartDate();
+		LocalDate semesterEndDate = semester.getEndDate();
+		if (semesterStartDate == null || semesterEndDate == null) {
+			throw new TimetableNotFoundException("Semester start/end date not set");
 		}
 
-		// academicYearStartDate = Aug 11 of the start year
-		String startYearStr = semesterYear.split("-")[0];
-		LocalDate academicYearStartDate = LocalDate.of(Integer.parseInt(startYearStr), 8, 11);
+		LocalDate academicYearStartDate = resolveAcademicYearStartDate(semester);
+		int fromWeek = Math.max(1, weekNoForDate(semesterStartDate, academicYearStartDate));
+		int toWeek = Math.max(fromWeek, weekNoForDate(semesterEndDate, academicYearStartDate));
 
 		for (int weekNo = fromWeek; weekNo <= toWeek; weekNo++) {
 			LocalDate startDate = academicYearStartDate.plusDays((long) (weekNo - 1) * 7);
@@ -203,7 +196,7 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 			} else {
 				week = SemesterWeek.builder()
 						.semesterId(semesterId)
-						.cohortYear(parseCohortYear(semesterYear))
+						.cohortYear(parseCohortYear(semester.getSemesterYear()))
 						.weekNo(weekNo)
 						.startDate(startDate)
 						.endDate(endDate)
@@ -212,6 +205,62 @@ public class TimetableCommandServiceImpl implements TimetableCommandService {
 			}
 			semesterWeekRepository.save(week);
 		}
+
+		semesterWeekRepository.deleteBySemesterIdAndWeekNoLessThan(semesterId, fromWeek);
+		semesterWeekRepository.deleteBySemesterIdAndWeekNoGreaterThan(semesterId, toWeek);
+	}
+
+	private int weekNoForDate(LocalDate date, LocalDate academicYearStartDate) {
+		long days = ChronoUnit.DAYS.between(academicYearStartDate, date);
+		if (days < 0) {
+			return 1;
+		}
+		return (int) (days / 7) + 1;
+	}
+
+	private LocalDate resolveAcademicYearStartDate(Semester semester) {
+		String semesterYear = semester.getSemesterYear();
+		if (semesterYear != null && semesterYear.contains("-")) {
+			String startYearStr = semesterYear.split("-")[0].trim();
+			try {
+				int startYear = Integer.parseInt(startYearStr);
+				return LocalDate.of(startYear, 8, 11);
+			} catch (NumberFormatException ignored) {
+				// Fallback to semester start date when semesterYear is not parseable.
+			}
+		}
+
+		LocalDate semesterStartDate = semester.getStartDate();
+		if (semesterStartDate == null) {
+			return LocalDate.of(LocalDate.now().getYear(), 8, 11);
+		}
+		LocalDate candidate = LocalDate.of(semesterStartDate.getYear(), 8, 11);
+		if (semesterStartDate.isBefore(candidate)) {
+			candidate = candidate.minusYears(1);
+		}
+		return candidate;
+	}
+
+	@Override
+	@Transactional
+	public Map<String, Integer> clearSemesterTimetable(Long semesterId) {
+		Semester semester = semesterRepository.findById(semesterId)
+				.orElseThrow(() -> new TimetableNotFoundException("Semester not found"));
+
+		int deletedSessions = classSessionRepository.deleteBySemesterId(semesterId);
+		int deletedSchedules = scheduleRepository.deleteBySemesterId(semesterId);
+		if (deletedSessions == 0 && deletedSchedules == 0) {
+			String semesterCode = semester.getSemesterCode();
+			if (semesterCode != null && !semesterCode.isBlank()) {
+				deletedSessions = classSessionRepository.deleteBySemesterCode(semesterCode);
+				deletedSchedules = scheduleRepository.deleteBySemesterCode(semesterCode);
+			}
+		}
+
+		return Map.of(
+				"deletedClassSessions", deletedSessions,
+				"deletedSchedules", deletedSchedules
+		);
 	}
 
 	private int mapDayOffset(String dayOfWeek) {

@@ -3,6 +3,7 @@ package com.ptit.studentportal.timetable.service.impl;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.time.temporal.ChronoUnit;
 
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,8 @@ import com.ptit.studentportal.timetable.repository.ScheduleRepository;
 import com.ptit.studentportal.timetable.repository.SemesterWeekRepository;
 import com.ptit.studentportal.timetable.dto.response.ScheduleViewProjection;
 import com.ptit.studentportal.timetable.entity.SemesterWeek;
+import com.ptit.studentportal.timetable.entity.Semester;
+import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.time.DayOfWeek;
@@ -28,6 +31,7 @@ import com.ptit.studentportal.timetable.repository.CourseSectionRepository;
 import com.ptit.studentportal.timetable.dto.response.SectionTimetableOptionResponse;
 import com.ptit.studentportal.lecturer.LecturerRepository;
 import com.ptit.studentportal.lecturer.Lecturer;
+import com.ptit.studentportal.timetable.service.TimetableCommandService;
 
 
 @Service
@@ -38,8 +42,10 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
     private final StudentRepository studentRepository;
     private final ScheduleRepository scheduleRepository;
     private final SemesterWeekRepository semesterWeekRepository;
+    private final SemesterRepository semesterRepository;
     private final CourseSectionRepository courseSectionRepository;
     private final LecturerRepository lecturerRepository;
+    private final TimetableCommandService timetableCommandService;
 
     public TimetableQueryServiceImpl(
             ClassSessionRepository classSessionRepository,
@@ -47,16 +53,20 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
             StudentRepository studentRepository,
             ScheduleRepository scheduleRepository,
             SemesterWeekRepository semesterWeekRepository,
+            SemesterRepository semesterRepository,
             CourseSectionRepository courseSectionRepository,
-            LecturerRepository lecturerRepository
+            LecturerRepository lecturerRepository,
+            TimetableCommandService timetableCommandService
     ) {
         this.classSessionRepository = classSessionRepository;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
         this.scheduleRepository = scheduleRepository;
         this.semesterWeekRepository = semesterWeekRepository;
+        this.semesterRepository = semesterRepository;
         this.courseSectionRepository = courseSectionRepository;
         this.lecturerRepository = lecturerRepository;
+        this.timetableCommandService = timetableCommandService;
     }
 
     @Override
@@ -344,7 +354,74 @@ public class TimetableQueryServiceImpl implements TimetableQueryService {
 
     @Override
     public List<SemesterWeek> getSemesterWeeks(Long semesterId) {
-        return semesterWeekRepository.findBySemesterIdOrderByWeekNo(semesterId);
+        List<SemesterWeek> weeks = semesterWeekRepository.findBySemesterIdOrderByWeekNo(semesterId);
+        Semester semester = semesterRepository.findById(semesterId).orElse(null);
+        if (semester != null && shouldRegenerateWeeks(semester, weeks)) {
+            timetableCommandService.generateSemesterWeeks(semesterId);
+            weeks = semesterWeekRepository.findBySemesterIdOrderByWeekNo(semesterId);
+        }
+        return weeks;
+    }
+
+    private boolean shouldRegenerateWeeks(Semester semester, List<SemesterWeek> weeks) {
+        LocalDate semesterStartDate = semester.getStartDate();
+        LocalDate semesterEndDate = semester.getEndDate();
+        if (semesterStartDate == null || semesterEndDate == null) {
+            return false;
+        }
+
+        LocalDate academicYearStartDate = resolveAcademicYearStartDate(semester);
+        int fromWeek = Math.max(1, weekNoForDate(semesterStartDate, academicYearStartDate));
+        int toWeek = Math.max(fromWeek, weekNoForDate(semesterEndDate, academicYearStartDate));
+
+        if (weeks == null || weeks.isEmpty()) {
+            return true;
+        }
+
+        SemesterWeek first = weeks.get(0);
+        SemesterWeek last = weeks.get(weeks.size() - 1);
+        if (first.getWeekNo() == null || last.getWeekNo() == null) {
+            return true;
+        }
+
+        if (first.getWeekNo() != fromWeek || last.getWeekNo() != toWeek) {
+            return true;
+        }
+
+        LocalDate expectedFirstStart = academicYearStartDate.plusDays((long) (fromWeek - 1) * 7);
+        LocalDate expectedLastEnd = academicYearStartDate.plusDays((long) (toWeek - 1) * 7 + 6);
+        return !expectedFirstStart.equals(first.getStartDate()) || !expectedLastEnd.equals(last.getEndDate());
+    }
+
+    private int weekNoForDate(LocalDate date, LocalDate academicYearStartDate) {
+        long days = ChronoUnit.DAYS.between(academicYearStartDate, date);
+        if (days < 0) {
+            return 1;
+        }
+        return (int) (days / 7) + 1;
+    }
+
+    private LocalDate resolveAcademicYearStartDate(Semester semester) {
+        String semesterYear = semester.getSemesterYear();
+        if (semesterYear != null && semesterYear.contains("-")) {
+            String startYearStr = semesterYear.split("-")[0].trim();
+            try {
+                int startYear = Integer.parseInt(startYearStr);
+                return LocalDate.of(startYear, 8, 11);
+            } catch (NumberFormatException ignored) {
+                // Fall back to semester start date when semesterYear is not parseable.
+            }
+        }
+
+        LocalDate semesterStartDate = semester.getStartDate();
+        if (semesterStartDate == null) {
+            return LocalDate.of(LocalDate.now().getYear(), 8, 11);
+        }
+        LocalDate candidate = LocalDate.of(semesterStartDate.getYear(), 8, 11);
+        if (semesterStartDate.isBefore(candidate)) {
+            candidate = candidate.minusYears(1);
+        }
+        return candidate;
     }
 
     @Override

@@ -15,6 +15,7 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     // Overlap room check: same room, same day, intersecting times
     @Query("SELECT e FROM Exam e WHERE e.roomId = :roomId AND e.examDate = :examDate " +
            "AND (:excludeExamId IS NULL OR e.examId <> :excludeExamId) " +
+           "AND LOWER(e.status) <> 'cancel' " +
            "AND NOT (e.endTime <= :startTime OR e.startTime >= :endTime)")
     List<Exam> findOverlappingRoomExams(
         @Param("roomId") Long roomId,

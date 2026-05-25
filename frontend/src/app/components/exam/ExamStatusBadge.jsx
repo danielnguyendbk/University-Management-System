@@ -1,6 +1,12 @@
 import React from "react";
 
 export function ExamStatusBadge({ status, className = "" }) {
+  const normalizedStatus = (() => {
+    const value = String(status || "").trim().toUpperCase();
+    if (value === "CANCEL" || value === "CANCELED") return "CANCELLED";
+    return value;
+  })();
+
   const statusConfig = {
     DRAFT: {
       text: "Lịch nháp",
@@ -20,7 +26,7 @@ export function ExamStatusBadge({ status, className = "" }) {
     }
   };
 
-  const current = statusConfig[status] || {
+  const current = statusConfig[normalizedStatus] || {
     text: status || "Không rõ",
     classes: "bg-slate-100 text-slate-700 border-slate-200"
   };

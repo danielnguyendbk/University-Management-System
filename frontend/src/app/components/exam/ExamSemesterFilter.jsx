@@ -13,7 +13,7 @@ export function ExamSemesterFilter({ semesters = [], selectedSemesterId, onChang
       >
         {semesters.map((sem) => (
           <option key={sem.semesterId || sem.id} value={sem.semesterId || sem.id}>
-            {sem.semesterName || sem.name} {sem.academicYear ? `(${sem.academicYear})` : ''}
+            {sem.semesterCode || sem.name} {sem.semesterYear ? `(${sem.semesterYear})` : ''}
           </option>
         ))}
       </select>

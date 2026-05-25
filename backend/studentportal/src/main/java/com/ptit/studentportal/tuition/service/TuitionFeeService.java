@@ -1,10 +1,14 @@
 package com.ptit.studentportal.tuition.service;
 
+import com.ptit.studentportal.student.Student;
+import com.ptit.studentportal.student.StudentRepository;
 import com.ptit.studentportal.timetable.entity.Semester;
 import com.ptit.studentportal.timetable.repository.SemesterRepository;
 import com.ptit.studentportal.tuition.dto.TuitionItemResponse;
 import com.ptit.studentportal.tuition.entity.TuitionFee;
+import com.ptit.studentportal.tuition.entity.TuitionRate;
 import com.ptit.studentportal.tuition.repository.TuitionFeeRepository;
+import com.ptit.studentportal.tuition.repository.TuitionRateRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,8 @@ public class TuitionFeeService {
 
     private final TuitionFeeRepository tuitionFeeRepository;
     private final SemesterRepository semesterRepository;
+    private final StudentRepository studentRepository;
+    private final TuitionRateRepository tuitionRateRepository;
 
     @PersistenceContext
     private final EntityManager entityManager;
@@ -46,7 +52,31 @@ public class TuitionFeeService {
 
         Semester semester = semesterRepository.findById(tuitionFee.getSemesterId())
                 .orElseThrow(() -> new IllegalArgumentException("Semester not found"));
-        BigDecimal pricePerCredit = semester.getPricePerCredit() != null ? semester.getPricePerCredit() : BigDecimal.ZERO;
+
+        // Determine cohort rate or fallback to semester price
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        Integer enrollmentYear = student.getEnrollmentYear();
+        if (enrollmentYear == null && student.getStudentCode() != null && student.getStudentCode().matches("^D\\d{2}.*")) {
+            try {
+                enrollmentYear = 2000 + Integer.parseInt(student.getStudentCode().substring(1, 3));
+            } catch (NumberFormatException e) {
+                log.warn("Failed to parse cohort year from student code: {}", student.getStudentCode());
+            }
+        }
+
+        BigDecimal pricePerCredit = null;
+        if (enrollmentYear != null) {
+            pricePerCredit = tuitionRateRepository.findByEnrollmentYear(enrollmentYear)
+                    .map(TuitionRate::getPricePerCredit)
+                    .orElse(null);
+        }
+        if (pricePerCredit == null) {
+            pricePerCredit = semester.getPricePerCredit();
+        }
+        if (pricePerCredit == null) {
+            pricePerCredit = BigDecimal.ZERO;
+        }
 
         List<Object[]> registrationResults = entityManager.createNativeQuery(
                 "SELECT c.course_code, c.course_name, c.credits " +

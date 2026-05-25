@@ -263,25 +263,7 @@ export function SectionAssignment() {
             </FormControl>
           </Grid>
 
-          {/* Class Filter */}
-          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel id="class-select-label">Lớp hành chính</InputLabel>
-              <Select
-                labelId="class-select-label"
-                value={classFilter}
-                label="Lớp hành chính"
-                onChange={(e) => setClassFilter(e.target.value)}
-              >
-                <MenuItem value="ALL">Tất cả lớp</MenuItem>
-                {uniqueClassCodes.map((code) => (
-                  <MenuItem key={code} value={code}>
-                    {code}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+
 
           {/* Status Filter */}
           <Grid size={{ xs: 12, sm: 6, md: 2 }}>

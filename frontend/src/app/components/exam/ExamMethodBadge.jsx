@@ -1,6 +1,8 @@
 import React from "react";
 
 export function ExamMethodBadge({ method, className = "" }) {
+  const normalizedMethod = method ? String(method).trim().toUpperCase() : method;
+
   const methodConfig = {
     WRITTEN: {
       text: "Tự luận/Trắc nghiệm",
@@ -20,7 +22,7 @@ export function ExamMethodBadge({ method, className = "" }) {
     }
   };
 
-  const current = methodConfig[method] || {
+  const current = methodConfig[normalizedMethod] || {
     text: method || "Không rõ",
     classes: "bg-slate-100 text-slate-700 border-slate-200"
   };

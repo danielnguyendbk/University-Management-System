@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -115,5 +116,11 @@ public class AdminTimetableController {
 	public ResponseEntity<ApiResponse<Void>> generateSemesterWeeks(@PathVariable Long semesterId) {
 		timetableCommandService.generateSemesterWeeks(semesterId);
 		return ResponseEntity.ok(ApiResponse.success("Semester weeks generated successfully", null));
+	}
+
+	@DeleteMapping("/semesters/{semesterId}/timetable")
+	public ResponseEntity<ApiResponse<Map<String, Integer>>> clearSemesterTimetable(@PathVariable Long semesterId) {
+		Map<String, Integer> response = timetableCommandService.clearSemesterTimetable(semesterId);
+		return ResponseEntity.ok(ApiResponse.success("Semester timetable deleted", response));
 	}
 }

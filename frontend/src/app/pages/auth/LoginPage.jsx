@@ -158,7 +158,7 @@ export function LoginPage() {
               </form>
 
               <div className="mt-6 rounded-xl border px-4 py-3 text-sm text-slate-600" style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}>
-                Tài khoản test: <strong>D22KH002 / Thai06112005</strong>, <strong>GV001 / Thai06112005</strong>, <strong>admin01 / 123456</strong>
+                Tài khoản test: <strong>D22KH002 / thai06112005</strong>, <strong>GV002 / Thai06112005</strong>, <strong>admin01 / 123456</strong>
               </div>
             </div>
           </div>

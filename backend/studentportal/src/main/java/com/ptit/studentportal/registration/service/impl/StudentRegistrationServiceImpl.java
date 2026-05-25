@@ -76,8 +76,20 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         Long studentId = student.getStudentId();
         Long programId = student.getProgramId();
 
-        List<AvailableSectionProjection> projections = sectionRepository.findAvailableSectionsForProgram(programId, semesterId);
         Semester semester = semesterRepository.findById(semesterId).orElse(null);
+        if (semester == null || semester.getRegistrationStatus() != RegistrationStatus.OPEN) {
+            return List.of();
+        }
+        Integer curriculumSemester = calculateCurriculumSemester(semester, student.getStudentCode());
+        if (curriculumSemester == null) {
+            return List.of();
+        }
+
+        List<AvailableSectionProjection> projections = sectionRepository.findAvailableSectionsForProgramSemester(
+                programId,
+                semesterId,
+                curriculumSemester
+        );
         
         return projections.stream()
                 .map(p -> {
@@ -198,6 +210,15 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         // 5. Check semester.registrationStatus == OPEN
         if (semester.getRegistrationStatus() != RegistrationStatus.OPEN) {
             throw new BusinessException("Học kỳ chưa mở đăng ký.");
+        }
+
+        Integer curriculumSemester = calculateCurriculumSemester(semester, student.getStudentCode());
+        if (curriculumSemester == null || sectionRepository.countSectionInProgramCurriculumSemester(
+                student.getProgramId(),
+                section.getSectionId(),
+                curriculumSemester
+        ) == 0) {
+            throw new BusinessException("Môn học này không nằm trong học kỳ đào tạo hiện tại của bạn.");
         }
 
         // 6. Check registration window
@@ -388,5 +409,25 @@ public class StudentRegistrationServiceImpl implements StudentRegistrationServic
         return schedules.stream()
                 .map(s -> s.getDayOfWeek() + " tiết " + s.getSlotStart() + "-" + s.getSlotEnd())
                 .collect(Collectors.joining(", "));
+    }
+
+    private Integer calculateCurriculumSemester(Semester semester, String studentCode) {
+        if (semester == null || studentCode == null || studentCode.length() < 3) {
+            return null;
+        }
+
+        try {
+            int enrollmentYear = 2000 + Integer.parseInt(studentCode.substring(1, 3));
+            int academicStartYear = Integer.parseInt(semester.getSemesterYear().substring(0, 4));
+            int semesterTermNo = parseSemesterTermNo(semester.getSemesterCode());
+            return (academicStartYear - enrollmentYear) * 2 + semesterTermNo;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private int parseSemesterTermNo(String semesterCode) {
+        String normalized = semesterCode == null ? "" : semesterCode.toUpperCase();
+        return normalized.contains("HK1") ? 1 : 2;
     }
 }

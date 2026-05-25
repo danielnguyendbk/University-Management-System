@@ -295,7 +295,7 @@ export function Tuition() {
           >
             {semesters.map((s) => (
               <option key={s.semesterId} value={s.semesterId}>
-                {s.semesterName} - {s.academicYear}
+                {s.semesterCode} 
               </option>
             ))}
           </select>
@@ -312,7 +312,11 @@ export function Tuition() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center max-w-lg mx-auto">
           <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-red-900 mb-1">Không có thông tin học phí</h3>
-          <p className="text-sm text-red-700 mb-4">{error}</p>
+          <p className="text-sm text-red-700 mb-4">
+            {error === "No tuition fee found for this student in the given semester"
+              ? "Học phí học kỳ này chưa được nhà trường tính toán/công bố."
+              : error}
+          </p>
         </div>
       ) : currentTuition ? (
         <>

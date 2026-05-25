@@ -74,6 +74,11 @@ export async function deleteSchedule(scheduleId) {
   return unwrapApiResponse(response);
 }
 
+export async function deleteSemesterTimetable(semesterId) {
+  const response = await adminTimetableClient.delete(`/admin/timetable/semesters/${semesterId}/timetable`);
+  return unwrapApiResponse(response);
+}
+
 export async function generateTimetable(semesterId) {
   const response = await adminTimetableClient.post("/admin/timetable/generate", {
     semesterId,

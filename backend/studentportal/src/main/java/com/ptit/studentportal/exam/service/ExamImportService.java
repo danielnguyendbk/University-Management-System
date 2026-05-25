@@ -9,9 +9,12 @@ import com.ptit.studentportal.exam.repository.ExamRepository;
 import com.ptit.studentportal.lecturer.Lecturer;
 import com.ptit.studentportal.lecturer.LecturerRepository;
 import com.ptit.studentportal.registration.repository.EnrollmentRepository;
+import com.ptit.studentportal.timetable.entity.ClassSession;
 import com.ptit.studentportal.timetable.entity.CourseSection;
 import com.ptit.studentportal.timetable.entity.Room;
 import com.ptit.studentportal.timetable.entity.Semester;
+import com.ptit.studentportal.timetable.enums.SessionStatus;
+import com.ptit.studentportal.timetable.repository.ClassSessionRepository;
 import com.ptit.studentportal.timetable.repository.CourseSectionRepository;
 import com.ptit.studentportal.timetable.repository.RoomRepository;
 import com.ptit.studentportal.timetable.repository.SemesterRepository;
@@ -43,6 +46,7 @@ public class ExamImportService {
     private final SemesterRepository semesterRepository;
     private final LecturerRepository lecturerRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ClassSessionRepository classSessionRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -57,8 +61,13 @@ public class ExamImportService {
         "room_code", "lecturer_code", "invigilator_role", "note"
     };
 
-    public byte[] generateImportTemplate() {
+    public byte[] generateImportTemplate(Long semesterIdParam) {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            List<Semester> semesters = semesterRepository.findAll();
+            List<Room> rooms = roomRepository.findAll();
+            List<Lecturer> lecturers = lecturerRepository.findAll();
+            List<CourseSection> sections = courseSectionRepository.findAll();
+            TemplateSampleData sampleData = buildTemplateSampleData(semesters, rooms, lecturers, sections, semesterIdParam);
             
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
@@ -121,7 +130,7 @@ public class ExamImportService {
                 sampleExamHeader.getCell(i).setCellStyle(headerStyle);
             }
             Row sampleExamRow = sampleSheet.createRow(2);
-            String[] examSampleData = {"CREATE", "4", "CN205.01", "A101", "midterm", "written", "2026-06-01", "08:00", "09:30", "draft", "Thi giữa kỳ"};
+            String[] examSampleData = {"CREATE", sampleData.semesterId, sampleData.sectionCode, sampleData.roomCode, "midterm", "written", sampleData.examDate, "08:00", "09:30", "draft", "Sample exam"};
             for (int i = 0; i < examSampleData.length; i++) sampleExamRow.createCell(i).setCellValue(examSampleData[i]);
             
             sampleSheet.createRow(4).createCell(0).setCellValue("MẪU GIÁM THỊ (Dữ liệu tham khảo, copy qua sheet chính)");
@@ -131,7 +140,7 @@ public class ExamImportService {
                 sampleInvHeader.getCell(i).setCellStyle(headerStyle);
             }
             Row sampleInvRow = sampleSheet.createRow(6);
-            String[] invSampleData = {"4", "CN205.01", "2026-06-01", "08:00", "A101", "GV002", "main", "Giám thị chính"};
+            String[] invSampleData = {sampleData.semesterId, sampleData.sectionCode, sampleData.examDate, "08:00", sampleData.roomCode, sampleData.lecturerCode, "main", "Main invigilator"};
             for (int i = 0; i < invSampleData.length; i++) sampleInvRow.createCell(i).setCellValue(invSampleData[i]);
             
             for(int i = 0; i < 11; i++) sampleSheet.autoSizeColumn(i);
@@ -147,19 +156,25 @@ public class ExamImportService {
             }
             int rIdx = 1;
             
-            for(Semester s : semesterRepository.findAll()) {
+            for(Semester s : semesters) {
                 Row r = lookupSheet.createRow(rIdx++);
                 r.createCell(0).setCellValue("Học kỳ (semester_id)");
                 r.createCell(1).setCellValue(s.getSemesterId());
                 r.createCell(2).setCellValue(s.getSemesterName() + " (" + s.getStartDate() + " to " + s.getEndDate() + ")");
             }
-            for(Room rm : roomRepository.findAll()) {
+            for(CourseSection cs : sections) {
+                Row r = lookupSheet.createRow(rIdx++);
+                r.createCell(0).setCellValue("Course section (semester_id / section_code)");
+                r.createCell(1).setCellValue(cs.getSemesterId() + " / " + cs.getSectionCode());
+                r.createCell(2).setCellValue("semester_id=" + cs.getSemesterId() + "; section_code=" + cs.getSectionCode());
+            }
+            for(Room rm : rooms) {
                 Row r = lookupSheet.createRow(rIdx++);
                 r.createCell(0).setCellValue("Phòng thi (room_code)");
                 r.createCell(1).setCellValue(rm.getRoomCode());
                 r.createCell(2).setCellValue("Sức chứa: " + rm.getCapacity());
             }
-            for(Lecturer l : lecturerRepository.findAll()) {
+            for(Lecturer l : lecturers) {
                 Row r = lookupSheet.createRow(rIdx++);
                 r.createCell(0).setCellValue("Giảng viên (lecturer_code)");
                 r.createCell(1).setCellValue(l.getLecturerCode());
@@ -333,7 +348,7 @@ public class ExamImportService {
                     }
 
                     if (semesterIdParam != null && !payload.semesterId.equals(semesterIdParam)) {
-                         addError(response, "EXAMS_IMPORT", payload.rowNum, "semester_id", "WARNING", "semester_id không khớp với học kỳ đang chọn");
+                         addError(response, "EXAMS_IMPORT", payload.rowNum, "semester_id", "ERROR", "semester_id không khớp với học kỳ đang chọn");
                     }
                     Semester sem = semCache.get(payload.semesterId);
                     if (sem == null) {
@@ -367,9 +382,11 @@ public class ExamImportService {
                     }
 
                     Integer studentCount = enrollmentRepository.countStudentsForSection(section.getSectionId());
-                    if (studentCount == null || studentCount == 0) {
-                        addError(response, "EXAMS_IMPORT", payload.rowNum, "student_count", "ERROR", "Lớp học phần không có sinh viên đăng ký hợp lệ");
-                        continue;
+                    if (studentCount == null) {
+                        studentCount = 0;
+                    }
+                    if (studentCount == 0) {
+                        addError(response, "EXAMS_IMPORT", payload.rowNum, "student_count", "WARNING", "Lớp học phần hiện chưa có sinh viên đăng ký hợp lệ; hệ thống sẽ lưu sĩ số là 0");
                     }
                     payload.studentCount = studentCount;
 
@@ -411,6 +428,9 @@ public class ExamImportService {
                         if (!hasMain) {
                             addError(response, "EXAMS_IMPORT", payload.rowNum, "status", "ERROR", "Lịch SCHEDULED cần có ít nhất 1 giám thị MAIN");
                         }
+                    }
+                    if (payload.examDate != null && payload.startTime != null && payload.endTime != null) {
+                        validateMatchedInvigilatorConflicts(response, payload, examPayloads);
                     }
                     
                     // Clash validation
@@ -461,6 +481,9 @@ public class ExamImportService {
                 if (errCount > 0) {
                     throw new AppException(HttpStatus.BAD_REQUEST, "File có lỗi (ERROR). Vui lòng sửa lỗi trước khi Import.");
                 }
+                if (examPayloads.isEmpty()) {
+                    throw new AppException(HttpStatus.BAD_REQUEST, "File không có dòng lịch thi hợp lệ để import.");
+                }
                 
                 for (ExamPayload ep : examPayloads) {
                     Long mainLecturerId = null;
@@ -502,12 +525,165 @@ public class ExamImportService {
             }
 
             return response;
+        } catch (AppException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
+            if (isConfirm) {
+                throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi không xác định khi đọc Excel: " + e.getMessage());
+            }
             addError(response, "FILE", 0, "system", "ERROR", "Lỗi không xác định khi đọc Excel: " + e.getMessage());
             response.setSuccess(false);
             return response;
         }
+    }
+
+    private TemplateSampleData buildTemplateSampleData(
+            List<Semester> semesters,
+            List<Room> rooms,
+            List<Lecturer> lecturers,
+            List<CourseSection> sections,
+            Long semesterIdParam
+    ) {
+        Map<Long, Semester> semesterById = new HashMap<>();
+        for (Semester semester : semesters) {
+            semesterById.put(semester.getSemesterId(), semester);
+        }
+
+        CourseSection sampleSection = sections.stream()
+            .filter(section -> semesterIdParam == null || semesterIdParam.equals(section.getSemesterId()))
+            .filter(section -> semesterById.containsKey(section.getSemesterId()))
+            .filter(this::hasRegisteredStudents)
+            .findFirst()
+            .orElseGet(() -> sections.stream()
+                .filter(section -> semesterIdParam == null || semesterIdParam.equals(section.getSemesterId()))
+                .filter(section -> semesterById.containsKey(section.getSemesterId()))
+                .findFirst()
+                .orElse(null));
+
+        Semester sampleSemester = sampleSection != null
+            ? semesterById.get(sampleSection.getSemesterId())
+            : (semesterIdParam != null ? semesterById.get(semesterIdParam) : semesters.stream().findFirst().orElse(null));
+
+        Integer studentCount = null;
+        if (sampleSection != null) {
+            studentCount = enrollmentRepository.countStudentsForSection(sampleSection.getSectionId());
+        }
+        final Integer requiredCapacity = studentCount;
+
+        Room sampleRoom = rooms.stream()
+            .filter(room -> requiredCapacity == null || room.getCapacity() == null || room.getCapacity() >= requiredCapacity)
+            .findFirst()
+            .orElse(rooms.stream().findFirst().orElse(null));
+
+        Long teachingLecturerId = sampleSection != null ? sampleSection.getLecturerId() : null;
+        Lecturer sampleLecturer = lecturers.stream()
+            .filter(lecturer -> teachingLecturerId == null || !lecturer.getLecturerId().equals(teachingLecturerId))
+            .findFirst()
+            .orElse(lecturers.stream().findFirst().orElse(null));
+
+        return new TemplateSampleData(
+            sampleSemester != null ? String.valueOf(sampleSemester.getSemesterId()) : "",
+            sampleSection != null ? sampleSection.getSectionCode() : "",
+            sampleRoom != null ? sampleRoom.getRoomCode() : "",
+            sampleSemester != null && sampleSemester.getStartDate() != null ? sampleSemester.getStartDate().toString() : "",
+            sampleLecturer != null ? sampleLecturer.getLecturerCode() : ""
+        );
+    }
+
+    private boolean hasRegisteredStudents(CourseSection section) {
+        Integer count = enrollmentRepository.countStudentsForSection(section.getSectionId());
+        return count != null && count > 0;
+    }
+
+    private void validateMatchedInvigilatorConflicts(
+            ExcelPreviewResponse response,
+            ExamPayload payload,
+            List<ExamPayload> previousPayloads
+    ) {
+        Set<Long> lecturerIds = new HashSet<>();
+        for (InvigilatorPayload invigilator : payload.matchedInvigilators) {
+            if (invigilator.lecturerId == null) {
+                continue;
+            }
+
+            if (!lecturerIds.add(invigilator.lecturerId)) {
+                addError(response, "INVIGILATORS_IMPORT", invigilator.rowNum, "lecturer_code", "ERROR",
+                    "Giảng viên này đã được phân công trong cùng ca thi");
+            }
+
+            if (hasExistingInvigilationOverlap(invigilator.lecturerId, payload.examDate, payload.startTime, payload.endTime)) {
+                addError(response, "INVIGILATORS_IMPORT", invigilator.rowNum, "lecturer_code", "ERROR",
+                    "Giảng viên coi thi bị trùng lịch coi thi với ca thi khác trong hệ thống");
+            }
+
+            if (hasTeachingOverlap(invigilator.lecturerId, payload.examDate, payload.startTime, payload.endTime)) {
+                addError(response, "INVIGILATORS_IMPORT", invigilator.rowNum, "lecturer_code", "ERROR",
+                    "Giảng viên coi thi bị trùng lịch dạy học phần");
+            }
+
+            if (hasExcelInvigilationOverlap(invigilator.lecturerId, payload, previousPayloads)) {
+                addError(response, "INVIGILATORS_IMPORT", invigilator.rowNum, "lecturer_code", "ERROR",
+                    "Giảng viên coi thi bị trùng lịch với ca thi khác trong file Excel");
+            }
+        }
+    }
+
+    private boolean hasExistingInvigilationOverlap(Long lecturerId, LocalDate date, LocalTime start, LocalTime end) {
+        for (ExamInvigilator duty : examInvigilatorRepository.findByLecturerId(lecturerId)) {
+            Exam exam = examRepository.findById(duty.getExamId()).orElse(null);
+            if (exam != null && !isCancelStatus(exam.getStatus())
+                && isTimeOverlap(date, start, end, exam.getExamDate(), exam.getStartTime(), exam.getEndTime())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasTeachingOverlap(Long lecturerId, LocalDate date, LocalTime start, LocalTime end) {
+        for (ClassSession classSession : classSessionRepository.findByLecturerIdAndSessionDateBetween(lecturerId, date, date)) {
+            if (classSession.getSessionStatus() != SessionStatus.CANCELLED
+                && isTimeOverlap(date, start, end, classSession.getSessionDate(), classSession.getStartTime(), classSession.getEndTime())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasExcelInvigilationOverlap(Long lecturerId, ExamPayload payload, List<ExamPayload> previousPayloads) {
+        for (ExamPayload previous : previousPayloads) {
+            if (isCancelStatus(previous.status)) {
+                continue;
+            }
+            if (!isTimeOverlap(payload.examDate, payload.startTime, payload.endTime,
+                previous.examDate, previous.startTime, previous.endTime)) {
+                continue;
+            }
+            boolean sameLecturer = previous.matchedInvigilators.stream()
+                .anyMatch(invigilator -> Objects.equals(invigilator.lecturerId, lecturerId));
+            if (sameLecturer) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isTimeOverlap(LocalDate d1, LocalTime s1, LocalTime e1, LocalDate d2, LocalTime s2, LocalTime e2) {
+        if (d1 == null || s1 == null || e1 == null || d2 == null || s2 == null || e2 == null) {
+            return false;
+        }
+        if (!d1.equals(d2)) {
+            return false;
+        }
+        return !(s1.isAfter(e2) || s1.equals(e2) || e1.isBefore(s2) || e1.equals(s2));
+    }
+
+    private boolean isCancelStatus(String status) {
+        return status != null && (
+            "cancel".equalsIgnoreCase(status)
+                || "cancelled".equalsIgnoreCase(status)
+                || "canceled".equalsIgnoreCase(status)
+        );
     }
     
     private Map<String, Integer> buildHeaderMap(Sheet sheet) {
@@ -699,6 +875,22 @@ public class ExamImportService {
             this.role = role;
             this.note = note;
             this.rowNum = rowNum;
+        }
+    }
+
+    private static class TemplateSampleData {
+        String semesterId;
+        String sectionCode;
+        String roomCode;
+        String examDate;
+        String lecturerCode;
+
+        TemplateSampleData(String semesterId, String sectionCode, String roomCode, String examDate, String lecturerCode) {
+            this.semesterId = semesterId;
+            this.sectionCode = sectionCode;
+            this.roomCode = roomCode;
+            this.examDate = examDate;
+            this.lecturerCode = lecturerCode;
         }
     }
 }

@@ -42,19 +42,37 @@ public interface RegCourseSectionRepository extends JpaRepository<CourseSection,
                 COALESCE(vsc.remaining_capacity, cs.max_capacity) AS remainingCapacity,
                 cs.status AS status
             FROM course_sections cs
-            JOIN courses c ON cs.course_id = c.course_id
-            JOIN program_courses pc ON c.course_id = pc.course_id
+            JOIN program_courses pc ON pc.course_id = cs.course_id
+            JOIN semesters sem ON sem.semester_id = cs.semester_id
+            JOIN courses c ON c.course_id = cs.course_id
             LEFT JOIN lecturers l ON cs.lecturer_id = l.lecturer_id
             LEFT JOIN vw_section_capacity vsc ON cs.section_id = vsc.section_id
             WHERE pc.program_id = :programId
               AND cs.semester_id = :semesterId
+              AND pc.recommended_semester = :curriculumSemester
               AND LOWER(cs.status) = 'open'
+              AND NOW() BETWEEN sem.registration_open AND sem.registration_close
               AND c.is_active = 1
             ORDER BY cs.section_code ASC
             """, nativeQuery = true)
-    List<com.ptit.studentportal.registration.dto.response.AvailableSectionProjection> findAvailableSectionsForProgram(
+    List<com.ptit.studentportal.registration.dto.response.AvailableSectionProjection> findAvailableSectionsForProgramSemester(
             @Param("programId") Long programId,
-            @Param("semesterId") Long semesterId
+            @Param("semesterId") Long semesterId,
+            @Param("curriculumSemester") Integer curriculumSemester
+    );
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM course_sections cs
+            JOIN program_courses pc ON pc.course_id = cs.course_id
+            WHERE pc.program_id = :programId
+              AND cs.section_id = :sectionId
+              AND pc.recommended_semester = :curriculumSemester
+            """, nativeQuery = true)
+    long countSectionInProgramCurriculumSemester(
+            @Param("programId") Long programId,
+            @Param("sectionId") Long sectionId,
+            @Param("curriculumSemester") Integer curriculumSemester
     );
 
     default String findClassCodeById(Long classId) {

@@ -4,8 +4,13 @@ import java.io.IOException;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import org.springframework.dao.DataAccessException;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -116,6 +121,26 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 				rowIndex++;
 				if (rowIndex == 1) continue; // Skip header
 
+				if (isBlankRow(
+							row,
+							semesterCodeIdx,
+							sectionCodeIdx,
+							roomCodeIdx,
+							lecturerCodeIdx,
+							dayOfWeekIdx,
+							fromWeekNoIdx,
+							toWeekNoIdx,
+							slotStartIdx,
+							slotEndIdx,
+							startTimeIdx,
+							endTimeIdx,
+							sessionTypeIdx,
+							practiceGroupNoIdx,
+							noteIdx
+				)) {
+					continue;
+				}
+
 				totalRows++;
 				int currentRowNum = rowIndex;
 
@@ -134,7 +159,9 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 					importRow.startTime = parseTime(row.getCell(startTimeIdx));
 					importRow.endTime = parseTime(row.getCell(endTimeIdx));
 					importRow.sessionType = getCellValueAsString(row.getCell(sessionTypeIdx));
-					importRow.practiceGroupNo = practiceGroupNoIdx != -1 ? getCellValueAsInteger(row.getCell(practiceGroupNoIdx)) : 0;
+					importRow.practiceGroupNo = practiceGroupNoIdx != -1
+							? getCellValueAsIntegerOrDefault(row.getCell(practiceGroupNoIdx), 0)
+							: Integer.valueOf(0);
 					importRow.note = noteIdx != -1 ? getCellValueAsString(row.getCell(noteIdx)) : "";
 
 					parsedRows.add(importRow);
@@ -150,8 +177,48 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 			return createErrorResult("File is empty (no data rows)");
 		}
 
+		Set<String> semesterCodes = new HashSet<>();
+		for (ScheduleImportRow row : parsedRows) {
+			if (!row.semesterCode.isEmpty()) {
+				semesterCodes.add(row.semesterCode);
+			}
+		}
+		for (String semesterCode : semesterCodes) {
+			Optional<Semester> semesterOpt = semesterRepository.findBySemesterCode(semesterCode);
+			if (semesterOpt.isPresent()
+					&& scheduleRepository.countSchedulesBySemesterId(semesterOpt.get().getSemesterId()) > 0) {
+				return createErrorResult(
+							"Học kỳ này đã có thời khóa biểu. Vui lòng bấm Xóa lịch hiện có trước khi import lại.");
+			}
+		}
+
+		Map<Long, Long> importedSectionLecturerIds = new HashMap<>();
+		for (ScheduleImportRow row : parsedRows) {
+			if (row.lecturerCode.isEmpty() || row.semesterCode.isEmpty() || row.sectionCode.isEmpty()) {
+				continue;
+			}
+
+			Optional<Semester> semesterOpt = semesterRepository.findBySemesterCode(row.semesterCode);
+			if (semesterOpt.isEmpty()) {
+				continue;
+			}
+
+			Optional<CourseSection> sectionOpt = courseSectionRepository.findBySectionCodeAndSemesterId(
+					row.sectionCode, semesterOpt.get().getSemesterId());
+			Optional<Lecturer> lecturerOpt = lecturerRepository.findByLecturerCode(row.lecturerCode);
+			if (sectionOpt.isEmpty() || lecturerOpt.isEmpty()) {
+				continue;
+			}
+
+			importedSectionLecturerIds.putIfAbsent(
+					sectionOpt.get().getSectionId(),
+					lecturerOpt.get().getLecturerId());
+		}
+
 		// Validation phase
 		List<Schedule> schedulesToSave = new ArrayList<>();
+		List<Long> scheduleSemesterIdsToSave = new ArrayList<>();
+		List<Long> scheduleLecturerIdsToSave = new ArrayList<>();
 		List<Long> successfullySemesterIds = new ArrayList<>();
 
 		for (ScheduleImportRow row : parsedRows) {
@@ -218,6 +285,8 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 				continue;
 			}
 			CourseSection section = sectionOpt.get();
+			Long effectiveLecturerId = importedSectionLecturerIds.getOrDefault(
+					section.getSectionId(), section.getLecturerId());
 
 			Optional<Room> roomOpt = roomRepository.findByRoomCode(row.roomCode);
 			if (roomOpt.isEmpty()) {
@@ -231,10 +300,8 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 				Optional<Lecturer> lecturerOpt = lecturerRepository.findByLecturerCode(row.lecturerCode);
 				if (lecturerOpt.isEmpty()) {
 					rowErrors.add("Lecturer '" + row.lecturerCode + "' not found");
-				} else {
-					if (!lecturerOpt.get().getLecturerId().equals(section.getLecturerId())) {
-						rowErrors.add("Lecturer '" + row.lecturerCode + "' does not match section lecturer");
-					}
+				} else if (!lecturerOpt.get().getLecturerId().equals(effectiveLecturerId)) {
+					rowErrors.add("Section '" + row.sectionCode + "' has multiple lecturerCode values in import file");
 				}
 			}
 
@@ -245,37 +312,53 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 
 			// Conflict checks
 			String dayOfWeekDb = DayOfWeekMapper.mapDayOfWeekToDb(row.dayOfWeek);
+			List<Schedule> roomSlotConflicts = scheduleRepository.findRoomSlotOverlaps(
+					semester.getSemesterId(), dayOfWeekDb, room.getRoomId(),
+					row.fromWeekNo, row.toWeekNo, row.slotStart, row.slotEnd, null);
 			List<Schedule> roomConflicts = scheduleRepository.findRoomOverlaps(
 					semester.getSemesterId(), dayOfWeekDb, room.getRoomId(),
 					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
-			if (!roomConflicts.isEmpty()) {
+			if (!roomSlotConflicts.isEmpty() || !roomConflicts.isEmpty()) {
 				rowErrors.add("Room conflict: room '" + room.getRoomCode() + "' is already booked");
 			}
 
+			List<Schedule> sectionSlotConflicts = scheduleRepository.findSectionSlotOverlaps(
+					semester.getSemesterId(), dayOfWeekDb, section.getSectionId(),
+					row.fromWeekNo, row.toWeekNo, row.slotStart, row.slotEnd, null);
 			List<Schedule> sectionConflicts = scheduleRepository.findSectionOverlaps(
 					semester.getSemesterId(), dayOfWeekDb, section.getSectionId(),
 					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
-			if (!sectionConflicts.isEmpty()) {
+			if (!sectionSlotConflicts.isEmpty() || !sectionConflicts.isEmpty()) {
 				rowErrors.add("Section conflict: section '" + section.getSectionCode() + "' already has a class");
 			}
 
-			List<Schedule> lecturerConflicts = scheduleRepository.findLecturerOverlaps(
-					semester.getSemesterId(), dayOfWeekDb, section.getLecturerId(),
-					row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
-			if (!lecturerConflicts.isEmpty()) {
-				rowErrors.add("Lecturer conflict: lecturer already has a class at this time");
+			if (effectiveLecturerId != null) {
+				List<Schedule> lecturerSlotConflicts = scheduleRepository.findLecturerSlotOverlaps(
+						semester.getSemesterId(), dayOfWeekDb, effectiveLecturerId,
+						row.fromWeekNo, row.toWeekNo, row.slotStart, row.slotEnd, null);
+				List<Schedule> lecturerConflicts = scheduleRepository.findLecturerOverlaps(
+						semester.getSemesterId(), dayOfWeekDb, effectiveLecturerId,
+						row.fromWeekNo, row.toWeekNo, row.startTime, row.endTime, null);
+				if (!lecturerSlotConflicts.isEmpty() || !lecturerConflicts.isEmpty()) {
+					rowErrors.add("Lecturer conflict: lecturer already has a class at this time");
+				}
 			}
 
 			// In-memory cross-row check (simplified logic: check if the exact same schedule logic exists in schedulesToSave)
-			for (Schedule prev : schedulesToSave) {
-				if (prev.getDayOfWeek().equals(dayOfWeekDb)
+			for (int i = 0; i < schedulesToSave.size(); i++) {
+				Schedule prev = schedulesToSave.get(i);
+				if (scheduleSemesterIdsToSave.get(i).equals(semester.getSemesterId())
+						&& prev.getDayOfWeek().equals(dayOfWeekDb)
 						&& Math.max(prev.getFromWeekNo(), row.fromWeekNo) <= Math.min(prev.getToWeekNo(), row.toWeekNo)
-						&& prev.getStartTime().isBefore(row.endTime) && prev.getEndTime().isAfter(row.startTime)) {
+						&& isSlotOverlap(prev.getSlotStart(), prev.getSlotEnd(), row.slotStart, row.slotEnd)) {
 					if (prev.getRoomId().equals(room.getRoomId())) {
 						rowErrors.add("Cross-row conflict: Room " + room.getRoomCode() + " overlaps with another row in the same file");
 					}
 					if (prev.getSectionId().equals(section.getSectionId())) {
 						rowErrors.add("Cross-row conflict: Section " + section.getSectionCode() + " overlaps with another row");
+					}
+					if (effectiveLecturerId != null && effectiveLecturerId.equals(scheduleLecturerIdsToSave.get(i))) {
+						rowErrors.add("Cross-row conflict: Lecturer overlaps with another row");
 					}
 				}
 			}
@@ -303,6 +386,8 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 					.build();
 
 			schedulesToSave.add(newSchedule);
+			scheduleSemesterIdsToSave.add(semester.getSemesterId());
+			scheduleLecturerIdsToSave.add(effectiveLecturerId);
 			if (!successfullySemesterIds.contains(semester.getSemesterId())) {
 				successfullySemesterIds.add(semester.getSemesterId());
 			}
@@ -320,11 +405,37 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 		}
 
 		// Save all
-		List<Schedule> savedSchedules = scheduleRepository.saveAll(schedulesToSave);
-		for (int i = 0; i < savedSchedules.size(); i++) {
-			ScheduleImportRow row = parsedRows.get(i);
-			importedRows.add(new TimetableImportRowResult(
-					row.rowNum, row.semesterCode, row.sectionCode, savedSchedules.get(i).getScheduleId()));
+		List<CourseSection> sectionsToUpdate = new ArrayList<>();
+		for (Map.Entry<Long, Long> entry : importedSectionLecturerIds.entrySet()) {
+			CourseSection section = courseSectionRepository.findById(entry.getKey()).orElse(null);
+			if (section != null && !entry.getValue().equals(section.getLecturerId())) {
+				section.setLecturerId(entry.getValue());
+				sectionsToUpdate.add(section);
+			}
+		}
+		List<Schedule> savedSchedules;
+		try {
+			courseSectionRepository.saveAll(sectionsToUpdate);
+			savedSchedules = scheduleRepository.saveAll(schedulesToSave);
+			for (int i = 0; i < savedSchedules.size(); i++) {
+				ScheduleImportRow row = parsedRows.get(i);
+				importedRows.add(new TimetableImportRowResult(
+						row.rowNum, row.semesterCode, row.sectionCode, savedSchedules.get(i).getScheduleId()));
+			}
+		} catch (DataAccessException ex) {
+			TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+			return TimetableImportResult.builder()
+					.totalRows(totalRows)
+					.successRows(0)
+					.errorRows(1)
+					.errors(List.of(TimetableImportError.builder()
+								.rowNumber(0)
+								.semesterCode("")
+								.sectionCode("")
+								.errors(List.of("Lỗi xung đột thời khóa biểu. Vui lòng kiểm tra trùng phòng/giảng viên/lớp học phần trước khi import."))
+								.build()))
+					.importedRows(new ArrayList<>())
+					.build();
 		}
 
 		return TimetableImportResult.builder()
@@ -364,6 +475,70 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 		}
 	}
 
+	private boolean isBlankRow(
+			Row row,
+			int semesterCodeIdx,
+			int sectionCodeIdx,
+			int roomCodeIdx,
+			int lecturerCodeIdx,
+			int dayOfWeekIdx,
+			int fromWeekNoIdx,
+			int toWeekNoIdx,
+			int slotStartIdx,
+			int slotEndIdx,
+			int startTimeIdx,
+			int endTimeIdx,
+			int sessionTypeIdx,
+			int practiceGroupNoIdx,
+			int noteIdx
+	) {
+		if (row == null) return true;
+		return isCellBlank(getCellSafe(row, semesterCodeIdx))
+				&& isCellBlank(getCellSafe(row, sectionCodeIdx))
+				&& isCellBlank(getCellSafe(row, roomCodeIdx))
+				&& isCellBlank(getCellSafe(row, lecturerCodeIdx))
+				&& isCellBlank(getCellSafe(row, dayOfWeekIdx))
+				&& isCellBlank(getCellSafe(row, fromWeekNoIdx))
+				&& isCellBlank(getCellSafe(row, toWeekNoIdx))
+				&& isCellBlank(getCellSafe(row, slotStartIdx))
+				&& isCellBlank(getCellSafe(row, slotEndIdx))
+				&& isCellBlank(getCellSafe(row, startTimeIdx))
+				&& isCellBlank(getCellSafe(row, endTimeIdx))
+				&& isCellBlank(getCellSafe(row, sessionTypeIdx))
+				&& isCellBlank(getCellSafe(row, practiceGroupNoIdx))
+				&& isCellBlank(getCellSafe(row, noteIdx));
+	}
+
+	private Cell getCellSafe(Row row, int index) {
+		if (row == null || index < 0) return null;
+		return row.getCell(index);
+	}
+
+	private boolean isCellBlank(Cell cell) {
+		if (cell == null) return true;
+		switch (cell.getCellType()) {
+		case BLANK:
+			return true;
+		case STRING:
+			return cell.getStringCellValue().trim().isEmpty();
+		case FORMULA:
+			return isFormulaResultBlank(cell);
+		default:
+			return false;
+		}
+	}
+
+	private boolean isFormulaResultBlank(Cell cell) {
+		switch (cell.getCachedFormulaResultType()) {
+		case STRING:
+			return cell.getStringCellValue().trim().isEmpty();
+		case BLANK:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	private Integer getCellValueAsInteger(Cell cell) {
 		if (cell == null) return null;
 		try {
@@ -373,6 +548,16 @@ public class TimetableImportServiceImpl implements TimetableImportService {
 			default: return null;
 			}
 		} catch (Exception e) { return null; }
+	}
+
+	private Integer getCellValueAsIntegerOrDefault(Cell cell, int defaultValue) {
+		Integer value = getCellValueAsInteger(cell);
+		return value != null ? value : Integer.valueOf(defaultValue);
+	}
+
+	private boolean isSlotOverlap(Integer startA, Integer endA, Integer startB, Integer endB) {
+		if (startA == null || endA == null || startB == null || endB == null) return false;
+		return !(endA < startB || startA > endB);
 	}
 
 	private LocalTime parseTime(Cell cell) {

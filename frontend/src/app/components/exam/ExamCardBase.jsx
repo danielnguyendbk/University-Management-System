@@ -42,6 +42,12 @@ export function ExamCardBase({
   };
 
   const formattedDate = formatDate(examDate);
+  const displayStatus = (() => {
+    const value = String(status || "").trim().toUpperCase();
+    if (value === "CANCEL" || value === "CANCELED") return "CANCELLED";
+    return value;
+  })();
+  const displayInvigilatorRole = String(invigilatorRole || "").trim().toUpperCase();
 
   // Status visual cues (left accent bar)
   const borderAccents = {
@@ -51,7 +57,7 @@ export function ExamCardBase({
     COMPLETED: "border-l-emerald-500"
   };
 
-  const leftAccent = borderAccents[status] || "border-l-blue-600";
+  const leftAccent = borderAccents[displayStatus] || "border-l-blue-600";
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 ${leftAccent} p-6 hover:shadow-md transition-all`}>
@@ -70,7 +76,7 @@ export function ExamCardBase({
             )}
             <ExamTypeBadge type={examType} />
             <ExamMethodBadge method={examMethod} />
-            <ExamStatusBadge status={status} />
+            <ExamStatusBadge status={displayStatus} />
             {badgeExtra}
           </div>
 
@@ -81,11 +87,11 @@ export function ExamCardBase({
                 <span className="font-medium text-gray-700">Giảng viên:</span> {lecturerName}
               </p>
             )}
-            {role === "lecturer" && invigilatorRole && (
+            {role === "lecturer" && displayInvigilatorRole && (
               <div className="mt-1 flex items-center gap-2">
                 <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded text-xs font-semibold flex items-center gap-1">
                   <UserCheck className="w-3.5 h-3.5" />
-                  Vai trò: {invigilatorRole === "MAIN" ? "Giám thị chính (MAIN)" : "Giám thị phụ (ASSISTANT)"}
+                  Vai trò: {displayInvigilatorRole === "MAIN" ? "Giám thị chính (MAIN)" : "Giám thị phụ (ASSISTANT)"}
                 </span>
               </div>
             )}
@@ -152,12 +158,18 @@ export function ExamCardBase({
         </div>
 
         {/* Right side slot for countdowns or actions */}
-        {role === "student" && status === "SCHEDULED" ? (
+        {role === "student" && displayStatus === "SCHEDULED" ? (
           <div className="shrink-0 lg:w-44 flex flex-col items-center justify-center p-4 bg-[#1E3A8A]/5 border border-[#1E3A8A]/10 rounded-xl text-center self-center lg:self-auto">
             <p className="text-xs text-gray-600 font-semibold mb-0.5">Số ngày còn lại</p>
             <p className="text-4xl font-extrabold text-[#1E3A8A] tracking-tight">{daysRemaining}</p>
             <p className="text-xs text-gray-500 mt-0.5 mb-3">Ngày</p>
             {actions}
+          </div>
+        ) : role === "lecturer" && displayStatus === "SCHEDULED" && daysRemaining !== undefined ? (
+          <div className="shrink-0 lg:w-36 flex flex-col items-center justify-center p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-center self-center lg:self-auto">
+            <p className="text-xs text-gray-600 font-semibold mb-0.5">Còn lại</p>
+            <p className="text-3xl font-extrabold text-indigo-700 tracking-tight">{daysRemaining}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Ngày</p>
           </div>
         ) : (
           actions && <div className="shrink-0 flex items-center justify-end self-center lg:self-auto">{actions}</div>

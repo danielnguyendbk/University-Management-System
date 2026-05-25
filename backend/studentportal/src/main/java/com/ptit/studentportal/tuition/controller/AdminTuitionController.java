@@ -1,11 +1,14 @@
 package com.ptit.studentportal.tuition.controller;
 
 import com.ptit.studentportal.commom.response.ApiResponse;
+import com.ptit.studentportal.student.Student;
 import com.ptit.studentportal.student.StudentRepository;
 import com.ptit.studentportal.tuition.entity.TuitionFee;
 import com.ptit.studentportal.tuition.entity.Payment;
+import com.ptit.studentportal.tuition.entity.TuitionRate;
 import com.ptit.studentportal.tuition.repository.TuitionFeeRepository;
 import com.ptit.studentportal.tuition.repository.PaymentRepository;
+import com.ptit.studentportal.tuition.repository.TuitionRateRepository;
 import com.ptit.studentportal.tuition.service.PaymentService;
 import com.ptit.studentportal.tuition.service.TuitionCalculationService;
 import com.ptit.studentportal.tuition.service.TuitionFeeService;
@@ -16,7 +19,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -31,8 +36,10 @@ public class AdminTuitionController {
     private final TuitionFeeRepository tuitionFeeRepository;
     private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
+    private final TuitionRateRepository tuitionRateRepository;
 
     public record CreditPriceRequest(BigDecimal pricePerCredit) {}
+    public record TuitionRateUpdateRequest(Integer enrollmentYear, BigDecimal pricePerCredit) {}
 
     @PutMapping("/semesters/{semesterId}/credit-price")
     public ResponseEntity<ApiResponse<Void>> setCreditPrice(
@@ -64,11 +71,11 @@ public class AdminTuitionController {
 
     @GetMapping("/debts")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStudentDebt(@RequestParam String studentCode) {
-        var studentOpt = studentRepository.findByStudentCode(studentCode);
-        if (studentOpt.isEmpty()) {
+        List<Student> students = studentRepository.searchByCodeOrName(studentCode);
+        if (students.isEmpty()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Sinh viên không tồn tại trong hệ thống."));
         }
-        var student = studentOpt.get();
+        var student = students.get(0);
         List<TuitionFee> fees = tuitionFeeRepository.findByStudentId(student.getStudentId());
         if (fees.isEmpty()) {
             return ResponseEntity.ok(ApiResponse.success("Không tìm thấy công nợ", Map.of(
@@ -132,5 +139,73 @@ public class AdminTuitionController {
             history = paymentRepository.findByPaymentStatusIgnoreCaseAndTuitionFee_Student_StudentCodeContainingIgnoreCase("success", studentCode, pageable);
         }
         return ResponseEntity.ok(ApiResponse.success("Tải lịch sử đối soát thành công", history));
+    }
+
+    @Transactional
+    @GetMapping("/rates")
+    public ResponseEntity<ApiResponse<List<TuitionRate>>> getTuitionRates() {
+        List<TuitionRate> rates = new ArrayList<>(tuitionRateRepository.findAll());
+
+        // Auto-seed default cohort stubs (D22–D25) if the table is empty
+        if (rates.isEmpty()) {
+            int currentYear = java.time.Year.now().getValue();
+            int startYear = currentYear - 3; // e.g. 2022 if current year is 2025
+            for (int y = startYear; y <= currentYear; y++) {
+                int finalY = y;
+                TuitionRate seeded = tuitionRateRepository.findByEnrollmentYear(y)
+                        .orElseGet(() -> {
+                            TuitionRate r = new TuitionRate();
+                            r.setEnrollmentYear(finalY);
+                            r.setPricePerCredit(BigDecimal.ZERO);
+                            return tuitionRateRepository.save(r);
+                        });
+                rates.add(seeded);
+            }
+        }
+
+        rates = rates.stream()
+                .sorted((a, b) -> b.getEnrollmentYear().compareTo(a.getEnrollmentYear()))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success("Tải danh sách đơn giá theo khóa thành công", rates));
+    }
+
+    @PutMapping("/rates")
+    public ResponseEntity<ApiResponse<Void>> updateTuitionRates(@RequestBody List<TuitionRateUpdateRequest> requests) {
+        for (TuitionRateUpdateRequest req : requests) {
+            if (req.enrollmentYear() == null || req.pricePerCredit() == null || req.pricePerCredit().compareTo(BigDecimal.ZERO) < 0) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Thông tin đơn giá không hợp lệ"));
+            }
+        }
+        for (TuitionRateUpdateRequest req : requests) {
+            TuitionRate rate = tuitionRateRepository.findByEnrollmentYear(req.enrollmentYear())
+                    .orElseGet(() -> {
+                        TuitionRate newRate = new TuitionRate();
+                        newRate.setEnrollmentYear(req.enrollmentYear());
+                        return newRate;
+                    });
+            rate.setPricePerCredit(req.pricePerCredit());
+            tuitionRateRepository.save(rate);
+        }
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật đơn giá theo khóa thành công", null));
+    }
+
+    @PutMapping("/rates/{enrollmentYear}")
+    public ResponseEntity<ApiResponse<TuitionRate>> updateSingleRate(
+            @PathVariable Integer enrollmentYear,
+            @RequestBody Map<String, BigDecimal> body
+    ) {
+        BigDecimal price = body.get("pricePerCredit");
+        if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Đơn giá không hợp lệ"));
+        }
+        TuitionRate rate = tuitionRateRepository.findByEnrollmentYear(enrollmentYear)
+                .orElseGet(() -> {
+                    TuitionRate newRate = new TuitionRate();
+                    newRate.setEnrollmentYear(enrollmentYear);
+                    return newRate;
+                });
+        rate.setPricePerCredit(price);
+        TuitionRate saved = tuitionRateRepository.save(rate);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật đơn giá thành công", saved));
     }
 }

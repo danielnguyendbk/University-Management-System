@@ -376,7 +376,7 @@ export function AdminExams() {
   // Excel Excel Import Actions
   const handleDownloadTemplate = async () => {
     try {
-      await adminExamApi.downloadTemplate();
+      await adminExamApi.downloadTemplate(selectedSemester);
       showToast("Bắt đầu tải file mẫu Excel...");
     } catch (err) {
       showToast("Không thể tải file mẫu", "error");
@@ -423,6 +423,17 @@ export function AdminExams() {
     try {
       setLoading(true);
       const res = await adminExamApi.confirmExcelImport(excelFile, selectedSemester);
+      if (!res.success) {
+        setExcelErrors(res.errors || []);
+        setExcelPreviewStats({
+          success: res.success,
+          totalRows: res.totalRows,
+          validRows: res.validRows,
+          errorCount: res.errorCount,
+          warningCount: res.warningCount
+        });
+        throw new Error(res.errors?.[0]?.message || "File Excel chưa hợp lệ để import");
+      }
       await loadExams();
       setImportSuccessCount(res.validRows || 0);
       setExcelFile(null);
@@ -1253,7 +1264,7 @@ export function AdminExams() {
                                       value={lec.lecturerId}
                                       disabled={isTeaching}
                                     >
-                                      {lec.lecturerCode} - {lec.fullName} {isTeaching ? " (GV giảng dạy - KHÔNG được chọn)" : ""}
+                                      {lec.lecturerCode} - {lec.lecturerName || lec.fullName} {isTeaching ? " (GV giảng dạy - KHÔNG được chọn)" : ""}
                                     </option>
                                   );
                                 })}
@@ -1338,10 +1349,10 @@ export function AdminExams() {
           MODAL 3: EXCEL IMPORT MODAL
           ======================================================== */}
       {activeModal === "import" && (
-        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
 
-            <div className="bg-[#1E3A8A] text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#1E3A8A] text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-blue-200" />
                 <h3 className="text-lg font-bold">Import lịch thi từ file Excel</h3>
@@ -1351,7 +1362,7 @@ export function AdminExams() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto">
 
               {/* Instructions and Download Template */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3 justify-between">
@@ -1515,7 +1526,7 @@ export function AdminExams() {
               ) : null}
 
               {/* Confirm Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+              <div className="sticky bottom-0 bg-white flex justify-end gap-3 pt-4 pb-1 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
