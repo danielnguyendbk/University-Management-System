@@ -12,3 +12,5 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+backend/studentportal/src/main/resources/application.properties
