@@ -24,7 +24,7 @@ export function Grades() {
   const [error, setError] = useState("");
   const [selectedCourse, setSelectedCourse] = useState(null);
 
-  const studentId = user?.studentId;
+  const studentId = user?.studentId ?? user?.studentProfile?.studentId;
 
   useEffect(() => {
     let mounted = true;
@@ -155,7 +155,7 @@ export function Grades() {
                   <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900">{semester.semesterName}</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">{semester.semesterCode || semester.semesterName}</h2>
                         <p className="text-sm text-gray-500">{semester.academicYear}</p>
                       </div>
                       <div className="flex items-center gap-4">
@@ -214,7 +214,7 @@ export function Grades() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <button
                                 type="button"
-                                onClick={() => setSelectedCourse({ ...course, semesterName: semester.semesterName, academicYear: semester.academicYear })}
+                                onClick={() => setSelectedCourse({ ...course, semesterCode: semester.semesterCode, semesterName: semester.semesterName, academicYear: semester.academicYear })}
                                 className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
                               >
                                 <Eye className="w-4 h-4" />
@@ -259,7 +259,7 @@ export function Grades() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
                   {[
-                    ["Học kỳ", `${selectedCourse.semesterName} - ${selectedCourse.academicYear}`],
+                    ["Học kỳ", `${selectedCourse.semesterCode || selectedCourse.semesterName} - ${selectedCourse.academicYear}`],
                     ["Tín chỉ", selectedCourse.credits],
                     ["Chuyên cần", selectedCourse.attendanceScore ?? "-"],
                     ["Bài tập", selectedCourse.exerciseScore ?? "-"],

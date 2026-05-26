@@ -1076,6 +1076,8 @@ ON academic_calendar_blocks (semester_id, start_date, end_date);
 
 
 SET @pwd = '$2a$10$gKee76JuMKMlvyoEtD4qEuBDp6dYaudD4BB6HasUOKMqERvVZuzpm'; -- bcrypt '123456'
+SET @student_pwd = '$2a$10$Bfpvk3PjszC1/ONAnHWiAuCTdoY7akOHgXt9SHAOWYI3fD.bdwIlm'; -- bcrypt 'thai06112005'
+SET @lecturer_pwd = '$2a$10$1TfH5cpFx2p4AJ11eIl5BebISAIOJMJJ8RB6o2jRs/MkcBNy7Rea6'; -- bcrypt 'Thai06112005'
 
 -- ============================================================
 -- 1. DEPARTMENTS
@@ -1144,7 +1146,6 @@ INSERT IGNORE INTO users
 (username, password_hash, email, force_password_change, role, status)
 VALUES
   ('admin01',  @pwd, 'admin01@ptit.edu.vn', FALSE, 'admin',    'active');
-
 
 
 

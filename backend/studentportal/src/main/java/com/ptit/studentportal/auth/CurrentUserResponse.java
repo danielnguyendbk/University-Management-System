@@ -12,8 +12,9 @@ public record CurrentUserResponse(
         String fullName,
         boolean forcePasswordChange,
         Long studentId,
+        String studentCode,
         Long lecturerId,
-        StudentProfile student,
-        LecturerProfile lecturer
+        StudentProfile studentProfile,
+        LecturerProfile lecturerProfile
 ) {
 }

@@ -419,6 +419,7 @@ class StudentGradesServiceTest {
         @Override public String getEnrollmentStatus() { return enrollmentStatus; }
         @Override public String getSectionCode() { return sectionCode; }
         @Override public Long getSemesterId() { return semesterId; }
+        @Override public String getSemesterCode() { return semesterName; }
         @Override public String getSemesterName() { return semesterName; }
         @Override public String getAcademicYear() { return academicYear; }
         @Override public String getCourseCode() { return courseCode; }

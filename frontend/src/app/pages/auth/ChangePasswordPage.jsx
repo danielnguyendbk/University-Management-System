@@ -38,7 +38,7 @@ export function ChangePasswordPage() {
 
     try {
       setSubmitting(true);
-      const updatedUser = await changePassword({ currentPassword, newPassword });
+      const updatedUser = await changePassword({ currentPassword, newPassword, confirmPassword });
       const rolePath = updatedUser?.role === "STUDENT" ? "/portal/student" : updatedUser?.role === "LECTURER" ? "/portal/lecturer" : "/portal/admin";
       toast.success("Đã đổi mật khẩu thành công");
       navigate(rolePath, { replace: true });

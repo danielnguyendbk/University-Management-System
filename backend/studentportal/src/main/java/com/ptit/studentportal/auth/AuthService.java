@@ -1,5 +1,7 @@
 package com.ptit.studentportal.auth;
 
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -58,6 +60,7 @@ public class AuthService {
         String token = jwtService.generateToken(new CustomUserDetails(user));
         String fullName = resolveFullName(user);
         Long studentId = resolveStudentId(user);
+        String studentCode = resolveStudentCode(user);
         Long lecturerId = resolveLecturerId(user);
 
         return new LoginResponse(
@@ -67,6 +70,7 @@ public class AuthService {
                 fullName,
                 user.isForcePasswordChange(),
                 studentId,
+                studentCode,
                 lecturerId
         );
     }
@@ -75,7 +79,9 @@ public class AuthService {
         User user = userDetails.getUser();
         String fullName = resolveFullName(user);
 
-        var studentOpt = studentRepository.findByUser_UserId(user.getUserId());
+        Optional<Student> studentOpt = user.getRole() == UserRole.STUDENT
+                ? studentRepository.findByUser_UserId(user.getUserId())
+                : Optional.empty();
         StudentProfile studentProfile = studentOpt.map(s -> new StudentProfile(
                 s.getStudentId(),
                 s.getStudentCode(),
@@ -88,7 +94,9 @@ public class AuthService {
                 s.getAcademicStatus() != null ? s.getAcademicStatus().name() : null
         )).orElse(null);
 
-        var lecturerOpt = lecturerRepository.findByUser_UserId(user.getUserId());
+        Optional<Lecturer> lecturerOpt = user.getRole() == UserRole.LECTURER
+                ? lecturerRepository.findByUser_UserId(user.getUserId())
+                : Optional.empty();
         LecturerProfile lecturerProfile = lecturerOpt.map(l -> new LecturerProfile(
                 l.getLecturerId(),
                 l.getLecturerCode(),
@@ -107,8 +115,9 @@ public class AuthService {
                 user.getStatus(),
                 fullName,
                 user.isForcePasswordChange(),
-                resolveStudentId(user),
-                resolveLecturerId(user),
+                studentOpt.map(Student::getStudentId).orElse(null),
+                studentOpt.map(Student::getStudentCode).orElse(null),
+                lecturerOpt.map(Lecturer::getLecturerId).orElse(null),
                 studentProfile,
                 lecturerProfile
         );
@@ -164,6 +173,16 @@ public class AuthService {
 
         return studentRepository.findByUser_UserId(user.getUserId())
                 .map(Student::getStudentId)
+                .orElse(null);
+    }
+
+    private String resolveStudentCode(User user) {
+        if (user.getRole() != UserRole.STUDENT) {
+            return null;
+        }
+
+        return studentRepository.findByUser_UserId(user.getUserId())
+                .map(Student::getStudentCode)
                 .orElse(null);
     }
 

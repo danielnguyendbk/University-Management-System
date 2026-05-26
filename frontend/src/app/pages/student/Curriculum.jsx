@@ -5,10 +5,39 @@ import { useAuth } from "../../../hooks/useAuth";
 import { getStudentCurriculum } from "../../../services/programService";
 
 const getStatusIcon = (status) => {
-  if (status === "completed") return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-  if (status === "in-progress") return <Circle className="w-5 h-5 text-blue-600" />;
+  const normalized = String(status || "").toLowerCase().replace("_", "-");
+  if (normalized === "completed") return <CheckCircle2 className="w-5 h-5 text-green-600" />;
+  if (["registered", "studying", "in-progress", "available", "open", "pending"].includes(normalized)) {
+    return <Circle className="w-5 h-5 text-blue-600" />;
+  }
+  if (normalized === "failed") return <AlertCircle className="w-5 h-5 text-red-600" />;
   return <Lock className="w-5 h-5 text-gray-400" />;
 };
+
+function getStatusColor(status) {
+  const normalized = String(status || "").toLowerCase().replace("_", "-");
+
+  switch (normalized) {
+    case "completed":
+      return "text-green-700 bg-green-50 border-green-200";
+    case "registered":
+    case "studying":
+    case "in-progress":
+      return "text-blue-700 bg-blue-50 border-blue-200";
+    case "available":
+    case "open":
+      return "text-emerald-700 bg-emerald-50 border-emerald-200";
+    case "pending":
+      return "text-amber-700 bg-amber-50 border-amber-200";
+    case "failed":
+      return "text-red-700 bg-red-50 border-red-200";
+    case "locked":
+    case "not-started":
+      return "text-gray-600 bg-gray-50 border-gray-200";
+    default:
+      return "text-gray-600 bg-gray-50 border-gray-200";
+  }
+}
 
 function groupCoursesBySemester(courses) {
   const grouped = {};
@@ -36,12 +65,13 @@ export function Curriculum() {
   const [curriculum, setCurriculum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const studentId = user?.studentId ?? user?.studentProfile?.studentId;
 
   useEffect(() => {
     let mounted = true;
 
     async function loadCurriculum() {
-      if (!user?.studentId) {
+      if (!studentId) {
         if (mounted) {
           setError("Không tìm thấy mã sinh viên trong phiên đăng nhập.");
           setLoading(false);
@@ -55,7 +85,7 @@ export function Curriculum() {
           setError("");
         }
 
-        const data = await getStudentCurriculum(user.studentId);
+        const data = await getStudentCurriculum(studentId);
         if (mounted) {
           setCurriculum(data);
         }
@@ -75,7 +105,7 @@ export function Curriculum() {
     return () => {
       mounted = false;
     };
-  }, [user?.studentId]);
+  }, [studentId]);
 
   const semesterGroups = curriculum?.semesters ?? [];
   const totalCredits = curriculum?.totalCredits ?? 0;

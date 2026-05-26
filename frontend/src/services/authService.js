@@ -1,13 +1,50 @@
-import { getStoredToken } from "./app";
+import { clearStoredToken, getStoredToken, setStoredToken } from "./app";
 import { request } from "./apiClient";
+
+const USER_STORAGE_KEY = "user";
 
 function normalizeUser(payload) {
   if (!payload) return payload;
+  const studentProfile = payload.studentProfile ?? payload.student ?? null;
+  const lecturerProfile = payload.lecturerProfile ?? payload.lecturer ?? null;
+
   return {
     ...payload,
     role: payload.role ? String(payload.role).toUpperCase() : payload.role,
     status: payload.status ? String(payload.status).toLowerCase() : payload.status,
+    studentId: payload.studentId ?? studentProfile?.studentId ?? null,
+    studentCode: payload.studentCode ?? studentProfile?.studentCode ?? null,
+    lecturerId: payload.lecturerId ?? lecturerProfile?.lecturerId ?? null,
+    studentProfile,
+    lecturerProfile,
   };
+}
+
+function persistUser(payload) {
+  const normalized = normalizeUser(payload);
+  if (!normalized) return normalized;
+
+  if (normalized.token) {
+    setStoredToken(normalized.token);
+  }
+
+  const token = normalized.token || getStoredToken();
+  const storedUser = token && !normalized.token ? { ...normalized, token } : normalized;
+  sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(storedUser));
+  return storedUser;
+}
+
+export function getStoredUser() {
+  const userStr = sessionStorage.getItem(USER_STORAGE_KEY);
+  if (!userStr) return null;
+
+  try {
+    return normalizeUser(JSON.parse(userStr));
+  } catch (e) {
+    console.error("Error parsing user from sessionStorage", e);
+    sessionStorage.removeItem(USER_STORAGE_KEY);
+    return null;
+  }
 }
 
 export async function login(credentials) {
@@ -16,38 +53,15 @@ export async function login(credentials) {
     body: JSON.stringify(credentials),
   });
 
-  // response is the JSON body: { success, message, data: { token, username, role, fullName } }
-  const payload = normalizeUser(response?.data);
-
-  if (payload && payload.token) {
-    sessionStorage.setItem("token", payload.token);
-    sessionStorage.setItem("user", JSON.stringify({
-      username: payload.username,
-      role: payload.role,
-      fullName: payload.fullName,
-      forcePasswordChange: payload.forcePasswordChange,
-      status: payload.status
-    }));
-  }
-
-  return payload;
+  return persistUser(response?.data);
 }
 
 export async function getCurrentUser() {
-  const userStr = sessionStorage.getItem("user");
-  if (userStr) {
-    try {
-      return normalizeUser(JSON.parse(userStr));
-    } catch (e) {
-      console.error("Error parsing user from sessionStorage", e);
-    }
-  }
-
   const response = await request("/auth/me", {
     method: "GET",
   });
 
-  return normalizeUser(response?.data);
+  return persistUser(response?.data);
 }
 
 export async function changePassword(body) {
@@ -56,12 +70,12 @@ export async function changePassword(body) {
     body: JSON.stringify(body),
   });
 
-  return normalizeUser(payload?.data);
+  return persistUser(payload?.data);
 }
 
 export function logout() {
-  sessionStorage.removeItem("token");
-  sessionStorage.removeItem("user");
+  clearStoredToken();
+  sessionStorage.removeItem(USER_STORAGE_KEY);
 }
 
 export async function forgotPassword(body) {

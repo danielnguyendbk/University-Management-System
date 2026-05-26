@@ -17,6 +17,7 @@ const sectionSummary = [
 
 export function LecturerDashboard() {
   const { user } = useAuth();
+  const lecturerProfile = user?.lecturerProfile;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -36,12 +37,12 @@ export function LecturerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Họ và tên</p>
-            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.fullName || user?.fullName || "-"}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{lecturerProfile?.fullName || user?.fullName || "-"}</p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Mã giảng viên</p>
-            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.lecturerCode || "-"}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{lecturerProfile?.lecturerCode || "-"}</p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -51,17 +52,17 @@ export function LecturerDashboard() {
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Email làm việc</p>
-            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.workEmail || user?.email || "-"}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{lecturerProfile?.workEmail || user?.email || "-"}</p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Số điện thoại</p>
-            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.phone || "-"}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{lecturerProfile?.phone || "-"}</p>
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">Học hàm / Học vị</p>
-            <p className="mt-1 text-base font-semibold text-gray-900">{user?.lecturer?.academicTitle || "-"}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900">{lecturerProfile?.academicTitle || "-"}</p>
           </div>
         </div>
       </section>

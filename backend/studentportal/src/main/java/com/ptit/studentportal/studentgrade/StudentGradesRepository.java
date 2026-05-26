@@ -19,8 +19,9 @@ public interface StudentGradesRepository extends JpaRepository<Grade, Long> {
                 e.enrollment_status AS enrollmentStatus,
                 cs.section_code AS sectionCode,
                 cs.semester_id AS semesterId,
-                s.semester_name AS semesterName,
-                s.academic_year AS academicYear,
+                s.semester_code AS semesterCode,
+                s.semester_code AS semesterName,
+                s.semester_year AS academicYear,
                 c.course_code AS courseCode,
                 c.course_name AS courseName,
                 c.credits AS credits,
@@ -49,6 +50,7 @@ public interface StudentGradesRepository extends JpaRepository<Grade, Long> {
         String getEnrollmentStatus();
         String getSectionCode();
         Long getSemesterId();
+        String getSemesterCode();
         String getSemesterName();
         String getAcademicYear();
         String getCourseCode();

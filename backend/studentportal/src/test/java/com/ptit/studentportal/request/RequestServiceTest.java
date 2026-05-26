@@ -264,6 +264,7 @@ class RequestServiceTest {
         @Override public String getEnrollmentStatus() { return enrollmentStatus; }
         @Override public String getSectionCode() { return sectionCode; }
         @Override public Long getSemesterId() { return semesterId; }
+        @Override public String getSemesterCode() { return null; }
         @Override public String getSemesterName() { return null; }
         @Override public String getAcademicYear() { return null; }
         @Override public String getCourseCode() { return courseCode; }

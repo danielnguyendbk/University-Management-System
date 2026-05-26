@@ -9,6 +9,7 @@ public record LoginResponse(
 	String fullName,
 	boolean forcePasswordChange,
 	Long studentId,
+	String studentCode,
 	Long lecturerId
 ) {
 }

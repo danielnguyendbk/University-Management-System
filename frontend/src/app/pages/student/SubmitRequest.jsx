@@ -6,7 +6,7 @@ import { getStudentRequests, submitStudentRequest } from "../../../services/requ
 
 export function SubmitRequest() {
   const { user } = useAuth();
-  const studentId = user?.studentId;
+  const studentId = user?.studentId ?? user?.studentProfile?.studentId;
   const [requestType, setRequestType] = useState("leave_request");
   const [requests, setRequests] = useState([]);
   const [gradeData, setGradeData] = useState(null);

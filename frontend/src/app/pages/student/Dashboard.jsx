@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Award, BookOpen, RefreshCw, UserCircle2 } from "lucide-react";
 import { PageHeader } from "../../components/common/PageHeader";
 import { useAuth } from "../../../hooks/useAuth";
+import { getCurrentUser } from "../../../services/authService";
 import { getStudentGrades } from "../../../services/gradeService";
 
 function scoreToHeight(score) {
@@ -13,16 +14,64 @@ function scoreToHeight(score) {
   return Math.max(16, Math.round((safeScore / 10) * 220));
 }
 
+function getSemesterCode(semester) {
+  return semester?.semesterCode || semester?.semesterName || (semester?.semesterId ? String(semester.semesterId) : "");
+}
+
+function getSemesterLabel(semester) {
+  const code = getSemesterCode(semester);
+  return code || semester?.academicYear || "Học kỳ";
+}
+
 export function Dashboard() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [gradeData, setGradeData] = useState(null);
-  const [selectedSemesterId, setSelectedSemesterId] = useState("");
+  const [selectedSemesterCode, setSelectedSemesterCode] = useState("ALL");
   const [hoveredCourse, setHoveredCourse] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const studentId = user?.studentId;
+  const studentProfile = user?.studentProfile;
+  const studentId = user?.studentId ?? studentProfile?.studentId;
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function hydrateStudentProfile() {
+      if (user?.role !== "STUDENT" || studentProfile) {
+        return;
+      }
+
+      try {
+        const currentUser = await getCurrentUser();
+        if (mounted && currentUser) {
+          setUser({ ...currentUser });
+        }
+      } catch {
+        // Keep the summary login session; grade loading below will surface actionable errors.
+      }
+    }
+
+    hydrateStudentProfile();
+
+    return () => {
+      mounted = false;
+    };
+  }, [setUser, studentProfile, user?.role]);
+
+  async function refreshDashboard() {
+    try {
+      const currentUser = await getCurrentUser();
+      if (currentUser) {
+        setUser({ ...currentUser });
+      }
+    } catch {
+      // Keep the current session if profile refresh fails.
+    }
+
+    setRefreshTick((current) => current + 1);
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -69,33 +118,66 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!semesters.length) {
+      if (selectedSemesterCode !== "ALL") {
+        setSelectedSemesterCode("ALL");
+      }
       return;
     }
 
-    const hasSelected = semesters.some((semester) => String(semester.semesterId) === selectedSemesterId);
+    const hasSelected = selectedSemesterCode === "ALL" || semesters.some((semester) => getSemesterCode(semester) === selectedSemesterCode);
     if (!hasSelected) {
-      setSelectedSemesterId(String(semesters[0].semesterId));
+      setSelectedSemesterCode("ALL");
     }
-  }, [semesters, selectedSemesterId]);
+  }, [semesters, selectedSemesterCode]);
+
+  const semesterOptions = useMemo(() => {
+    const seen = new Set();
+    return semesters
+      .map((semester) => ({ code: getSemesterCode(semester), label: getSemesterLabel(semester) }))
+      .filter((semester) => {
+        if (!semester.code || seen.has(semester.code)) {
+          return false;
+        }
+        seen.add(semester.code);
+        return true;
+      });
+  }, [semesters]);
 
   const currentSemester = useMemo(
-    () => semesters.find((semester) => String(semester.semesterId) === selectedSemesterId) ?? semesters[0],
-    [semesters, selectedSemesterId]
+    () => selectedSemesterCode === "ALL"
+      ? null
+      : semesters.find((semester) => getSemesterCode(semester) === selectedSemesterCode) ?? null,
+    [semesters, selectedSemesterCode]
   );
 
-  const chartRows = currentSemester?.courses ?? [];
-  const currentSemesterCredits = currentSemester?.totalCredits ?? 0;
+  const chartRows = useMemo(() => {
+    if (selectedSemesterCode === "ALL") {
+      return semesters.flatMap((semester) => {
+        const semesterCode = getSemesterCode(semester);
+        const semesterLabel = getSemesterLabel(semester);
+        return (semester.courses ?? []).map((course) => ({ ...course, semesterCode, semesterLabel }));
+      });
+    }
+
+    const semesterCode = getSemesterCode(currentSemester);
+    const semesterLabel = getSemesterLabel(currentSemester);
+    return (currentSemester?.courses ?? []).map((course) => ({ ...course, semesterCode, semesterLabel }));
+  }, [currentSemester, semesters, selectedSemesterCode]);
+
+  const chartLabel = selectedSemesterCode === "ALL" ? "Tất cả học kỳ" : getSemesterLabel(currentSemester);
+  const chartGpaLabel = selectedSemesterCode === "ALL" ? "GPA tích lũy" : "GPA học kỳ";
+  const chartGpa = selectedSemesterCode === "ALL" ? gradeData?.cumulativeGpa : currentSemester?.semesterGpa;
 
   const summaryRows = [
     { label: "Họ và tên", value: user?.fullName || gradeData?.fullName || "Chưa có dữ liệu" },
-    { label: "Mã sinh viên", value: gradeData?.studentCode || user?.username || "Chưa có dữ liệu" },
+    { label: "Mã sinh viên", value: gradeData?.studentCode || user?.studentCode || studentProfile?.studentCode || user?.username || "Chưa có dữ liệu" },
     { label: "Vai trò", value: user?.role || "STUDENT" },
-    { label: "Ngày sinh", value: user?.student?.dateOfBirth || gradeData?.dateOfBirth || "-" },
-    { label: "Giới tính", value: user?.student?.gender || "-" },
-    { label: "Số điện thoại", value: user?.student?.phone || "-" },
-    { label: "Địa chỉ thường trú", value: user?.student?.address || "-" },
-    { label: "Niên khóa", value: user?.student?.enrollmentYear || "-" },
-    { label: "Trạng thái", value: user?.student?.academicStatus || "-" },
+    { label: "Ngày sinh", value: studentProfile?.dateOfBirth || gradeData?.dateOfBirth || "-" },
+    { label: "Giới tính", value: studentProfile?.gender || "-" },
+    { label: "Số điện thoại", value: studentProfile?.phone || "-" },
+    { label: "Địa chỉ thường trú", value: studentProfile?.address || "-" },
+    { label: "Niên khóa", value: studentProfile?.enrollmentYear || "-" },
+    { label: "Trạng thái", value: studentProfile?.academicStatus || "-" },
   ];
 
   return (
@@ -120,7 +202,7 @@ export function Dashboard() {
           </div>
           <button
             type="button"
-            onClick={() => setRefreshTick((current) => current + 1)}
+            onClick={refreshDashboard}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <RefreshCw className="w-4 h-4" />
@@ -151,17 +233,18 @@ export function Dashboard() {
             </label>
             <select
               id="dashboard-semester"
-              value={selectedSemesterId}
-              onChange={(event) => setSelectedSemesterId(event.target.value)}
+              value={selectedSemesterCode}
+              onChange={(event) => setSelectedSemesterCode(event.target.value)}
               className="min-w-64 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900"
               disabled={loading || !semesters.length}
             >
               {!semesters.length ? (
                 <option value="">Chưa có học kỳ</option>
               ) : null}
-              {semesters.map((semester) => (
-                <option key={semester.semesterId} value={semester.semesterId}>
-                  {semester.semesterName} - {semester.academicYear}
+              {semesters.length ? <option value="ALL">Tất cả học kỳ</option> : null}
+              {semesterOptions.map((semester) => (
+                <option key={semester.code} value={semester.code}>
+                  {semester.label}
                 </option>
               ))}
             </select>
@@ -172,7 +255,7 @@ export function Dashboard() {
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
             Đang tải biểu đồ kết quả học tập...
           </div>
-        ) : !currentSemester ? (
+        ) : !semesters.length ? (
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-sm text-gray-600">
             Chưa có dữ liệu học kỳ để hiển thị biểu đồ.
           </div>
@@ -180,11 +263,11 @@ export function Dashboard() {
           <>
             <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
               <p>
-                    {currentSemester ? `${currentSemester.semesterName} - ${currentSemester.academicYear}` : "Theo học kỳ đang chọn"}
+                {chartLabel}
               </p>
               <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-blue-700">
                 <Award className="w-4 h-4" />
-                GPA học kỳ: {Number(currentSemester.semesterGpa ?? 0).toFixed(2)}
+                {chartGpaLabel}: {Number(chartGpa ?? 0).toFixed(2)}
               </div>
             </div>
 
@@ -193,6 +276,7 @@ export function Dashboard() {
                 <p className="font-semibold">
                   {hoveredCourse.courseCode} - {hoveredCourse.courseName}
                 </p>
+                {hoveredCourse.semesterCode ? <p className="text-blue-700">{hoveredCourse.semesterCode}</p> : null}
                 <p className="text-blue-800">
                   Điểm tổng kết: {hoveredCourse.totalScore !== null && hoveredCourse.totalScore !== undefined
                     ? Number(hoveredCourse.totalScore).toFixed(2)
@@ -257,6 +341,9 @@ export function Dashboard() {
                       <div key={`${course.enrollmentId}-label`} className="px-2 text-center">
                         <p className="text-xs font-semibold text-gray-800 truncate">{course.courseCode}</p>
                         <p className="text-[11px] text-gray-500 truncate">{course.courseName}</p>
+                        {selectedSemesterCode === "ALL" && course.semesterCode ? (
+                          <p className="text-[11px] text-blue-600 truncate">{course.semesterCode}</p>
+                        ) : null}
                       </div>
                     ))}
                   </div>

@@ -79,6 +79,7 @@ public class StudentGradesService {
 
             semesterMap.computeIfAbsent(row.getSemesterId(), id -> new SemesterGradesResponse.Builder(
                     row.getSemesterId(),
+                    row.getSemesterCode(),
                     row.getSemesterName(),
                     row.getAcademicYear()))
                     .addCourse(new StudentCourseGradeResponse(
@@ -186,6 +187,7 @@ public class StudentGradesService {
 
     public record SemesterGradesResponse(
             Long semesterId,
+            String semesterCode,
             String semesterName,
             String academicYear,
             BigDecimal semesterGpa,
@@ -194,12 +196,14 @@ public class StudentGradesService {
     ) {
         public static class Builder {
             private final Long semesterId;
+            private final String semesterCode;
             private final String semesterName;
             private final String academicYear;
             private final List<StudentCourseGradeResponse> courses = new ArrayList<>();
 
-            public Builder(Long semesterId, String semesterName, String academicYear) {
+            public Builder(Long semesterId, String semesterCode, String semesterName, String academicYear) {
                 this.semesterId = semesterId;
+                this.semesterCode = semesterCode;
                 this.semesterName = semesterName;
                 this.academicYear = academicYear;
             }
@@ -217,7 +221,7 @@ public class StudentGradesService {
                 BigDecimal semesterGpa = totalCredits == 0
                         ? ZERO
                         : weightedPoints.divide(BigDecimal.valueOf(totalCredits), 2, RoundingMode.HALF_UP);
-                return new SemesterGradesResponse(semesterId, semesterName, academicYear, semesterGpa, totalCredits, List.copyOf(courses));
+                return new SemesterGradesResponse(semesterId, semesterCode, semesterName, academicYear, semesterGpa, totalCredits, List.copyOf(courses));
             }
         }
     }

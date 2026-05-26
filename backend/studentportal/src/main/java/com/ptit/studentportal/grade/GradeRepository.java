@@ -31,8 +31,8 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
                 cs.section_code AS sectionCode,
                 c.course_code AS courseCode,
                 c.course_name AS courseName,
-                s.semester_name AS semesterName,
-                s.academic_year AS academicYear,
+                s.semester_code AS semesterName,
+                s.semester_year AS academicYear,
                 cs.max_capacity AS maxCapacity,
                 cs.status AS status,
                 COUNT(e.enrollment_id) AS currentCapacity
@@ -45,7 +45,7 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
             WHERE cs.lecturer_id = :lecturerId
             GROUP BY
                 cs.section_id, cs.course_id, cs.semester_id, cs.section_code,
-                c.course_code, c.course_name, s.semester_name, s.academic_year,
+                c.course_code, c.course_name, s.semester_code, s.semester_year,
                 cs.max_capacity, cs.status
             ORDER BY s.start_date DESC, cs.section_code ASC
             """, nativeQuery = true)
@@ -63,8 +63,8 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
                 cs.section_code AS sectionCode,
                 c.course_code AS courseCode,
                 c.course_name AS courseName,
-                s.semester_name AS semesterName,
-                s.academic_year AS academicYear,
+                s.semester_code AS semesterName,
+                s.semester_year AS academicYear,
                 cs.lecturer_id AS lecturerId,
                 g.attendance_score AS attendanceScore,
                 g.exercise_score AS exerciseScore,
@@ -95,8 +95,8 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
                 cs.section_code AS sectionCode,
                 c.course_code AS courseCode,
                 c.course_name AS courseName,
-                s.semester_name AS semesterName,
-                s.academic_year AS academicYear,
+                s.semester_code AS semesterName,
+                s.semester_year AS academicYear,
                 cs.lecturer_id AS lecturerId,
                 g.attendance_score AS attendanceScore,
                 g.exercise_score AS exerciseScore,

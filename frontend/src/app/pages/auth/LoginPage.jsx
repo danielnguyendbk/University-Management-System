@@ -130,9 +130,9 @@ export function LoginPage() {
                     />
                   </div>
                   <div className="mt-2 text-right">
-                    <button type="button" className="text-xs font-medium transition-colors duration-200 hover:underline" style={{ color: "#6366f1" }}>
+                    <Link to="/forgot-password" className="text-xs font-medium transition-colors duration-200 hover:underline" style={{ color: "#6366f1" }}>
                       Quên mật khẩu?
-                    </button>
+                    </Link>
                   </div>
                 </div>
 

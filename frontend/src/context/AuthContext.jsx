@@ -1,5 +1,5 @@
 import { createContext, useEffect, useMemo, useState } from "react";
-import { changePassword as changePasswordRequest, getCurrentUser, login as loginRequest, logout as logoutRequest } from "../services/authService";
+import { changePassword as changePasswordRequest, getCurrentUser, getStoredUser, login as loginRequest, logout as logoutRequest } from "../services/authService";
 import { getStoredToken } from "../services/app";
 export const AuthContext = createContext(null);
 
@@ -18,6 +18,11 @@ export function AuthProvider({ children }) {
       }
 
       try {
+        const cachedUser = getStoredUser();
+        if (mounted && cachedUser) {
+          setUser(cachedUser);
+        }
+
         const currentUser = await getCurrentUser();
         if (mounted) setUser(currentUser);
       } catch {
@@ -37,8 +42,19 @@ export function AuthProvider({ children }) {
 
   async function login(credentials) {
     const loggedInUser = await loginRequest(credentials);
-    setUser(loggedInUser ? { ...loggedInUser } : null);
-    return loggedInUser;
+    let hydratedUser = loggedInUser ? { ...loggedInUser } : null;
+
+    if (loggedInUser?.token) {
+      try {
+        const currentUser = await getCurrentUser();
+        hydratedUser = currentUser ? { ...currentUser } : hydratedUser;
+      } catch {
+        hydratedUser = loggedInUser ? { ...loggedInUser } : null;
+      }
+    }
+
+    setUser(hydratedUser);
+    return hydratedUser;
   }
 
   async function changePassword(body) {
