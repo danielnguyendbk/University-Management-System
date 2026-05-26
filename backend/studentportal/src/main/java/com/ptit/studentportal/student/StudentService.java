@@ -143,6 +143,7 @@ public class StudentService {
 				.gender(request.gender())
 				.phone(request.phone())
 				.address(request.address())
+				.enrollmentYear(request.enrollmentYear())
 				.academicStatus(request.academicStatus())
 				.build();
 
@@ -165,6 +166,7 @@ public class StudentService {
 				student.getGender(),
 				student.getPhone(),
 				student.getAddress(),
+				student.getEnrollmentYear(),
 				student.getAcademicStatus()
 		);
 	}

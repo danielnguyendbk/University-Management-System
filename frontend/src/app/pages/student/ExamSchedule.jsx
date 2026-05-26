@@ -154,9 +154,6 @@ export function ExamSchedule() {
               <div className="md:w-48 flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-gray-600 mb-1">Số ngày còn lại</p>
                 <p className="text-4xl font-bold text-[#1E3A8A] mb-2">23</p>
-                <button className="w-full px-4 py-2 bg-[#1E3A8A] text-white rounded-lg hover:bg-[#1E3A8A]/90 transition-colors text-sm font-medium">
-                  Đặt nhắc lịch
-                </button>
               </div>
             </div>
           </div>

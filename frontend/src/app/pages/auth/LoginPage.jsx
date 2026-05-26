@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { AlertCircle, LoaderCircle, UserRound, LockKeyhole, GraduationCap } from "lucide-react";
+import { Calendar, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 
 export function LoginPage() {
@@ -9,7 +10,7 @@ export function LoginPage() {
   const message = location.state?.message;
   const { login, user, loading: authLoading } = useAuth();
   const [username, setUsername] = useState("D22KH002");
-  const [password, setPassword] = useState("Thai06112005");
+  const [password, setPassword] = useState("thai06112005");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 

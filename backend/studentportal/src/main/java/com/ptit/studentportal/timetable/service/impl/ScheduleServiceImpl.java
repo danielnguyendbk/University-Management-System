@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.ptit.studentportal.lecturer.Lecturer;
 import com.ptit.studentportal.lecturer.LecturerRepository;

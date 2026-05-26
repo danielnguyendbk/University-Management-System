@@ -15,7 +15,7 @@ class AuthServiceLoginDebugTest {
     @Test
     void debugLogin() {
         try {
-            LoginResponse response = authService.login(new LoginRequest("student01", "123456"));
+            LoginResponse response = authService.login(new LoginRequest("DHKKH001", "thai06112005"));
             System.out.println("LOGIN OK: " + response);
         } catch (Exception ex) {
             System.out.println("LOGIN FAILED: " + ex.getClass().getName());

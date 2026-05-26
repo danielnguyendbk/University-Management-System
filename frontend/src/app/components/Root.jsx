@@ -16,12 +16,14 @@ import {
   Search,
   User,
   Menu,
-  X
+  X,
+  LockKeyhole
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useIdleLogout } from "../hooks/useIdleLogout";
 import { NotificationBell } from "./NotificationBell";
+
 
 const navigationByRole = {
   STUDENT: [
@@ -35,6 +37,7 @@ const navigationByRole = {
     { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", path: "tuition", icon: DollarSign },
     { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", path: "submit-request", icon: Send },
     { name: "Phản hồi", name_vi: "Đóng góp ý kiến", path: "feedback", icon: MessageSquare },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   LECTURER: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển giảng viên", path: "", icon: LayoutDashboard },
@@ -45,6 +48,7 @@ const navigationByRole = {
     { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
     { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
     { name: "Phản hồi", name_vi: "Trao đổi với sinh viên", path: "feedback", icon: MessageSquare },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   ADMIN: [
     { name: "Trang chủ", name_vi: "Bảng điều khiển quản trị", path: "", icon: LayoutDashboard },
@@ -57,6 +61,7 @@ const navigationByRole = {
     { name: "Thời khóa biểu", name_vi: "Tạo và quản lý lịch học", path: "timetable", icon: CalendarDays },
     { name: "Quản lý lịch thi", name_vi: "Xếp lịch & gán giám thị", path: "exams", icon: CalendarCheck },
     { name: "Quản lý học phí", name_vi: "Học phí & Thanh toán", path: "tuition", icon: DollarSign },
+    { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
 };
 

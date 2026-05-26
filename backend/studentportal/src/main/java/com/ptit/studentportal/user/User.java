@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.ptit.studentportal.persistence.converter.UserRoleConverter;
+import com.ptit.studentportal.persistence.converter.UserStatusConverter;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Convert;

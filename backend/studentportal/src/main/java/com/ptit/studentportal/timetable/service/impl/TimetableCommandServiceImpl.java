@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.ptit.studentportal.timetable.dto.request.CreateScheduleRequest;
 import com.ptit.studentportal.timetable.dto.request.GenerateClassSessionsRequest;

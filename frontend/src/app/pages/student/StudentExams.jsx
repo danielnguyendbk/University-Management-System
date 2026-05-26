@@ -225,28 +225,6 @@ export function StudentExams() {
               key={exam.id}
               exam={exam}
               role="student"
-              actions={
-                <button
-                  onClick={() => handleToggleReminder(exam.id, exam.courseCode)}
-                  className={`w-full px-4 py-2 rounded-lg border text-sm font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                    exam.hasReminder
-                      ? "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100"
-                      : "bg-[#1E3A8A] text-white border-transparent hover:bg-[#1E3A8A]/90"
-                  }`}
-                >
-                  {exam.hasReminder ? (
-                    <>
-                      <BellOff className="w-4 h-4" />
-                      Đã đặt nhắc lịch
-                    </>
-                  ) : (
-                    <>
-                      <Bell className="w-4 h-4" />
-                      Đặt nhắc lịch
-                    </>
-                  )}
-                </button>
-              }
             />
           ))}
         </div>
@@ -254,7 +232,7 @@ export function StudentExams() {
 
       {/* Summary Stats Cards */}
       {!loading && !error && filteredExams.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
             <p className="text-sm font-semibold text-gray-500 mb-1">Môn thi sắp diễn ra</p>
             <p className="text-2xl font-bold text-gray-900">
@@ -283,12 +261,7 @@ export function StudentExams() {
               })}
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-500 mb-1">Nhắc nhở đã đặt</p>
-            <p className="text-3xl font-extrabold text-amber-600">
-              {filteredExams.filter(e => e.hasReminder).length} <span className="text-sm text-gray-500 font-medium">lịch</span>
-            </p>
-          </div>
+          
         </div>
       )}
     </div>

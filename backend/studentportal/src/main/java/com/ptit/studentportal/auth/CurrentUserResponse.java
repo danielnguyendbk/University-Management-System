@@ -10,6 +10,10 @@ public record CurrentUserResponse(
         UserRole role,
         UserStatus status,
         String fullName,
-        boolean forcePasswordChange
+        boolean forcePasswordChange,
+        Long studentId,
+        Long lecturerId,
+        StudentProfile student,
+        LecturerProfile lecturer
 ) {
 }

@@ -1,6 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { ChangePasswordPage } from "./pages/auth/ChangePasswordPage";
+import { ForgotPassword } from "./pages/auth/ForgotPassword";
+import { ResetPassword } from "./pages/auth/ResetPassword";
+import { ChangePassword } from "./pages/shared/ChangePassword";
 import { Dashboard } from "./pages/student/Dashboard";
 import { Announcements } from "./pages/student/Announcements";
 import { Curriculum } from "./pages/student/Curriculum";
@@ -55,6 +58,8 @@ export const router = createBrowserRouter([
     path: "/",
     Component: LoginPage,
   },
+  { path: "/forgot-password", Component: ForgotPassword },
+  { path: "/reset-password", Component: ResetPassword },
   {
     path: "/login",
     Component: LoginPage,
@@ -89,6 +94,7 @@ export const router = createBrowserRouter([
       { path: "e-invoice", Component: EInvoice },
       { path: "submit-request", Component: SubmitRequest },
       { path: "feedback", Component: Feedback },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
   {
@@ -105,6 +111,7 @@ export const router = createBrowserRouter([
       { path: "exams", Component: LecturerExams },         // Map /portal/lecturer/exams
       { path: "request-approval", Component: RequestApproval },
       { path: "feedback", Component: Feedback },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
   {
@@ -126,7 +133,9 @@ export const router = createBrowserRouter([
       { path: "timetable", Component: AdminTimetablePage },
       { path: "exams", Component: AdminExams },
       { path: "tuition", Component: AdminTuition },
-      { path: "courses", Component: ManageCourses }
+      { path: "courses", Component: ManageCourses },
+      { path: "registration-sessions", Component: RegistrationSessions },
+      { path: "change-password", Component: ChangePassword },
     ],
   },
   {

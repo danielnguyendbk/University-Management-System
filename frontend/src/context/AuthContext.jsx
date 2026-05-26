@@ -1,6 +1,6 @@
 import { createContext, useEffect, useMemo, useState } from "react";
-import { changePassword as changePasswordRequest, getCurrentUser, getStoredToken, login as loginRequest, logout as logoutRequest } from "../services/authService";
-
+import { changePassword as changePasswordRequest, getCurrentUser, login as loginRequest, logout as logoutRequest } from "../services/authService";
+import { getStoredToken } from "../services/app";
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {

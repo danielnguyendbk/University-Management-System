@@ -19,6 +19,7 @@ public record StudentDTO(
 	Student.Gender gender,
 	String phone,
 	String address,
+	Integer enrollmentYear,
 	Student.AcademicStatus academicStatus
 ) {
 }

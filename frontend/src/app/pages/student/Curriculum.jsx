@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, BookOpen, GraduationCap, Loader2, RefreshCw } from "lucide-react";
-import { getStudentCurriculum } from "../../../services/courseService";
 
-const courseTypeLabels = {
-  "bắt buộc chung": "Bắt buộc chung",
-  "bắt buộc chung nhóm ngành": "Bắt buộc chung nhóm ngành",
-  "cơ sở ngành": "Cơ sở ngành",
-  "chuyên ngành": "Chuyên ngành",
-  "thực tập": "Thực tập",
-  "luận văn tốt nghiệp": "Luận văn tốt nghiệp",
+import { BookOpen, CheckCircle2, Circle, Lock, RefreshCw, AlertCircle } from "lucide-react";
+import { useAuth } from "../../../hooks/useAuth";
+import { getStudentCurriculum } from "../../../services/programService";
+
+const getStatusIcon = (status) => {
+  if (status === "completed") return <CheckCircle2 className="w-5 h-5 text-green-600" />;
+  if (status === "in-progress") return <Circle className="w-5 h-5 text-blue-600" />;
+  return <Lock className="w-5 h-5 text-gray-400" />;
 };
 
 function groupCoursesBySemester(courses) {
@@ -33,187 +32,189 @@ function groupCoursesBySemester(courses) {
 }
 
 export function Curriculum() {
+  const { user } = useAuth();
   const [curriculum, setCurriculum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadCurriculum = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await getStudentCurriculum();
-      setCurriculum(data);
-    } catch (err) {
-      setError(err.message || "Không tải được chương trình đào tạo");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let mounted = true;
+
+    async function loadCurriculum() {
+      if (!user?.studentId) {
+        if (mounted) {
+          setError("Không tìm thấy mã sinh viên trong phiên đăng nhập.");
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (mounted) {
+          setLoading(true);
+          setError("");
+        }
+
+        const data = await getStudentCurriculum(user.studentId);
+        if (mounted) {
+          setCurriculum(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err.message || "Không thể tải chương trình đào tạo.");
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
     loadCurriculum();
-  }, []);
 
-  const courses = curriculum?.courses || [];
-  const semesters = useMemo(() => groupCoursesBySemester(courses), [courses]);
-  const assignedCredits = curriculum?.assignedCredits ?? courses.reduce((sum, course) => sum + (course.credits || 0), 0);
-  const achievedCredits = curriculum?.achievedCredits ?? courses
-    .filter((course) => course.completed)
-    .reduce((sum, course) => sum + (course.credits || 0), 0);
+    return () => {
+      mounted = false;
+    };
+  }, [user?.studentId]);
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <div className="min-h-[420px] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-[#1E3A8A]">
-            <Loader2 className="w-8 h-8 animate-spin" />
-            <p className="text-sm font-semibold">Đang tải chương trình đào tạo...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const semesterGroups = curriculum?.semesters ?? [];
+  const totalCredits = curriculum?.totalCredits ?? 0;
+  const completedCredits = curriculum?.completedCredits ?? 0;
+  const inProgressCredits = curriculum?.inProgressCredits ?? 0;
+  const lockedCredits = curriculum?.lockedCredits ?? 0;
+  const progressPercent = totalCredits > 0 ? Math.round((completedCredits / totalCredits) * 100) : 0;
 
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold text-gray-900">Chương trình đào tạo</h1>
-          <p className="text-gray-600 mt-1">Theo ngành học của sinh viên đang đăng nhập</p>
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-5 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-            <div>
-              <p className="font-semibold text-red-900">Không tải được dữ liệu</p>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={loadCurriculum}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Thử lại
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const semesterCourseCount = useMemo(
+    () => semesterGroups.reduce((sum, semester) => sum + (semester.courses?.length ?? 0), 0),
+    [semesterGroups]
+  );
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-gray-900">Chương trình đào tạo</h1>
-        <p className="text-gray-600 mt-1">
-          {curriculum?.programName ? `${curriculum.programName} (${curriculum.programCode})` : "Theo ngành học của sinh viên"}
-        </p>
-      </div>
-
-      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#1E3A8A] flex items-center justify-center">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Sinh viên</p>
-              <p className="font-semibold text-gray-900">{curriculum?.fullName || "-"}</p>
-              <p className="text-sm text-gray-500">{curriculum?.studentCode || "-"}</p>
-            </div>
-          </div>
-
+      {loading ? (
+        <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600">
+          Đang tải chương trình đào tạo...
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 flex items-start gap-3 text-red-800">
+          <AlertCircle className="w-5 h-5 mt-0.5" />
           <div>
-            <p className="text-sm text-gray-500">Ngành học</p>
-            <p className="font-semibold text-gray-900">{curriculum?.programName || "-"}</p>
-            <p className="text-sm text-gray-500">{curriculum?.programCode || "-"}</p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Tín chỉ đã đạt / tổng</p>
-            <p className="text-2xl font-semibold text-gray-900">{achievedCredits} / {assignedCredits}</p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Số môn học</p>
-            <p className="text-2xl font-semibold text-[#1E3A8A]">{courses.length}</p>
+            <p className="font-semibold">Không tải được dữ liệu</p>
+            <p className="text-sm">{error}</p>
           </div>
         </div>
-
-      </section>
-
-      {semesters.length === 0 ? (
-        <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-10 text-center">
-          <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="font-semibold text-gray-900">Chưa có môn học trong chương trình đào tạo</p>
-          <p className="text-sm text-gray-500 mt-1">Ngành của sinh viên chưa được admin gán danh sách môn học.</p>
-        </section>
       ) : (
-        <section className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] table-fixed">
-              <colgroup>
-                <col style={{ width: "72px" }} />
-                <col style={{ width: "150px" }} />
-                <col />
-                <col style={{ width: "270px" }} />
-                <col style={{ width: "130px" }} />
-                <col style={{ width: "110px" }} />
-              </colgroup>
-              <thead>
-                <tr className="bg-white border-b-2 border-sky-400">
-                  <th className="px-5 py-4 text-center text-sm font-bold text-gray-700">STT</th>
-                  <th className="px-5 py-4 text-left text-sm font-bold text-gray-700">Mã môn</th>
-                  <th className="px-5 py-4 text-left text-sm font-bold text-gray-700">Tên môn học</th>
-                  <th className="px-5 py-4 text-left text-sm font-bold text-gray-700">Loại</th>
-                  <th className="px-5 py-4 text-center text-sm font-bold text-gray-700">Tín chỉ</th>
-                  <th className="px-5 py-4 text-center text-sm font-bold text-gray-700">Đã học</th>
-                </tr>
-              </thead>
-              <tbody>
-                {semesters.flatMap((semester) => {
-                  const semesterRow = (
-                    <tr key={`${semester.semesterName}-summary`} className="bg-slate-100 border-b border-sky-300">
-                      <td colSpan={4} className="px-5 py-3 text-sm font-bold text-gray-700">
-                        {semester.semesterName}
-                      </td>
-                      <td className="px-5 py-3 text-center text-sm font-bold text-sky-600">
-                        {semester.credits} tín chỉ
-                      </td>
-                      <td className="px-5 py-3 bg-slate-100" />
-                    </tr>
-                  );
-
-                  const courseRows = semester.courses.map((course, index) => (
-                    <tr key={course.programCourseId || `${semester.semesterName}-${course.courseId}`} className="border-b border-sky-200 hover:bg-blue-50/50">
-                      <td className="px-5 py-4 text-center text-sm text-gray-600">{index + 1}</td>
-                      <td className="px-5 py-4 text-sm font-semibold text-gray-900">{course.courseCode}</td>
-                      <td className="px-5 py-4 text-sm text-gray-800 break-words">{course.courseName}</td>
-                      <td className="px-5 py-4 text-sm text-gray-700">
-                        <span className="inline-flex rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-                          {courseTypeLabels[course.courseType] || course.courseType || "-"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-center text-sm font-semibold text-gray-800">{course.credits}</td>
-                      <td className="px-5 py-4 text-center text-sm font-bold">
-                        {course.completed ? (
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-green-50 text-green-700 ring-1 ring-green-200">
-                            X
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ));
-
-                  return [semesterRow, ...courseRows];
-                })}
-              </tbody>
-            </table>
+        <>
+          <div>
+            <h1 className="text-3xl font-semibold text-gray-900">{curriculum?.programName || "Chương trình đào tạo"}</h1>
+            <p className="text-gray-600 mt-1">
+              {curriculum?.departmentName || ""} • {curriculum?.studentCode || ""} • {curriculum?.fullName || ""}
+            </p>
           </div>
-        </section>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm text-gray-500 mb-1">Tổng tín chỉ yêu cầu</p>
+              <p className="text-3xl font-semibold text-gray-900">{totalCredits}</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm text-gray-500 mb-1">Tín chỉ đã hoàn thành</p>
+              <p className="text-3xl font-semibold text-green-600">{completedCredits}</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm text-gray-500 mb-1">Đang học</p>
+              <p className="text-3xl font-semibold text-blue-600">{inProgressCredits}</p>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-sm text-gray-500 mb-1">Tiến độ hoàn thành</p>
+              <p className="text-3xl font-semibold text-[#1E3A8A]">{progressPercent}%</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Tiến độ chương trình</span>
+              <span className="text-sm text-gray-600">{completedCredits} / {totalCredits} tín chỉ</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-[#1E3A8A] h-3 rounded-full transition-all"
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex flex-wrap gap-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span className="text-sm text-gray-700">Đã hoàn thành</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Circle className="w-5 h-5 text-blue-600" />
+                <span className="text-sm text-gray-700">Đang học</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-gray-400" />
+                <span className="text-sm text-gray-700">Chưa mở</span>
+              </div>
+            </div>
+          </div>
+
+          {semesterGroups.length === 0 ? (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600">
+              Chưa có dữ liệu chương trình đào tạo.
+            </div>
+          ) : (
+            semesterGroups.map((semester) => (
+              <div key={semester.semesterNumber} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-[#1E3A8A] to-[#2563eb] px-6 py-4">
+                  <h2 className="text-xl font-semibold text-white">{semester.semesterTitle}</h2>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {semester.courses.map((course) => (
+                      <div
+                        key={course.courseCode}
+                        className={`border rounded-lg p-4 ${getStatusColor(course.status)}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {getStatusIcon(course.status)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="font-semibold text-gray-900">{course.courseCode}</p>
+                              <span className="text-sm font-medium text-gray-600">{course.credits} cr</span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{course.courseName}</p>
+                            {course.required !== null && (
+                              <span className="inline-flex px-2 py-0.5 bg-white border border-gray-200 rounded text-xs font-medium text-gray-900 mr-2">
+                                {course.required ? "Bắt buộc" : "Tự chọn"}
+                              </span>
+                            )}
+                            {course.status === "in-progress" && (
+                              <span className="inline-flex px-2 py-0.5 bg-blue-100 border border-blue-200 rounded text-xs font-medium text-blue-900">
+                                Hiện tại
+                              </span>
+                            )}
+                            {course.status === "locked" && (
+                              <span className="inline-flex px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-medium text-gray-600">
+                                Chưa khả dụng
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-sm text-gray-600">
+                    Tổng: {semester.totalCredits} tín chỉ • {semester.courses.length} học phần
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </>
       )}
     </div>
   );

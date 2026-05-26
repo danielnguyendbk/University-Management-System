@@ -64,4 +64,31 @@ export function logout() {
   sessionStorage.removeItem("user");
 }
 
+export async function forgotPassword(body) {
+  const payload = await request("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function verifyForgotPasswordOtp(body) {
+  const payload = await request("/auth/forgot-password/verify-otp", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+export async function resetPassword(body) {
+  const payload = await request("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return payload?.data;
+}
+
+
+
+
 export { getStoredToken };

@@ -18,6 +18,11 @@ export async function parseApiError(response) {
     const payload = await response.json();
     return payload?.message || "Request failed";
   } catch {
-    return "Request failed";
+    try {
+      const text = await response.text();
+      return text || "Request failed";
+    } catch {
+      return "Request failed";
+    }
   }
 }

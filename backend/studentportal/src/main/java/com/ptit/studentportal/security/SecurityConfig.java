@@ -48,6 +48,10 @@ public class SecurityConfig {
 						
 						// Các request hợp lệ khác
 						.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/forgot-password/verify-otp").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
+						.requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						.requestMatchers("/api/lecturer/**").hasRole("LECTURER")
 						.requestMatchers("/api/student/**").hasRole("STUDENT")

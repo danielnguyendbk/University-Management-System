@@ -14,7 +14,8 @@ public record StudentCreateRequest(
         LocalDate dateOfBirth,
         Student.Gender gender,
         @Size(max = 20) String phone,
-                @Size(max = 255) String address,
+        @Size(max = 255) String address,
+        Integer enrollmentYear,
         @NotNull Student.AcademicStatus academicStatus
 ) {
 }
