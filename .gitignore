@@ -46,8 +46,13 @@ hs_err_pid*
 # ================================
 # Environment & Secrets
 # ================================
-backend/src/main/resources/application-local.properties
-backend/src/main/resources/application-prod.properties
+# Local/prod Spring Boot config
+backend/studentportal/src/main/resources/application-local.properties
+backend/studentportal/src/main/resources/application-prod.properties
+
+# Temporary file used for git history cleanup
+replacements.txt
+
 .env
 .env.*
 !.env.example
