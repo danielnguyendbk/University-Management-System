@@ -32,5 +32,3 @@ build/
 ### VS Code ###
 .vscode/
 
-# Đảm bảo rằng file application.properties không bị đẩy lên GitHub
-/src/main/resources/application.properties
