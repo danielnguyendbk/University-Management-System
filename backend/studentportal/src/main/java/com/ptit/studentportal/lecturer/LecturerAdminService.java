@@ -498,9 +498,7 @@ public class LecturerAdminService {
 		return "tcpeduvn+" + username + "@gmail.com";
 	}
 
-	private String buildWorkEmail(String lecturerCode) {
-		return lecturerCode.toLowerCase(Locale.ROOT) + "@ptit.edu.vn";
-	}
+	
 
 	private String resolveWorkEmail(String workEmail, String lecturerCode) {
 		String normalizedWorkEmail = normalize(workEmail);
@@ -511,7 +509,7 @@ public class LecturerAdminService {
 		if (!StringUtils.hasText(normalizedLecturerCode)) {
 			return null;
 		}
-		return buildWorkEmail(normalizedLecturerCode);
+		return buildManagedEmail(normalizedLecturerCode);
 	}
 
 	private String normalize(String value) {

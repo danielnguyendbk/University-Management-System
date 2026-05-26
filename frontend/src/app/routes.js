@@ -16,7 +16,7 @@ import { Tuition } from "./pages/student/Tuition";
 import { EInvoice } from "./pages/student/EInvoice";
 import { SubmitRequest } from "./pages/student/SubmitRequest";
 import { RequestApproval } from "./components/RequestApproval";
-import { Feedback } from "./pages/student/Feedback";
+
 import { PortalHome } from "./components/PortalHome";
 import { PortalRedirect } from "./components/PortalRedirect";
 import { StudentPortalRoute, LecturerPortalRoute, AdminPortalRoute } from "./components/RolePortalRoute";
@@ -93,7 +93,6 @@ export const router = createBrowserRouter([
       { path: "tuition", Component: Tuition },
       { path: "e-invoice", Component: EInvoice },
       { path: "submit-request", Component: SubmitRequest },
-      { path: "feedback", Component: Feedback },
       { path: "change-password", Component: ChangePassword },
     ],
   },
@@ -110,7 +109,6 @@ export const router = createBrowserRouter([
       { path: "grade-entry", Component: LecturerGradeEntry },
       { path: "exams", Component: LecturerExams },         // Map /portal/lecturer/exams
       { path: "request-approval", Component: RequestApproval },
-      { path: "feedback", Component: Feedback },
       { path: "change-password", Component: ChangePassword },
     ],
   },

@@ -36,7 +36,6 @@ const navigationByRole = {
     { name: "Điểm số", name_vi: "Kết quả học tập", path: "grades", icon: GraduationCap },
     { name: "Học phí & Thanh toán", name_vi: "Theo dõi công nợ", path: "tuition", icon: DollarSign },
     { name: "Gửi yêu cầu", name_vi: "Nghỉ học hoặc phúc khảo", path: "submit-request", icon: Send },
-    { name: "Phản hồi", name_vi: "Đóng góp ý kiến", path: "feedback", icon: MessageSquare },
     { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   LECTURER: [
@@ -47,7 +46,6 @@ const navigationByRole = {
     { name: "Lớp học phần", name_vi: "Danh sách lớp phụ trách", path: "sections", icon: BookOpen },
     { name: "Nhập điểm", name_vi: "Cập nhật kết quả học tập", path: "grade-entry", icon: GraduationCap },
     { name: "Duyệt yêu cầu", name_vi: "Phê duyệt đơn từ", path: "request-approval", icon: CheckSquare },
-    { name: "Phản hồi", name_vi: "Trao đổi với sinh viên", path: "feedback", icon: MessageSquare },
     { name: "Đổi mật khẩu", name_vi: "Cập nhật bảo mật", path: "change-password", icon: LockKeyhole },
   ],
   ADMIN: [
