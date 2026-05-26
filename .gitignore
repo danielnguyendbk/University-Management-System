@@ -1,6 +1,9 @@
 # Frontend dependencies and build output
 frontend/node_modules/
 frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
 
 # Logs
 *.log
@@ -12,3 +15,44 @@ pnpm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# ================================
+# Java / Maven (backend)
+# ================================
+backend/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# Maven wrapper
+!backend/.mvn/wrapper/maven-wrapper.jar
+
+# ================================
+# IDE & Editor
+# ================================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ================================
+# Environment & Secrets
+# ================================
+# Local/prod Spring Boot config
+backend/studentportal/src/main/resources/application-local.properties
+backend/studentportal/src/main/resources/application-prod.properties
+
+# Temporary file used for git history cleanup
+replacements.txt
+
+.env
+.env.*
+!.env.example

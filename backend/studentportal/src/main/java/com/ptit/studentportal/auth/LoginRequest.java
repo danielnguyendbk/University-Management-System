@@ -1,4 +1,9 @@
 package com.ptit.studentportal.auth;
 
-public class LoginRequest {
+import jakarta.validation.constraints.NotBlank;
+
+public record LoginRequest(
+	@NotBlank String username,
+	@NotBlank String password
+) {
 }

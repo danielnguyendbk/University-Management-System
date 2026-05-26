@@ -27,7 +27,7 @@
 		<url/>
 	</scm>
 	<properties>
-		<java.version>17</java.version>
+		<java.version>21</java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -45,6 +45,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+
+		<!-- Jackson databind: explicit compile-scope dependency so ObjectMapper
+		     can be used in application code (spring-boot-starter-webmvc only
+		     pulls it in as a transitive runtime dep in Spring Boot 4.x). -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
 		</dependency>
 
 		<dependency>
@@ -100,6 +108,25 @@
 			<version>0.12.5</version>
 			<scope>runtime</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.4.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>1.12.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.librepdf</groupId>
+			<artifactId>openpdf</artifactId>
+			<version>1.3.30</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -132,8 +159,9 @@
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
-							</annotationProcessorPaths>
-						</configuration>
+							</annotationProcessorPaths>						<compilerArgs>
+							<arg>-Xlint:all,-deprecation,-removal</arg>
+						</compilerArgs>						</configuration>
 					</execution>
 					<execution>
 						<id>default-testCompile</id>
@@ -147,8 +175,9 @@
 									<groupId>org.projectlombok</groupId>
 									<artifactId>lombok</artifactId>
 								</path>
-							</annotationProcessorPaths>
-						</configuration>
+							</annotationProcessorPaths>						<compilerArgs>
+							<arg>-Xlint:all,-deprecation,-removal</arg>
+						</compilerArgs>						</configuration>
 					</execution>
 				</executions>
 			</plugin>

@@ -1,74 +1,6 @@
 import { useState } from "react";
 import { Search, Filter, AlertCircle, CheckCircle2, Users } from "lucide-react";
 
-const courses = [
-  {
-    id: 1,
-    code: "CS301",
-    name: "Cấu trúc dữ liệu nâng cao",
-    credits: 3,
-    lecturer: "Dr. Emily Smith",
-    available: 12,
-    total: 30,
-    schedule: "Thứ 2, Thứ 4 09:00-10:30",
-    room: "A-301"
-  },
-  {
-    id: 2,
-    code: "CS302",
-    name: "Hệ quản trị cơ sở dữ liệu",
-    credits: 4,
-    lecturer: "Prof. Michael Johnson",
-    available: 5,
-    total: 35,
-    schedule: "Thứ 3, Thứ 5 11:00-12:30",
-    room: "B-205"
-  },
-  {
-    id: 3,
-    code: "CS303",
-    name: "Phát triển web",
-    credits: 3,
-    lecturer: "Dr. Sarah Williams",
-    available: 0,
-    total: 25,
-    schedule: "Thứ 2, Thứ 4 14:00-15:30",
-    room: "C-104"
-  },
-  {
-    id: 4,
-    code: "CS304",
-    name: "Học máy",
-    credits: 4,
-    lecturer: "Dr. James Brown",
-    available: 18,
-    total: 30,
-    schedule: "Thứ 3, Thứ 5 09:00-10:30",
-    room: "A-205"
-  },
-  {
-    id: 5,
-    code: "CS305",
-    name: "Kỹ nghệ phần mềm",
-    credits: 3,
-    lecturer: "Prof. Lisa Davis",
-    available: 8,
-    total: 30,
-    schedule: "Thứ 4, Thứ 6 13:00-14:30",
-    room: "B-301"
-  },
-  {
-    id: 6,
-    code: "MATH201",
-    name: "Đại số tuyến tính",
-    credits: 3,
-    lecturer: "Dr. Robert Wilson",
-    available: 15,
-    total: 40,
-    schedule: "Thứ 2, Thứ 4 10:30-12:00",
-    room: "D-101"
-  },
-];
 
 export function CourseRegistration() {
   const [selectedCourses, setSelectedCourses] = useState([]);
@@ -89,7 +21,7 @@ export function CourseRegistration() {
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.lecturer.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesDepartment =
       selectedDepartment === "all" || course.code.startsWith(selectedDepartment);
 
@@ -214,7 +146,7 @@ export function CourseRegistration() {
               {filteredCourses.map((course) => {
                 const isSelected = selectedCourses.includes(course.id);
                 const isFull = course.available === 0;
-                
+
                 return (
                   <tr key={course.id} className={isSelected ? "bg-blue-50" : "hover:bg-gray-50"}>
                     <td className="px-6 py-4 whitespace-nowrap">
