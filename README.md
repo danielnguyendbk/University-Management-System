@@ -174,8 +174,17 @@ Username: admin01
 Password: 123456
 Role: ADMIN
 ```
+Sau khi import sinh viên:
+Username: Mã sinh viên in hoa (D22KH001)
+Password: Mã sinh viên in thường(d22kh001)
+Role: STUDENT
 
+Sau khi import giảng viên:
+Username: Mã giảng viên in hoa (GV001)
+Password: Mã giảng viên in thường(gv001)
+Role: LECTURER
 
+Sau lần đăng nhập lần đầu sẽ bị yêu cầu đổi mật khẩu khác do cá nhân tự tạo.
 
 ## 9. Quy trình demo đề xuất
 
