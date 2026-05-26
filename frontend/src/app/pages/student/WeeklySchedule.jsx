@@ -301,7 +301,7 @@ export function WeeklySchedule({ showCancelled = true }) {
                         {/* Left Time Axis */}
                         <div className="relative bg-[#1E3A8A] text-white border-r border-sky-600" style={{ height: gridHeight }}>
                             {timeSlots.slice(0, -1).map((time, index) => (
-                                <div key={time} className="flex items-center justify-center border-b border-white/25 text-xs font-semibold" style={{ height: `${ROW_HEIGHT}px` }}>
+                                <div key={time} className="flex items-center justify-center border-b border-white/25 text-sm font-semibold" style={{ height: `${ROW_HEIGHT}px` }}>
                                     {time}
                                 </div>
                             ))}
@@ -345,26 +345,26 @@ export function WeeklySchedule({ showCancelled = true }) {
                                         return (
                                             <div
                                                 key={item.sessionId}
-                                                className={`group absolute left-2 right-2 rounded-md border border-l-4 shadow-md px-3 py-2 session-card transition-all duration-200 hover:shadow-lg ${isOff
+                                                className={`group absolute left-2 right-2 rounded-md border border-l-4 shadow-md px-4 py-3 session-card transition-all duration-200 hover:shadow-lg ${isOff
                                                     ? "bg-rose-50/95 border-rose-300 border-l-rose-500 text-rose-950 hover:bg-rose-100/95"
                                                     : `${palette.bg} ${palette.border} ${palette.accent} ${palette.text} hover:scale-[1.01]`
                                                     }`}
                                                 style={{ top, height }}
                                             >
-                                                <div className="text-xs leading-snug flex flex-col h-full justify-between">
+                                                <div className="text-base leading-snug flex flex-col h-full justify-between">
                                                     <div>
                                                         <div className="flex items-start justify-between gap-1.5">
                                                             <div className="truncate pr-1">
                                                                 <p className="font-bold text-sm truncate" title={item.courseName}>
                                                                     {item.courseName}
                                                                 </p>
-                                                                <p className="font-semibold text-[10px] opacity-80 mt-0.5">
+                                                                <p className="font-semibold text-[12px] opacity-80 mt-0.5">
                                                                     {item.courseCode}
                                                                 </p>
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
                                                             {/* Session Type Badge */}
                                                             {item.sessionType === "PRACTICE" || item.practice ? (
                                                                 <span className="shrink-0 rounded bg-orange-100/80 px-1.5 py-0.5 text-[9px] font-bold text-orange-700 border border-orange-200/50">
@@ -380,7 +380,7 @@ export function WeeklySchedule({ showCancelled = true }) {
 
                                                         </div>
 
-                                                        <div className="mt-2 space-y-0.5 text-[11px] opacity-90 font-medium">
+                                                        <div className="mt-3 space-y-1.5 text-[11px] opacity-90 font-medium">
                                                             <p className="truncate">
                                                                 Nhóm: <span className="font-bold">{item.groupName || item.sectionCode || "N/A"}</span>
                                                             </p>
@@ -399,7 +399,7 @@ export function WeeklySchedule({ showCancelled = true }) {
                                                         </div>
                                                     </div>
 
-                                                    <div className="group overflow-visible hover:z-[999] mt-2 pt-1 border-t border-dashed border-gray-200/50">
+                                                    <div className="group overflow-visible hover:z-[999] mt-3 pt-2 border-t border-dashed border-gray-200/50">
                                                         {/* Note in class block if holiday/cancelled */}
                                                         {isOff && (
                                                             <div className="pointer-events-none absolute left-[calc(100%-10px)] bottom-3 z-[999] hidden group-hover:block">
